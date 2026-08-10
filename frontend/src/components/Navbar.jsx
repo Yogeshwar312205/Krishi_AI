@@ -11,10 +11,13 @@ import {
   AlertTriangle,
   Sparkles,
   UserCheck,
-  User
+  User,
+  Package,
+  Globe
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSocket } from '../hooks/useSocket';
+import { getTranslation } from '../utils/translations';
 
 export const Navbar = () => {
   const { 
@@ -24,19 +27,24 @@ export const Navbar = () => {
     activeTab, 
     setActiveTab,
     cropDetails,
-    setCropDetails
+    setCropDetails,
+    language,
+    setLanguage
   } = useAppStore();
   const { triggerDevTrafficJam } = useSocket();
 
+  const t = (key) => getTranslation(language, key);
+
   const navItems = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'forecasting', label: 'Price Forecast', icon: TrendingUp },
-    { id: 'mandi-comparison', label: 'Mandi Comparison', icon: Store },
-    { id: 'demand-analysis', label: 'Demand & Trends', icon: BarChart3 },
-    { id: 'profitability', label: 'Sell vs Hold', icon: Calculator },
-    { id: 'price-alerts', label: 'Price Alerts', icon: Bell },
-    { id: 'logistics', label: 'Logistics VRP', icon: Truck },
-    { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : 'Account') : 'Login / Sign Up', icon: UserCheck },
+    { id: 'home', label: t('home'), icon: Home },
+    { id: 'forecasting', label: t('forecasting'), icon: TrendingUp },
+    { id: 'mandi-comparison', label: t('mandiComparison'), icon: Store },
+    { id: 'demand-analysis', label: t('demandAnalysis'), icon: BarChart3 },
+    { id: 'profitability', label: t('profitability'), icon: Calculator },
+    { id: 'price-alerts', label: t('priceAlerts'), icon: Bell },
+    { id: 'logistics', label: t('logistics'), icon: Truck },
+    { id: 'bookings', label: t('bookings'), icon: Package },
+    { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : t('farmerProfile')) : t('loginRegister'), icon: UserCheck },
   ];
 
   return (
@@ -62,18 +70,35 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* Global Crop Quick Selector in Nav */}
-        <div className="hidden md:flex items-center space-x-2 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 text-xs font-semibold">
-          <span className="text-slate-500 pl-2">Crop:</span>
-          <select 
-            value={cropDetails.cropType}
-            onChange={(e) => setCropDetails({ cropType: e.target.value })}
-            className="bg-white text-forest-900 border border-slate-200 rounded-lg px-2.5 py-1 font-bold shadow-xs outline-none cursor-pointer hover:border-forest-400"
-          >
-            {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+        {/* Global Language & Crop Quick Selector in Nav */}
+        <div className="hidden md:flex items-center space-x-3">
+          {/* Language Switcher */}
+          <div className="flex items-center space-x-1.5 bg-forest-50 p-1.5 rounded-xl border border-forest-200 text-xs font-bold text-forest-900">
+            <Globe className="h-4 w-4 text-emerald-600 pl-1" />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="bg-white text-forest-900 border border-forest-200 rounded-lg px-2 py-1 font-bold shadow-2xs outline-none cursor-pointer hover:border-forest-400"
+            >
+              <option value="en">🌐 English</option>
+              <option value="hi">🇮🇳 हिन्दी (Hindi)</option>
+              <option value="mr">🚩 मराठी (Marathi)</option>
+            </select>
+          </div>
+
+          {/* Crop Selector */}
+          <div className="flex items-center space-x-2 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 text-xs font-semibold">
+            <span className="text-slate-500 pl-2">Crop:</span>
+            <select 
+              value={cropDetails.cropType}
+              onChange={(e) => setCropDetails({ cropType: e.target.value })}
+              className="bg-white text-forest-900 border border-slate-200 rounded-lg px-2.5 py-1 font-bold shadow-2xs outline-none cursor-pointer hover:border-forest-400"
+            >
+              {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* System Microservices Status */}
@@ -91,6 +116,19 @@ export const Navbar = () => {
 
         {/* Action Controls */}
         <div className="flex items-center space-x-2">
+          {/* Mobile language button */}
+          <div className="md:hidden flex items-center">
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="bg-white text-forest-900 border border-slate-200 rounded-xl px-2 py-1 text-xs font-bold shadow-2xs outline-none"
+            >
+              <option value="en">EN</option>
+              <option value="hi">HI</option>
+              <option value="mr">MR</option>
+            </select>
+          </div>
+
           <button
             onClick={() => triggerDevTrafficJam('m1', [73.5, 19.5])}
             className="flex items-center space-x-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-md transition-all active:scale-95"
@@ -115,7 +153,7 @@ export const Navbar = () => {
 
       </div>
 
-      {/* Feature Navigation Subbar matching exact requested navigation */}
+      {/* Feature Navigation Subbar */}
       <div className="bg-forest-900 text-white border-t border-forest-800">
         <div className="mx-auto flex max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-8 no-scrollbar">
           <nav className="flex space-x-1 sm:space-x-2 py-2">

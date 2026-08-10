@@ -7,6 +7,7 @@ import { DemandAnalysis } from './components/DemandAnalysis';
 import { ProfitabilityEstimator } from './components/ProfitabilityEstimator';
 import { PriceAlerts } from './components/PriceAlerts';
 import { AuthPage } from './components/AuthPage';
+import { MyBookings } from './components/MyBookings';
 import { CropWizard } from './components/CropWizard';
 import { RecommendationCards } from './components/RecommendationCards';
 import { MapView } from './components/MapView';
@@ -64,6 +65,7 @@ export function App() {
           {activeTab === 'demand-analysis' && <DemandAnalysis />}
           {activeTab === 'profitability' && <ProfitabilityEstimator />}
           {activeTab === 'price-alerts' && <PriceAlerts />}
+          {activeTab === 'bookings' && <MyBookings />}
           {activeTab === 'auth' && <AuthPage />}
 
           {/* LOGISTICS & VRP INTERACTIVE SECTION */}

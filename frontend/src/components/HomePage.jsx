@@ -18,9 +18,12 @@ import {
   DollarSign
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { getTranslation } from '../utils/translations';
 
 export const HomePage = () => {
-  const { setActiveTab, cropDetails } = useAppStore();
+  const { setActiveTab, cropDetails, language } = useAppStore();
+
+  const t = (key) => getTranslation(language, key);
 
   const fleetShowcase = [
     {
@@ -70,7 +73,7 @@ export const HomePage = () => {
   const quickFeatures = [
     {
       id: 'forecasting',
-      title: 'AI Price Forecasting',
+      title: t('forecasting'),
       desc: 'Predict crop prices up to 30 days in advance using XGBoost AI models trained on Agmarknet data.',
       icon: TrendingUp,
       color: 'from-emerald-500 to-teal-700',
@@ -78,7 +81,7 @@ export const HomePage = () => {
     },
     {
       id: 'mandi-comparison',
-      title: 'Multi-Mandi Net Profit',
+      title: t('mandiComparison'),
       desc: 'Compare rates across 10+ APMC mandis with real transport costs deducted to find true net profit.',
       icon: Store,
       color: 'from-blue-600 to-indigo-800',
@@ -86,7 +89,7 @@ export const HomePage = () => {
     },
     {
       id: 'profitability',
-      title: 'Sell vs Hold Advisor',
+      title: t('profitability'),
       desc: 'Determine whether holding your harvest in cold storage pays off after accounting for spoilage & storage fees.',
       icon: Calculator,
       color: 'from-amber-500 to-orange-700',
@@ -94,7 +97,7 @@ export const HomePage = () => {
     },
     {
       id: 'logistics',
-      title: 'VRP Vehicle Routing',
+      title: t('logistics'),
       desc: 'Book temperature-controlled trucks with dynamic rerouting around traffic jams and highway delays.',
       icon: Truck,
       color: 'from-forest-700 to-forest-900',
@@ -102,7 +105,7 @@ export const HomePage = () => {
     },
     {
       id: 'demand-analysis',
-      title: 'Regional Demand Radar',
+      title: t('demandAnalysis'),
       desc: 'Spot upcoming demand spikes in urban consumption centers before sending your truck.',
       icon: BarChart3,
       color: 'from-purple-600 to-indigo-900',
@@ -110,7 +113,7 @@ export const HomePage = () => {
     },
     {
       id: 'price-alerts',
-      title: 'Instant SMS & Price Alerts',
+      title: t('priceAlerts'),
       desc: 'Set custom price triggers and receive automated WhatsApp & SMS alerts when mandi prices peak.',
       icon: Bell,
       color: 'from-rose-500 to-red-700',
@@ -132,15 +135,15 @@ export const HomePage = () => {
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center space-x-2 rounded-full bg-forest-50 border border-forest-200 px-4 py-1.5 shadow-xs text-xs font-bold text-forest-700">
               <Sparkles className="h-4 w-4 text-emerald-600 animate-pulse" />
-              <span>Agmarknet AI Price & Market Intelligence Platform</span>
+              <span>{t('platformTitle')}</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-forest-900 tracking-tight leading-[1.15]">
-              Predict Crop Prices & Maximize Your Farmer Income
+              {t('heroHeading')}
             </h1>
 
             <p className="text-base text-slate-600 font-medium leading-relaxed max-w-2xl">
-              Eliminate market price uncertainty. KrishiFlow combines AI price forecasting, multi-mandi net profit comparison, demand analysis, and VRP refrigerated logistics to help farmers sell at peak prices.
+              {t('heroSubheading')}
             </p>
 
             {/* Action Buttons mapped to Navigation Tabs */}
@@ -150,7 +153,7 @@ export const HomePage = () => {
                 className="btn-forest-primary px-6 py-3.5 text-sm flex items-center gap-2 group shadow-md"
               >
                 <TrendingUp className="h-4 w-4" />
-                <span>View AI Price Forecast</span>
+                <span>{t('viewForecastBtn')}</span>
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </button>
 
@@ -159,7 +162,7 @@ export const HomePage = () => {
                 className="btn-forest-secondary px-6 py-3.5 text-sm flex items-center gap-2"
               >
                 <Store className="h-4 w-4 text-forest-700" />
-                <span>Compare Mandi Prices</span>
+                <span>{t('compareMandiBtn')}</span>
               </button>
 
               <button
@@ -167,7 +170,7 @@ export const HomePage = () => {
                 className="px-6 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm flex items-center gap-2 shadow-md transition-all active:scale-95"
               >
                 <Calculator className="h-4 w-4" />
-                <span>Sell vs Hold Advisor</span>
+                <span>{t('sellAdvisorBtn')}</span>
               </button>
             </div>
 
@@ -175,17 +178,17 @@ export const HomePage = () => {
             <div className="pt-6 border-t border-slate-100 grid grid-cols-3 gap-4 max-w-lg">
               <div>
                 <div className="text-2xl sm:text-3xl font-extrabold text-forest-800 tracking-tight">+22%</div>
-                <div className="text-xs font-bold text-slate-500 mt-0.5">Average Income Boost</div>
+                <div className="text-xs font-bold text-slate-500 mt-0.5">{t('incomeBoost')}</div>
               </div>
 
               <div>
                 <div className="text-2xl sm:text-3xl font-extrabold text-forest-800 tracking-tight">94%</div>
-                <div className="text-xs font-bold text-slate-500 mt-0.5">AI Model Accuracy</div>
+                <div className="text-xs font-bold text-slate-500 mt-0.5">{t('modelAccuracy')}</div>
               </div>
 
               <div>
                 <div className="text-2xl sm:text-3xl font-extrabold text-forest-800 tracking-tight">10+ APMCs</div>
-                <div className="text-xs font-bold text-slate-500 mt-0.5">Live Mandis Monitored</div>
+                <div className="text-xs font-bold text-slate-500 mt-0.5">{t('mandisMonitored')}</div>
               </div>
             </div>
           </div>
@@ -198,26 +201,26 @@ export const HomePage = () => {
               <div className="flex items-center justify-between border-b border-forest-700/80 pb-3">
                 <div className="flex items-center space-x-2">
                   <div className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="text-xs font-extrabold text-emerald-400">Live AI Market Snapshot</span>
+                  <span className="text-xs font-extrabold text-emerald-400">{t('liveSnapshot')}</span>
                 </div>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">Active</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">{t('active')}</span>
               </div>
 
               <div className="space-y-3">
                 <div className="p-3 rounded-2xl bg-white/10 border border-white/10 flex justify-between items-center backdrop-blur-xs">
                   <div>
-                    <div className="text-xs text-slate-300 font-medium">Commodity</div>
+                    <div className="text-xs text-slate-300 font-medium">{t('commodity')}</div>
                     <div className="text-lg font-black text-white">{cropDetails.cropType || 'Tomato'}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-slate-300 font-medium">Nashik Current Rate</div>
+                    <div className="text-xs text-slate-300 font-medium">Nashik {t('currentRate')}</div>
                     <div className="text-lg font-black text-emerald-400">₹38 / kg</div>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-white/10 border border-white/10 flex justify-between items-center backdrop-blur-xs">
                   <div>
-                    <div className="text-xs text-slate-300 font-medium">Recommended Mandi</div>
+                    <div className="text-xs text-slate-300 font-medium">{t('recommendedMandi')}</div>
                     <div className="text-sm font-extrabold text-white">Vashi Wholesale APMC</div>
                   </div>
                   <div className="text-right">
@@ -228,7 +231,7 @@ export const HomePage = () => {
 
                 <div className="p-3.5 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex justify-between items-center shadow-inner">
                   <div>
-                    <div className="text-xs text-emerald-200 font-bold">Optimal Strategy</div>
+                    <div className="text-xs text-emerald-200 font-bold">{t('optimalStrategy')}</div>
                     <div className="text-xs text-white font-extrabold flex items-center gap-1 mt-0.5">
                       <span>Hold for 4 Days</span>
                       <ArrowRight className="h-3 w-3 text-emerald-400" />
@@ -236,7 +239,7 @@ export const HomePage = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-emerald-200 font-bold">Net Profit Delta</div>
+                    <div className="text-xs text-emerald-200 font-bold">{t('netProfitDelta')}</div>
                     <div className="text-base font-black text-emerald-300">+₹25,000</div>
                   </div>
                 </div>
@@ -246,7 +249,7 @@ export const HomePage = () => {
                 onClick={() => setActiveTab('forecasting')}
                 className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all text-center block tracking-wide uppercase active:scale-98"
               >
-                Explore Full Market Insights
+                {t('exploreInsights')}
               </button>
             </div>
           </div>
@@ -254,7 +257,7 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {/* FARMERS & LOGISTICS FLEET SHOWCASE (Dedicated to Home Page) */}
+      {/* FARMERS & LOGISTICS FLEET SHOWCASE */}
       <section className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-forest-200/80 pb-4">
           <div>
@@ -263,10 +266,10 @@ export const HomePage = () => {
               <span>Smart Agricultural Logistics</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-forest-900 tracking-tight">
-              Farmers Powered by Cold-Chain Fleet & VRP Optimization
+              {t('fleetTitle')}
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-3xl mt-1">
-              KrishiFlow links local farmers directly with temperature-controlled vehicles to dispatch produce to high-rate mandis before spoil dates.
+              {t('fleetSubtitle')}
             </p>
           </div>
 
@@ -275,7 +278,7 @@ export const HomePage = () => {
             className="btn-forest-primary px-4 py-2.5 text-xs flex items-center gap-2 self-start sm:self-auto shrink-0 shadow-md"
           >
             <Navigation className="h-3.5 w-3.5" />
-            <span>Open Logistics VRP Map</span>
+            <span>{t('openVRPMap')}</span>
           </button>
         </div>
 
@@ -286,7 +289,6 @@ export const HomePage = () => {
               key={item.id}
               className="bg-white rounded-3xl border border-forest-100 overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col group"
             >
-              {/* Image Container */}
               <div className="relative h-48 overflow-hidden bg-slate-900">
                 <img 
                   src={item.image} 
@@ -299,20 +301,17 @@ export const HomePage = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 
-                {/* Badge top-left */}
                 <div className="absolute top-3 left-3">
                   <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full shadow-md ${item.badgeColor}`}>
                     {item.badge}
                   </span>
                 </div>
 
-                {/* Temp / Specs Pill top-right */}
                 <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg border border-white/20 flex items-center gap-1">
                   <Thermometer className="h-3 w-3 text-emerald-400" />
                   <span>{item.tempControl}</span>
                 </div>
 
-                {/* Farmer Info overlay bottom */}
                 <div className="absolute bottom-3 left-3 right-3 text-white">
                   <div className="text-xs font-medium text-emerald-300 flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
@@ -322,7 +321,6 @@ export const HomePage = () => {
                 </div>
               </div>
 
-              {/* Card Body */}
               <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -409,37 +407,6 @@ export const HomePage = () => {
               </div>
             );
           })}
-        </div>
-      </section>
-
-      {/* WHY FARMERS TRUST KRISHIFLOW BANNER */}
-      <section className="bg-gradient-to-r from-forest-900 via-forest-800 to-forest-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          <div className="space-y-2 md:col-span-2">
-            <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-widest">Guaranteed Market Uplift</span>
-            <h3 className="text-2xl sm:text-3xl font-black text-white">Empowering Farmers with Agmarknet Big Data & AI</h3>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-xl">
-              By combining official government mandi rate streams with machine learning and temperature-controlled logistics, KrishiFlow ensures you get the highest net profit for every harvest.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row md:flex-col gap-3 justify-center">
-            <button
-              onClick={() => setActiveTab('forecasting')}
-              className="py-3 px-6 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs rounded-2xl shadow-lg transition-all text-center flex items-center justify-center gap-2"
-            >
-              <TrendingUp className="h-4 w-4" />
-              <span>Start Price Forecasting</span>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('logistics')}
-              className="py-3 px-6 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-2xl border border-white/20 transition-all text-center flex items-center justify-center gap-2"
-            >
-              <Truck className="h-4 w-4" />
-              <span>Explore Fleet Logistics</span>
-            </button>
-          </div>
         </div>
       </section>
     </div>
