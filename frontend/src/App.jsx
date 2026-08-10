@@ -8,6 +8,7 @@ import { ProfitabilityEstimator } from './components/ProfitabilityEstimator';
 import { PriceAlerts } from './components/PriceAlerts';
 import { AuthPage } from './components/AuthPage';
 import { MyBookings } from './components/MyBookings';
+import { KisanVoiceBot } from './components/KisanVoiceBot';
 import { CropWizard } from './components/CropWizard';
 import { RecommendationCards } from './components/RecommendationCards';
 import { MapView } from './components/MapView';
@@ -113,6 +114,8 @@ export function App() {
       <footer className="border-t border-forest-200/80 bg-white py-6 text-center text-xs text-slate-500 font-semibold mt-12">
         KrishiFlow © 2026 — Intelligent Crop Price Prediction & Market Insights Platform
       </footer>
+      {/* Floating Kisan Voice AI Assistant */}
+      <KisanVoiceBot />
     </div>
   );
 }

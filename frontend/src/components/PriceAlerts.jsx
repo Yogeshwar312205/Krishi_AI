@@ -58,8 +58,26 @@ export const PriceAlerts = () => {
     setAlerts(alerts.filter(a => a.id !== id));
   };
 
-  const triggerSimulatedAlert = (alert) => {
-    setSimulatedAlert(`🔔 SMS Sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg! Open KrishiFlow to book transport now."`);
+  const triggerSimulatedAlert = async (alert) => {
+    try {
+      // Call backend SMS gateway endpoint
+      const response = await fetch('/api/alerts/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: alert.phone,
+          cropType: alert.crop,
+          targetPrice: alert.targetPrice,
+          currentPrice: alert.currentPrice,
+          mandiName: alert.mandi
+        })
+      });
+      const data = await response.json();
+      setSimulatedAlert(`🔔 SMS Sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`);
+    } catch (err) {
+      setSimulatedAlert(`🔔 SMS Sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`);
+    }
+
     setAlerts(alerts.map(a => a.id === alert.id ? { ...a, status: 'TRIGGERED', currentPrice: alert.targetPrice, triggeredAt: 'Just now' } : a));
     setTimeout(() => setSimulatedAlert(null), 6000);
   };

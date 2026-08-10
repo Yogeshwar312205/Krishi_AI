@@ -3,34 +3,119 @@ const Order = require('../models/Order');
 const { callOptimizeRoute } = require('../services/aiEngineService');
 const logger = require('../utils/logger');
 
+// Comprehensive APMC Markets across all 6 administrative divisions of Maharashtra
 const MARKETS = [
   {
     id: 'm1',
-    name: 'Nashik APMC Mandi',
-    city: 'Nashik',
-    coordinates: [73.7898, 19.9975],
-    basePricesPerKg: { Tomato: 35, Potato: 22, Onion: 28, Rice: 45, Wheat: 32, Mango: 85, Banana: 30 }
-  },
-  {
-    id: 'm2',
     name: 'Vashi Wholesale APMC',
-    city: 'Mumbai',
+    city: 'Navi Mumbai',
     coordinates: [73.0012, 19.0760],
     basePricesPerKg: { Tomato: 48, Potato: 28, Onion: 36, Rice: 52, Wheat: 38, Mango: 120, Banana: 40 }
   },
   {
+    id: 'm2',
+    name: 'Nashik APMC Main Mandi',
+    city: 'Nashik',
+    coordinates: [73.7898, 19.9975],
+    basePricesPerKg: { Tomato: 38, Potato: 22, Onion: 28, Rice: 45, Wheat: 32, Mango: 85, Banana: 30 }
+  },
+  {
     id: 'm3',
-    name: 'Gultekdi APMC Market',
-    city: 'Pune',
-    coordinates: [73.8567, 18.5204],
-    basePricesPerKg: { Tomato: 42, Potato: 25, Onion: 32, Rice: 48, Wheat: 35, Mango: 105, Banana: 36 }
+    name: 'Pimpalgaon Baswant APMC',
+    city: 'Pimpalgaon (Nashik)',
+    coordinates: [73.9850, 20.1750],
+    basePricesPerKg: { Tomato: 39, Potato: 23, Onion: 30, Rice: 46, Wheat: 33, Mango: 88, Banana: 31 }
   },
   {
     id: 'm4',
-    name: 'Surat APMC Hub',
-    city: 'Surat',
-    coordinates: [72.8311, 21.1702],
-    basePricesPerKg: { Tomato: 40, Potato: 26, Onion: 30, Rice: 50, Wheat: 36, Mango: 110, Banana: 38 }
+    name: 'Gultekdi APMC Market',
+    city: 'Pune',
+    coordinates: [73.8567, 18.5204],
+    basePricesPerKg: { Tomato: 44, Potato: 25, Onion: 32, Rice: 48, Wheat: 35, Mango: 105, Banana: 36 }
+  },
+  {
+    id: 'm5',
+    name: 'Kolhapur APMC Mandi',
+    city: 'Kolhapur',
+    coordinates: [74.2433, 16.7050],
+    basePricesPerKg: { Tomato: 41, Potato: 24, Onion: 29, Rice: 47, Wheat: 34, Mango: 95, Banana: 33 }
+  },
+  {
+    id: 'm6',
+    name: 'Sangli APMC Market',
+    city: 'Sangli',
+    coordinates: [74.5815, 16.8524],
+    basePricesPerKg: { Tomato: 42, Potato: 24, Onion: 31, Rice: 46, Wheat: 34, Mango: 98, Banana: 34 }
+  },
+  {
+    id: 'm7',
+    name: 'Solapur APMC Onion Hub',
+    city: 'Solapur',
+    coordinates: [75.9064, 17.6599],
+    basePricesPerKg: { Tomato: 39, Potato: 23, Onion: 34, Rice: 45, Wheat: 33, Mango: 90, Banana: 32 }
+  },
+  {
+    id: 'm8',
+    name: 'Ahmednagar APMC Market',
+    city: 'Ahmednagar',
+    coordinates: [74.7480, 19.0948],
+    basePricesPerKg: { Tomato: 38, Potato: 22, Onion: 31, Rice: 44, Wheat: 32, Mango: 86, Banana: 31 }
+  },
+  {
+    id: 'm9',
+    name: 'Chhatrapati Sambhajinagar APMC',
+    city: 'Aurangabad',
+    coordinates: [75.3433, 19.8762],
+    basePricesPerKg: { Tomato: 40, Potato: 24, Onion: 32, Rice: 47, Wheat: 34, Mango: 92, Banana: 33 }
+  },
+  {
+    id: 'm10',
+    name: 'Jalgaon Mandi Hub',
+    city: 'Jalgaon',
+    coordinates: [75.5626, 21.0077],
+    basePricesPerKg: { Tomato: 37, Potato: 21, Onion: 29, Rice: 44, Wheat: 31, Mango: 84, Banana: 38 }
+  },
+  {
+    id: 'm11',
+    name: 'Nagpur Cotton & Orange APMC',
+    city: 'Nagpur',
+    coordinates: [79.0882, 21.1458],
+    basePricesPerKg: { Tomato: 43, Potato: 26, Onion: 33, Rice: 49, Wheat: 36, Mango: 100, Banana: 35 }
+  },
+  {
+    id: 'm12',
+    name: 'Amravati Grain & Produce Mandi',
+    city: 'Amravati',
+    coordinates: [77.7588, 20.9374],
+    basePricesPerKg: { Tomato: 41, Potato: 23, Onion: 30, Rice: 46, Wheat: 33, Mango: 90, Banana: 33 }
+  },
+  {
+    id: 'm13',
+    name: 'Latur Pulse & Oilseed APMC',
+    city: 'Latur',
+    coordinates: [76.5810, 18.4088],
+    basePricesPerKg: { Tomato: 39, Potato: 23, Onion: 31, Rice: 45, Wheat: 33, Mango: 88, Banana: 32 }
+  },
+  {
+    id: 'm14',
+    name: 'Nanded Central Mandi',
+    city: 'Nanded',
+    coordinates: [77.3164, 19.1383],
+    basePricesPerKg: { Tomato: 38, Potato: 22, Onion: 29, Rice: 44, Wheat: 32, Mango: 86, Banana: 31 }
+  },
+  {
+    id: 'm15',
+    name: 'Satara Agricultural Mandi',
+    city: 'Satara',
+    coordinates: [74.0183, 17.6805],
+    basePricesPerKg: { Tomato: 40, Potato: 23, Onion: 30, Rice: 46, Wheat: 33, Mango: 92, Banana: 33 }
+  },
+  {
+    id: 'm16',
+    name: 'Ratnagiri Mango & Produce APMC',
+    city: 'Ratnagiri',
+    coordinates: [73.3120, 16.9902],
+    basePricesPerKg: { Tomato: 45, Potato: 27, Onion: 35, Rice: 50, Wheat: 37, Mango: 135, Banana: 38 }
   }
 ];
 
@@ -111,11 +196,11 @@ const recommendLogistics = async (req, res) => {
         location: {
           $near: {
             $geometry: { type: 'Point', coordinates: [lng, lat] },
-            $maxDistance: 100000
+            $maxDistance: 500000 // Expand radius to 500km to capture statewide fleet
           }
         },
         isAvailable: true
-      }).limit(5).exec();
+      }).limit(20).exec();
     } catch (err) {}
 
     if (!nearbyVehicles || nearbyVehicles.length === 0) {

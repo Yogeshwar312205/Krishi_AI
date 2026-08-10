@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: krishiflow-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=krishiflow
+    restart: always
+
+  # Node.js Express Backend Orchestrator
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: krishiflow-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongodb:27017/krishiflow
+      - AI_ENGINE_URL=http://ai-engine:8000
+      - JWT_SECRET=krishiflow_super_secret_jwt_key_2026
+    depends_on:
+      - mongodb
+    restart: always
+
+  # Python FastAPI AI / VRP Optimization Engine
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    container_name: krishiflow-ai-engine
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    restart: always
+
+  # React Vite Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: krishiflow-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+      - ai-engine
+    restart: always
+
+volumes:
+  mongo_data:

@@ -1,10 +1,30 @@
-import React, { useState } from 'react';
-import { TrendingUp, Calendar, ArrowUpRight, Award, ShieldCheck, Info, Sparkles, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, Calendar, ArrowUpRight, Award, ShieldCheck, Info, Sparkles, RefreshCw, Thermometer, Droplets, Gauge } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 export const PriceForecaster = () => {
   const { cropDetails, setCropDetails, setActiveTab } = useAppStore();
   const [timeframe, setTimeframe] = useState('7-day'); // '7-day' | '30-day'
+  const [liveGovtRecords, setLiveGovtRecords] = useState([]);
+  const [loadingGovt, setLoadingGovt] = useState(false);
+
+  useEffect(() => {
+    const fetchLiveGovtRates = async () => {
+      setLoadingGovt(true);
+      try {
+        const res = await fetch(`/api/agmarknet/live-rates?crop=${cropDetails.cropType || 'Tomato'}`);
+        const data = await res.json();
+        if (data.records) {
+          setLiveGovtRecords(data.records);
+        }
+      } catch (err) {
+        console.log('Using local fallback for Govt rates stream');
+      } finally {
+        setLoadingGovt(false);
+      }
+    };
+    fetchLiveGovtRates();
+  }, [cropDetails.cropType]);
 
   // Dynamic price forecast generator based on selected crop
   const cropBasePrices = {
@@ -250,6 +270,55 @@ export const PriceForecaster = () => {
           </div>
         </div>
 
+      </div>
+
+      {/* LIVE GOVT AGMARKNET & METEOROLOGICAL WEATHER STREAM CARD */}
+      <div className="bg-white border border-forest-100 rounded-3xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center space-x-2">
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            <h3 className="text-base font-black text-forest-900">
+              Live Govt Agmarknet & Meteorological Weather Feed
+            </h3>
+          </div>
+          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+            Source: Govt Open-Meteo & Agmarknet Data Gateway
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {liveGovtRecords.map((rec, idx) => (
+            <div key={idx} className="p-4 rounded-2xl bg-forest-50/50 border border-forest-100 space-y-2 text-xs">
+              <div className="font-extrabold text-slate-900 border-b border-slate-200/60 pb-1 flex justify-between items-center">
+                <span>{rec.mandi}</span>
+                <span className="text-emerald-700 font-bold">{rec.trend}</span>
+              </div>
+
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Agmarknet Rate:</span>
+                <strong className="text-slate-900 font-black text-sm">₹{rec.rate} / kg</strong>
+              </div>
+
+              {rec.weather && (
+                <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/40">
+                  <span className="flex items-center gap-1 text-[11px] font-medium">
+                    <Thermometer className="h-3.5 w-3.5 text-rose-500" /> Temp:
+                  </span>
+                  <strong className="text-rose-700 font-bold">{rec.weather.temperature}°C</strong>
+                </div>
+              )}
+
+              {rec.fuelDetails && (
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="flex items-center gap-1 text-[11px] font-medium">
+                    <Gauge className="h-3.5 w-3.5 text-amber-600" /> Transport Rate:
+                  </span>
+                  <strong className="text-amber-800 font-bold">₹{rec.logisticsRatePerKm}/km</strong>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
