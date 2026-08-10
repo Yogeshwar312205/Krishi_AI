@@ -58,6 +58,10 @@ export const useAppStore = create((set, get) => ({
     trackedVehicle: { ...state.trackedVehicle, ...data }
   })),
 
+  // Active Navigation Tab
+  activeTab: 'forecasting', // 'forecasting' | 'mandi-comparison' | 'demand-analysis' | 'profitability' | 'price-alerts' | 'logistics'
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
   // Dev Trigger Traffic Jam Alert
   trafficAlert: null,
   isSimulatingJam: false,
