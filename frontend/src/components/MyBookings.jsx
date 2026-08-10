@@ -18,11 +18,13 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { getTranslation } from '../utils/translations';
 import { WaybillModal } from './WaybillModal';
+import { NewBookingModal } from './NewBookingModal';
 
 export const MyBookings = () => {
   const { bookings, language, setActiveTab } = useAppStore();
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'active' | 'completed'
   const [selectedBookingForWaybill, setSelectedBookingForWaybill] = useState(null);
+  const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
 
   const t = (key) => getTranslation(language, key);
 
@@ -50,7 +52,7 @@ export const MyBookings = () => {
         </div>
 
         <button
-          onClick={() => setActiveTab('logistics')}
+          onClick={() => setIsNewBookingOpen(true)}
           className="btn-forest-primary px-5 py-3 text-xs flex items-center gap-2 self-start sm:self-auto shrink-0 shadow-md"
         >
           <Plus className="h-4 w-4" />
@@ -253,6 +255,12 @@ export const MyBookings = () => {
           onClose={() => setSelectedBookingForWaybill(null)}
         />
       )}
+
+      {/* Render New Booking Modal */}
+      <NewBookingModal
+        isOpen={isNewBookingOpen}
+        onClose={() => setIsNewBookingOpen(false)}
+      />
     </div>
   );
 };

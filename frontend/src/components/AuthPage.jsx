@@ -20,7 +20,7 @@ import { useAppStore } from '../store/useAppStore';
 import { loginUser, registerUser } from '../services/api';
 
 export const AuthPage = () => {
-  const { user, setAuth, logout, setActiveTab } = useAppStore();
+  const { user, setAuth, logout, setActiveTab, bookings } = useAppStore();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -157,6 +157,7 @@ export const AuthPage = () => {
             </button>
           </div>
 
+          {/* Active Farmer Perks Grid */}
           <div className="py-6 space-y-4">
             <h3 className="text-sm font-extrabold text-forest-900 uppercase tracking-wider">
               Farmer Account Perks Active
@@ -183,6 +184,57 @@ export const AuthPage = () => {
             </div>
           </div>
 
+          {/* DEDICATED MY CROP SHIPMENTS & VEHICLE BOOKINGS PANEL WIDGET */}
+          <div className="p-5 rounded-3xl bg-slate-900 text-white space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <Truck className="h-5 w-5 text-emerald-400" />
+                <span className="text-sm font-black text-white">My Crop Shipments & Vehicle Bookings</span>
+              </div>
+              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                {bookings.length} Dispatches Recorded
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {bookings.slice(0, 2).map((b) => (
+                <div key={b.id} className="p-3.5 rounded-2xl bg-white/10 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-extrabold text-emerald-400">{b.id}</span>
+                      <span className="text-slate-300 font-medium">• {b.cropType} ({b.quantityKg} kg)</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {b.origin} ➔ <strong className="text-white">{b.destination}</strong>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 border-white/10 pt-2 sm:pt-0">
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-400 font-medium">Est. Net Profit</div>
+                      <div className="font-black text-emerald-300 text-sm">{b.netProfit}</div>
+                    </div>
+
+                    <button
+                      onClick={() => setActiveTab('bookings')}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[11px] transition-all shrink-0"
+                    >
+                      View Waybill
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setActiveTab('bookings')}
+              className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-extrabold text-xs transition-all text-center flex items-center justify-center gap-1.5"
+            >
+              <span>Manage All Shipments & Book New Truck</span>
+              <ArrowRight className="h-4 w-4 text-emerald-400" />
+            </button>
+          </div>
+
           <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-3">
             <button
               onClick={() => setActiveTab('forecasting')}
@@ -193,7 +245,7 @@ export const AuthPage = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('logistics')}
+              onClick={() => setActiveTab('bookings')}
               className="btn-forest-secondary px-5 py-2.5 text-xs flex items-center gap-2"
             >
               <Truck className="h-4 w-4 text-forest-700" />
