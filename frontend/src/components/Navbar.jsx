@@ -1,6 +1,7 @@
 import React from 'react';
 import { 
   Sprout, 
+  Home,
   TrendingUp, 
   Store, 
   BarChart3, 
@@ -8,13 +9,16 @@ import {
   Bell, 
   Truck, 
   AlertTriangle,
-  Sparkles
+  Sparkles,
+  UserCheck,
+  User
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSocket } from '../hooks/useSocket';
 
 export const Navbar = () => {
   const { 
+    user,
     backendStatus, 
     aiEngineStatus, 
     activeTab, 
@@ -25,12 +29,14 @@ export const Navbar = () => {
   const { triggerDevTrafficJam } = useSocket();
 
   const navItems = [
+    { id: 'home', label: 'Home', icon: Home },
     { id: 'forecasting', label: 'Price Forecast', icon: TrendingUp },
     { id: 'mandi-comparison', label: 'Mandi Comparison', icon: Store },
     { id: 'demand-analysis', label: 'Demand & Trends', icon: BarChart3 },
     { id: 'profitability', label: 'Sell vs Hold', icon: Calculator },
     { id: 'price-alerts', label: 'Price Alerts', icon: Bell },
     { id: 'logistics', label: 'Logistics VRP', icon: Truck },
+    { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : 'Account') : 'Login / Sign Up', icon: UserCheck },
   ];
 
   return (
@@ -40,7 +46,7 @@ export const Navbar = () => {
         
         {/* Brand Logo */}
         <div 
-          onClick={() => setActiveTab('forecasting')}
+          onClick={() => setActiveTab('home')}
           className="flex items-center space-x-3 cursor-pointer group"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-forest-600 text-white shadow-md group-hover:scale-105 transition-transform">
@@ -95,11 +101,15 @@ export const Navbar = () => {
           </button>
 
           <button 
-            onClick={() => setActiveTab('profitability')}
-            className="btn-forest-primary px-4 py-2 text-xs flex items-center gap-1.5 shadow-md"
+            onClick={() => setActiveTab('auth')}
+            className={`px-3.5 py-2 text-xs flex items-center gap-1.5 rounded-xl font-bold transition-all shadow-md active:scale-95 ${
+              user 
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200' 
+                : 'bg-forest-800 hover:bg-forest-900 text-white'
+            }`}
           >
-            <Sparkles className="h-4 w-4 fill-white" />
-            <span>Sell Advisor</span>
+            {user ? <User className="h-4 w-4 text-emerald-700" /> : <UserCheck className="h-4 w-4" />}
+            <span>{user ? user.name || 'Farmer Profile' : 'Farmer Login'}</span>
           </button>
         </div>
 
