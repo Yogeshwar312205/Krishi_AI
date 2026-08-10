@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #edf8ef;
+    background-image: radial-gradient(#18532B 0.65px, transparent 0.65px);
+    background-size: 24px 24px;
+    background-position: 0 0;
+    color: #1f2937;
+  }
+}
+
+.krushi-card {
+  background: #ffffff;
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 35px -5px rgba(24, 83, 43, 0.07), 0 0 2px rgba(24, 83, 43, 0.05);
+  border: 1px solid rgba(24, 83, 43, 0.08);
+}
+
+.krushi-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.krushi-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -10px rgba(24, 83, 43, 0.12);
+  border-color: rgba(24, 83, 43, 0.25);
+}
+
+.btn-forest-primary {
+  background-color: #18532B;
+  color: #ffffff;
+  border-radius: 9999px;
+  font-weight: 700;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 6px 20px -4px rgba(24, 83, 43, 0.3);
+}
+
+.btn-forest-primary:hover {
+  background-color: #124021;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px -4px rgba(24, 83, 43, 0.4);
+}
+
+.btn-forest-secondary {
+  background-color: transparent;
+  color: #18532B;
+  border: 2px solid #18532B;
+  border-radius: 9999px;
+  font-weight: 700;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-forest-secondary:hover {
+  background-color: rgba(24, 83, 43, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #edf8ef;
+}
+::-webkit-scrollbar-thumb {
+  background: #a7d7b1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #18532B;
+}
