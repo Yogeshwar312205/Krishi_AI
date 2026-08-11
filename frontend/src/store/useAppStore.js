@@ -2,15 +2,28 @@ import { create } from 'zustand';
 
 export const useAppStore = create((set, get) => ({
   // Auth state
-  user: localStorage.getItem('token') ? { name: 'Ramesh Singh', role: 'Farmer', email: 'ramesh.farmer@krishiflow.ai' } : null,
+  user: localStorage.getItem('token') 
+    ? { name: 'Ramesh Singh', role: 'Farmer', email: 'ramesh.farmer@krishiflow.ai', location: 'Nashik, Maharashtra' } 
+    : null,
   token: localStorage.getItem('token') || null,
+  activeRole: localStorage.getItem('activeRole') || 'Farmer', // 'Farmer' | 'Driver' | 'APMC Buyer'
+
   setAuth: (user, token) => {
     if (token) localStorage.setItem('token', token);
-    set({ user, token });
+    const role = user?.role || 'Farmer';
+    localStorage.setItem('activeRole', role);
+    set({ user, token, activeRole: role });
   },
+
+  setActiveRole: (role) => {
+    localStorage.setItem('activeRole', role);
+    set({ activeRole: role });
+  },
+
   logout: () => {
     localStorage.removeItem('token');
-    set({ user: null, token: null });
+    localStorage.removeItem('activeRole');
+    set({ user: null, token: null, activeRole: 'Farmer' });
   },
 
   // Service health statuses
@@ -53,22 +66,148 @@ export const useAppStore = create((set, get) => ({
   // Live Vehicle Tracking & WebSocket
   trackedVehicle: {
     vehicleId: 'VEH-9988',
-    driverName: 'Ramesh Kumar',
+    driverName: 'Suresh Shinde',
     currentCoordinates: [73.7898, 19.9975],
     speedKmH: 58,
-    progressPercent: 0
+    progressPercent: 35
   },
   updateTrackedVehicle: (data) => set((state) => ({
     trackedVehicle: { ...state.trackedVehicle, ...data }
   })),
 
   // Active Navigation Tab
-  activeTab: 'home', // 'home' | 'forecasting' | 'mandi-comparison' | 'demand-analysis' | 'profitability' | 'price-alerts' | 'logistics' | 'bookings' | 'auth'
+  activeTab: 'home', // 'home' | 'forecasting' | 'mandi-comparison' | 'demand-analysis' | 'profitability' | 'price-alerts' | 'logistics' | 'bookings' | 'auth' | 'driver-jobs' | 'driver-vehicles' | 'buyer-postings' | 'inbound-shipments' | 'book-truck'
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // Multilingual Support
   language: 'en', // 'en' | 'hi' | 'mr'
   setLanguage: (lang) => set({ language: lang }),
+
+  // Registered Driver Vehicles (Driver Vehicle Management & Search)
+  registeredVehicles: [
+    {
+      id: 'VEH-101',
+      driverName: 'Suresh Shinde',
+      driverPhone: '+91 98230 11223',
+      vehicleNo: 'MH 15 GH 4921',
+      vehicleType: 'Refrigerated Van',
+      capacityKg: 3500,
+      ratePerKm: 18,
+      isRefrigerated: true,
+      baseLocation: 'Nashik APMC Hub',
+      availableFrom: new Date().toISOString().split('T')[0],
+      availableTo: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
+      isAvailable: true,
+      tempSensor: '11°C Active Cooling'
+    },
+    {
+      id: 'VEH-102',
+      driverName: 'Sunita Patil',
+      driverPhone: '+91 94221 88990',
+      vehicleNo: 'MH 31 CB 7810',
+      vehicleType: 'Heavy Freighter',
+      capacityKg: 10000,
+      ratePerKm: 28,
+      isRefrigerated: true,
+      baseLocation: 'Nagpur & Vashi APMC',
+      availableFrom: new Date().toISOString().split('T')[0],
+      availableTo: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
+      isAvailable: true,
+      tempSensor: 'Ventilated Cargo Container'
+    },
+    {
+      id: 'VEH-103',
+      driverName: 'Aniket Deshmukh',
+      driverPhone: '+91 98901 44556',
+      vehicleNo: 'MH 12 AB 9910',
+      vehicleType: 'E-Pickup Express',
+      capacityKg: 1500,
+      ratePerKm: 12,
+      isRefrigerated: false,
+      baseLocation: 'Pune & Satara Circle',
+      availableFrom: new Date().toISOString().split('T')[0],
+      availableTo: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
+      isAvailable: true,
+      tempSensor: 'Insulated Fast Deck'
+    }
+  ],
+
+  addRegisteredVehicle: (vehicleData) => set((state) => ({
+    registeredVehicles: [vehicleData, ...state.registeredVehicles]
+  })),
+
+  // Date-Based Uber-Like Vehicle Booking Requests (Farmer -> Driver)
+  dateBookings: [
+    {
+      id: 'UBER-501',
+      farmerName: 'Ramesh Singh',
+      farmerPhone: '+91 98765 43210',
+      pickupDate: new Date(Date.now() + 2*24*60*60*1000).toISOString().split('T')[0], // 2 days from now
+      timeSlot: 'Morning (06:00 AM - 10:00 AM)',
+      cropType: 'Tomato',
+      quantityKg: 2500,
+      origin: 'Nashik Farm HQ, Maharashtra',
+      destination: 'Vashi Wholesale APMC, Navi Mumbai',
+      vehicleId: 'VEH-101',
+      vehicleNo: 'MH 15 GH 4921',
+      driverName: 'Suresh Shinde',
+      driverPhone: '+91 98230 11223',
+      estDistanceKm: 165,
+      estTotalFare: '₹8,500',
+      status: 'Accepted',
+      createdAt: 'Today, 09:30 AM'
+    },
+    {
+      id: 'UBER-502',
+      farmerName: 'Kiran Thorat',
+      farmerPhone: '+91 94211 77665',
+      pickupDate: new Date(Date.now() + 4*24*60*60*1000).toISOString().split('T')[0],
+      timeSlot: 'Afternoon (01:00 PM - 05:00 PM)',
+      cropType: 'Onion',
+      quantityKg: 5000,
+      origin: 'Pimpalgaon Grape Farm',
+      destination: 'Gultekdi APMC, Pune',
+      vehicleId: 'VEH-101',
+      vehicleNo: 'MH 15 GH 4921',
+      driverName: 'Suresh Shinde',
+      driverPhone: '+91 98230 11223',
+      estDistanceKm: 210,
+      estTotalFare: '₹12,000',
+      status: 'Pending Driver Acceptance',
+      createdAt: 'Today, 10:15 AM'
+    }
+  ],
+
+  createDateBooking: (booking) => set((state) => {
+    const newBookingList = [booking, ...state.dateBookings];
+    // Also create a booking entry in main bookings for seamless tracking
+    const newMainBooking = {
+      id: booking.id,
+      cropType: booking.cropType,
+      quantityKg: booking.quantityKg,
+      driverName: booking.driverName,
+      driverPhone: booking.driverPhone,
+      vehicleType: 'Refrigerated Vehicle',
+      vehicleNo: booking.vehicleNo,
+      origin: booking.origin,
+      destination: booking.destination,
+      status: 'Scheduled for ' + booking.pickupDate,
+      dispatchTime: booking.pickupDate + ' (' + booking.timeSlot.split(' ')[0] + ')',
+      estArrival: 'Target Mandi Delivery',
+      temperature: 'Active Cold Chain',
+      expectedRevenue: '₹1,20,000',
+      transportCost: booking.estTotalFare,
+      netProfit: '₹1,11,500'
+    };
+    return {
+      dateBookings: newBookingList,
+      bookings: [newMainBooking, ...state.bookings]
+    };
+  }),
+
+  respondToDateBooking: (bookingId, newStatus) => set((state) => ({
+    dateBookings: state.dateBookings.map((b) => b.id === bookingId ? { ...b, status: newStatus } : b)
+  })),
 
   // Farmer Bookings & Consignments
   bookings: [
@@ -76,8 +215,8 @@ export const useAppStore = create((set, get) => ({
       id: 'DISP-8921',
       cropType: 'Tomato',
       quantityKg: 2500,
-      driverName: 'Ramesh Kumar',
-      driverPhone: '+91 98765 12345',
+      driverName: 'Suresh Shinde',
+      driverPhone: '+91 98230 11223',
       vehicleType: 'Refrigerated Van',
       vehicleNo: 'MH 15 GH 4921',
       origin: 'Nashik Farm HQ',
@@ -112,6 +251,114 @@ export const useAppStore = create((set, get) => ({
   addBooking: (newBooking) => set((state) => ({
     bookings: [newBooking, ...state.bookings]
   })),
+
+  // Driver Jobs (Driver Dashboard State)
+  driverJobs: [
+    {
+      id: 'JOB-301',
+      farmerName: 'Ramesh Singh',
+      farmerPhone: '+91 98765 43210',
+      origin: 'Nashik Farm HQ, Sector 4',
+      destination: 'Vashi Wholesale APMC, Navi Mumbai',
+      cropType: 'Tomato',
+      quantityKg: 2500,
+      requiredVehicle: 'Refrigerated Van',
+      offeredFreight: '₹8,500',
+      distanceKm: 165,
+      estTime: '3.5 Hours',
+      status: 'In Transit',
+      createdAt: 'Today, 06:15 AM'
+    },
+    {
+      id: 'JOB-302',
+      farmerName: 'Anand Kulkarni',
+      farmerPhone: '+91 94220 99881',
+      origin: 'Pimpalgaon Grape Orchards',
+      destination: 'Gultekdi APMC, Pune',
+      cropType: 'Onion',
+      quantityKg: 4000,
+      requiredVehicle: 'Heavy Freighter',
+      offeredFreight: '₹12,000',
+      distanceKm: 210,
+      estTime: '4.5 Hours',
+      status: 'Pending',
+      createdAt: 'Today, 07:45 AM'
+    }
+  ],
+
+  updateDriverJobStatus: (jobId, newStatus) => set((state) => ({
+    driverJobs: state.driverJobs.map((j) => j.id === jobId ? { ...j, status: newStatus } : j)
+  })),
+
+  // APMC Buyer Rate Postings & Procurement Bids (Buyer Dashboard State)
+  buyerPostings: [
+    {
+      id: 'BID-901',
+      cropType: 'Tomato',
+      grade: 'Grade-A Premium Red',
+      offeredPricePerKg: 46,
+      requiredQuantityKg: 5000,
+      receivedQuantityKg: 2500,
+      mandiName: 'Vashi Wholesale APMC',
+      traderName: 'Rajesh Mehta (Mehta Produce Corp)',
+      traderPhone: '+91 98200 55443',
+      status: 'Active Procurement',
+      expiresIn: '2 Days'
+    },
+    {
+      id: 'BID-902',
+      cropType: 'Onion',
+      grade: 'Lasalgaon Red Export Grade',
+      offeredPricePerKg: 34,
+      requiredQuantityKg: 10000,
+      receivedQuantityKg: 5000,
+      mandiName: 'Nashik Main APMC',
+      traderName: 'Rajesh Mehta (Mehta Produce Corp)',
+      traderPhone: '+91 98200 55443',
+      status: 'Active Procurement',
+      expiresIn: '5 Days'
+    }
+  ],
+
+  addBuyerPosting: (posting) => set((state) => ({
+    buyerPostings: [posting, ...state.buyerPostings]
+  })),
+
+  deleteBuyerPosting: (id) => set((state) => ({
+    buyerPostings: state.buyerPostings.filter((p) => p.id !== id)
+  })),
+
+  // Inbound Shipments for APMC Buyer
+  inboundShipments: [
+    {
+      id: 'DISP-8921',
+      farmerName: 'Ramesh Singh',
+      cropType: 'Tomato',
+      quantityKg: 2500,
+      driverName: 'Suresh Shinde',
+      driverPhone: '+91 98230 11223',
+      vehicleNo: 'MH 15 GH 4921',
+      mandiName: 'Vashi Wholesale APMC',
+      eta: 'Today, 11:45 AM',
+      agreedRate: '₹46 / kg',
+      estTotalValue: '₹1,15,000',
+      status: 'In Transit (35km away)'
+    },
+    {
+      id: 'DISP-7710',
+      farmerName: 'Sunita Patil',
+      cropType: 'Onion',
+      quantityKg: 5000,
+      driverName: 'Sunita Patil',
+      driverPhone: '+91 94221 88990',
+      vehicleNo: 'MH 31 CB 7810',
+      mandiName: 'Vashi Wholesale APMC',
+      eta: 'Arrived at Gate #4',
+      agreedRate: '₹34 / kg',
+      estTotalValue: '₹1,70,000',
+      status: 'Unloading'
+    }
+  ],
 
   // Dev Trigger Traffic Jam Alert
   trafficAlert: null,

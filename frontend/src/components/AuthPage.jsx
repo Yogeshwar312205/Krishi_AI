@@ -43,20 +43,26 @@ export const AuthPage = () => {
     setErrorMsg('');
   };
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = async (targetRole = 'Farmer') => {
     setLoading(true);
     setErrorMsg('');
     try {
+      const emailMap = {
+        Farmer: 'ramesh.farmer@krishiflow.ai',
+        Driver: 'suresh.driver@krishiflow.ai',
+        'APMC Buyer': 'rajesh.buyer@krishiflow.ai'
+      };
       const demoCredentials = {
-        email: 'ramesh.farmer@krishiflow.ai',
+        email: emailMap[targetRole] || 'ramesh.farmer@krishiflow.ai',
         password: 'password123'
       };
       const res = await loginUser(demoCredentials);
-      setAuth(res.user, res.token);
-      setSuccessMsg('Successfully logged in as Ramesh Singh (Demo Farmer)!');
+      const updatedUser = { ...res.user, role: targetRole };
+      setAuth(updatedUser, res.token);
+      setSuccessMsg(`Successfully logged in as ${updatedUser.name} (${targetRole})!`);
       setTimeout(() => {
         setActiveTab('home');
-      }, 1200);
+      }, 1000);
     } catch (err) {
       setErrorMsg(err.message || 'Demo login failed');
     } finally {
@@ -316,20 +322,43 @@ export const AuthPage = () => {
           {/* Quick Demo Login Callout */}
           <div className="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-xs space-y-2 relative z-10">
             <div className="text-xs font-extrabold text-amber-300 flex items-center justify-between">
-              <span>Quick Test Access</span>
+              <span>Instant Demo Dashboards</span>
               <Sparkles className="h-3.5 w-3.5 text-amber-400" />
             </div>
             <p className="text-[11px] text-slate-200 font-medium">
-              Want to test the platform instantly without entering details?
+              Select a role below for 1-click test access to tailored dashboards:
             </p>
-            <button
-              onClick={handleDemoLogin}
-              disabled={loading}
-              className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs rounded-xl shadow-md transition-all text-center flex items-center justify-center gap-1.5"
-            >
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserCheck className="h-3.5 w-3.5" />}
-              <span>1-Click Demo Farmer Login</span>
-            </button>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('Farmer')}
+                disabled={loading}
+                className="py-2 px-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] rounded-xl shadow-md transition-all text-center flex flex-col items-center gap-1"
+              >
+                <Sprout className="h-3.5 w-3.5" />
+                <span>🌾 Farmer</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('Driver')}
+                disabled={loading}
+                className="py-2 px-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] rounded-xl shadow-md transition-all text-center flex flex-col items-center gap-1"
+              >
+                <Truck className="h-3.5 w-3.5" />
+                <span>🚚 Driver</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('APMC Buyer')}
+                disabled={loading}
+                className="py-2 px-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-[10px] rounded-xl shadow-md transition-all text-center flex flex-col items-center gap-1"
+              >
+                <User className="h-3.5 w-3.5" />
+                <span>🏛️ Buyer</span>
+              </button>
+            </div>
           </div>
         </div>
 

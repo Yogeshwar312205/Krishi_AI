@@ -13,6 +13,9 @@ import { CropWizard } from './components/CropWizard';
 import { RecommendationCards } from './components/RecommendationCards';
 import { MapView } from './components/MapView';
 import { DevTriggerBar } from './components/DevTriggerBar';
+import { DateVehicleBooking } from './components/DateVehicleBooking';
+import { DriverDashboard } from './components/DriverDashboard';
+import { BuyerDashboard } from './components/BuyerDashboard';
 
 import { useSocket } from './hooks/useSocket';
 import { useAppStore } from './store/useAppStore';
@@ -68,6 +71,15 @@ export function App() {
           {activeTab === 'price-alerts' && <PriceAlerts />}
           {activeTab === 'bookings' && <MyBookings />}
           {activeTab === 'auth' && <AuthPage />}
+
+          {/* UBER-LIKE DATE VEHICLE BOOKING FOR FARMERS */}
+          {activeTab === 'book-truck' && <DateVehicleBooking />}
+
+          {/* DRIVER SPECIFIC TABS */}
+          {(activeTab === 'driver-jobs' || activeTab === 'driver-vehicles') && <DriverDashboard />}
+
+          {/* BUYER SPECIFIC TABS */}
+          {(activeTab === 'buyer-postings' || activeTab === 'inbound-shipments') && <BuyerDashboard />}
 
           {/* LOGISTICS & VRP INTERACTIVE SECTION */}
           {activeTab === 'logistics' && (

@@ -13,7 +13,10 @@ import {
   UserCheck,
   User,
   Package,
-  Globe
+  Globe,
+  Layers,
+  Calendar,
+  ShieldCheck
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSocket } from '../hooks/useSocket';
@@ -29,23 +32,64 @@ export const Navbar = () => {
     cropDetails,
     setCropDetails,
     language,
-    setLanguage
+    setLanguage,
+    activeRole,
+    setActiveRole,
+    setAuth
   } = useAppStore();
   const { triggerDevTrafficJam } = useSocket();
 
   const t = (key) => getTranslation(language, key);
 
-  const navItems = [
-    { id: 'home', label: t('home'), icon: Home },
-    { id: 'forecasting', label: t('forecasting'), icon: TrendingUp },
-    { id: 'mandi-comparison', label: t('mandiComparison'), icon: Store },
-    { id: 'demand-analysis', label: t('demandAnalysis'), icon: BarChart3 },
-    { id: 'profitability', label: t('profitability'), icon: Calculator },
-    { id: 'price-alerts', label: t('priceAlerts'), icon: Bell },
-    { id: 'logistics', label: t('logistics'), icon: Truck },
-    { id: 'bookings', label: t('bookings'), icon: Package },
-    { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : t('farmerProfile')) : t('loginRegister'), icon: UserCheck },
-  ];
+  const handleRoleChange = (newRole) => {
+    setActiveRole(newRole);
+    setActiveTab('home'); // Reset to home dashboard on role switch
+    if (user) {
+      const demoNames = {
+        Farmer: 'Ramesh Singh (Farmer)',
+        Driver: 'Suresh Shinde (Transporter)',
+        'APMC Buyer': 'Rajesh Mehta (APMC Merchant)'
+      };
+      setAuth({ ...user, role: newRole, name: demoNames[newRole] || user.name }, localStorage.getItem('token') || 'demo-token');
+    }
+  };
+
+  // Determine effective role
+  const currentRole = activeRole || user?.role || 'Farmer';
+
+  // STRICT ROLE-BASED NAVIGATION ITEMS
+  let navItems = [];
+
+  if (currentRole === 'Farmer') {
+    navItems = [
+      { id: 'home', label: t('home'), icon: Home },
+      { id: 'forecasting', label: t('forecasting'), icon: TrendingUp },
+      { id: 'mandi-comparison', label: t('mandiComparison'), icon: Store },
+      { id: 'demand-analysis', label: t('demandAnalysis'), icon: BarChart3 },
+      { id: 'profitability', label: t('profitability'), icon: Calculator },
+      { id: 'price-alerts', label: t('priceAlerts'), icon: Bell },
+      { id: 'book-truck', label: 'Book Vehicle (Date)', icon: Calendar },
+      { id: 'bookings', label: t('bookings'), icon: Package },
+      { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : 'Profile') : 'Login', icon: UserCheck },
+    ];
+  } else if (currentRole === 'Driver' || currentRole === 'Transporter') {
+    navItems = [
+      { id: 'home', label: 'Driver Workstation', icon: Home },
+      { id: 'driver-jobs', label: 'Schedule Booking Requests', icon: Calendar },
+      { id: 'driver-vehicles', label: 'My Registered Vehicles', icon: Truck },
+      { id: 'logistics', label: 'Live VRP Navigation', icon: MapPinIcon },
+      { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : 'Driver Profile') : 'Login', icon: UserCheck },
+    ];
+  } else {
+    // APMC Buyer / Trader
+    navItems = [
+      { id: 'home', label: 'APMC Buyer Desk', icon: Home },
+      { id: 'buyer-postings', label: 'Post Buying Rates', icon: Store },
+      { id: 'inbound-shipments', label: 'Inbound Mandi Arrivals', icon: Truck },
+      { id: 'demand-analysis', label: 'Market Demand Metrics', icon: BarChart3 },
+      { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : 'Merchant Profile') : 'Login', icon: UserCheck },
+    ];
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-forest-100 bg-white/95 backdrop-blur-md shadow-sm">
@@ -70,62 +114,65 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* Global Language & Crop Quick Selector in Nav */}
-        <div className="hidden md:flex items-center space-x-3">
-          {/* Language Switcher */}
+        {/* Global Role Switcher, Language & Crop Quick Selector */}
+        <div className="hidden md:flex items-center space-x-2.5">
+          {/* Active Role Dashboard Quick Switcher */}
           <div className="flex items-center space-x-1.5 bg-forest-50 p-1.5 rounded-xl border border-forest-200 text-xs font-bold text-forest-900">
-            <Globe className="h-4 w-4 text-emerald-600 pl-1" />
+            <Layers className="h-4 w-4 text-forest-700 pl-0.5" />
+            <select
+              value={currentRole}
+              onChange={(e) => handleRoleChange(e.target.value)}
+              className="bg-white text-forest-900 border border-forest-200 rounded-lg px-2 py-1 font-extrabold shadow-2xs outline-none cursor-pointer hover:border-forest-400"
+            >
+              <option value="Farmer">🌾 Farmer View</option>
+              <option value="Driver">🚚 Driver / Transporter View</option>
+              <option value="APMC Buyer">🏛️ APMC Buyer View</option>
+            </select>
+          </div>
+
+          {/* Language Switcher */}
+          <div className="flex items-center space-x-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800">
+            <Globe className="h-4 w-4 text-emerald-600 pl-0.5" />
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="bg-white text-forest-900 border border-forest-200 rounded-lg px-2 py-1 font-bold shadow-2xs outline-none cursor-pointer hover:border-forest-400"
+              className="bg-white text-slate-800 border border-slate-200 rounded-lg px-2 py-1 font-bold shadow-2xs outline-none cursor-pointer hover:border-slate-400"
             >
               <option value="en">🌐 English</option>
-              <option value="hi">🇮🇳 हिन्दी (Hindi)</option>
-              <option value="mr">🚩 मराठी (Marathi)</option>
+              <option value="hi">🇮🇳 हिन्दी</option>
+              <option value="mr">🚩 मराठी</option>
             </select>
           </div>
 
           {/* Crop Selector */}
-          <div className="flex items-center space-x-2 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 text-xs font-semibold">
-            <span className="text-slate-500 pl-2">Crop:</span>
-            <select 
-              value={cropDetails.cropType}
-              onChange={(e) => setCropDetails({ cropType: e.target.value })}
-              className="bg-white text-forest-900 border border-slate-200 rounded-lg px-2.5 py-1 font-bold shadow-2xs outline-none cursor-pointer hover:border-forest-400"
-            >
-              {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* System Microservices Status */}
-        <div className="hidden lg:flex items-center space-x-2 text-xs">
-          <div className="flex items-center space-x-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-3 py-1 text-slate-700 font-semibold shadow-2xs">
-            <span className={`h-2 w-2 rounded-full ${backendStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-            <span>Node Core: <strong className="text-emerald-700">Online</strong></span>
-          </div>
-
-          <div className="flex items-center space-x-1.5 rounded-full bg-amber-50 border border-amber-200/80 px-3 py-1 text-slate-700 font-semibold shadow-2xs">
-            <span className={`h-2 w-2 rounded-full ${aiEngineStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-            <span>FastAPI AI: <strong className="text-amber-700">Ready</strong></span>
-          </div>
+          {currentRole === 'Farmer' && (
+            <div className="flex items-center space-x-2 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 text-xs font-semibold">
+              <span className="text-slate-500 pl-1">Crop:</span>
+              <select 
+                value={cropDetails.cropType}
+                onChange={(e) => setCropDetails({ cropType: e.target.value })}
+                className="bg-white text-forest-900 border border-slate-200 rounded-lg px-2 py-1 font-bold shadow-2xs outline-none cursor-pointer hover:border-forest-400"
+              >
+                {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center space-x-2">
-          {/* Mobile language button */}
+          {/* Mobile role select */}
           <div className="md:hidden flex items-center">
             <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              value={currentRole}
+              onChange={(e) => handleRoleChange(e.target.value)}
               className="bg-white text-forest-900 border border-slate-200 rounded-xl px-2 py-1 text-xs font-bold shadow-2xs outline-none"
             >
-              <option value="en">EN</option>
-              <option value="hi">HI</option>
-              <option value="mr">MR</option>
+              <option value="Farmer">🌾 Farmer</option>
+              <option value="Driver">🚚 Driver</option>
+              <option value="APMC Buyer">🏛️ Buyer</option>
             </select>
           </div>
 
@@ -147,13 +194,13 @@ export const Navbar = () => {
             }`}
           >
             {user ? <User className="h-4 w-4 text-emerald-700" /> : <UserCheck className="h-4 w-4" />}
-            <span>{user ? user.name || 'Farmer Profile' : 'Farmer Login'}</span>
+            <span>{user ? user.name || 'Profile' : 'Login'}</span>
           </button>
         </div>
 
       </div>
 
-      {/* Feature Navigation Subbar */}
+      {/* STRICT ROLE-BASED NAVIGATION SUBBAR */}
       <div className="bg-forest-900 text-white border-t border-forest-800">
         <div className="mx-auto flex max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-8 no-scrollbar">
           <nav className="flex space-x-1 sm:space-x-2 py-2">
@@ -181,3 +228,7 @@ export const Navbar = () => {
     </header>
   );
 };
+
+function MapPinIcon(props) {
+  return <Truck {...props} />;
+}

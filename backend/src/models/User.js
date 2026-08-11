@@ -26,7 +26,7 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['Farmer', 'Driver', 'Admin'],
+    enum: ['Farmer', 'Driver', 'Transporter', 'Trader', 'Buyer', 'APMC Buyer', 'Admin'],
     default: 'Farmer',
   },
   location: {

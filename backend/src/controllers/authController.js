@@ -55,11 +55,20 @@ const login = async (req, res) => {
     if (!user) {
       // Demo authentication fallback
       if (email && password) {
-        const token = generateToken('demo-usr-id', 'Farmer');
+        let demoRole = 'Farmer';
+        let demoName = 'Ramesh Singh';
+        if (email.includes('driver') || email.includes('transporter')) {
+          demoRole = 'Driver';
+          demoName = 'Suresh Shinde';
+        } else if (email.includes('buyer') || email.includes('trader') || email.includes('apmc')) {
+          demoRole = 'APMC Buyer';
+          demoName = 'Rajesh Mehta';
+        }
+        const token = generateToken('demo-usr-id', demoRole);
         return res.status(200).json({
           success: true,
           token,
-          user: { id: 'demo-usr-id', name: 'Demo Farmer', email, role: 'Farmer' }
+          user: { id: 'demo-usr-id', name: demoName, email, role: demoRole }
         });
       }
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
