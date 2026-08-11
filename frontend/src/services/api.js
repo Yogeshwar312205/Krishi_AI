@@ -67,6 +67,26 @@ export const loginUser = async (credentials) => {
   }
 };
 
+export const fetchLiveAgmarknetMarkets = async (crop = 'Tomato', state = '') => {
+  try {
+    const response = await apiClient.get(`/agmarknet/live-rates?crop=${encodeURIComponent(crop)}&state=${encodeURIComponent(state)}&limit=100`);
+    return response.data;
+  } catch (err) {
+    console.warn('Failed to fetch live Govt Agmarknet markets:', err);
+    return { success: false, records: [] };
+  }
+};
+
+export const fetchAllMarkets = async (crop = 'Tomato', state = '') => {
+  try {
+    const response = await apiClient.get(`/markets?crop=${encodeURIComponent(crop)}&state=${encodeURIComponent(state)}&limit=100`);
+    return response.data;
+  } catch (err) {
+    console.warn('Failed to fetch markets:', err);
+    return { success: false, markets: [] };
+  }
+};
+
 export const registerUser = async (userData) => {
   try {
     const response = await apiClient.post('/auth/register', userData);

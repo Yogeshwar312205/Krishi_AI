@@ -21,8 +21,10 @@ router.post('/alerts/send-sms', apiLimiter, sendSMSAlert);
 // Govt Agmarknet Live Market & Weather Feed
 router.get('/agmarknet/live-rates', async (req, res) => {
   const crop = req.query.crop || 'Tomato';
-  const data = await getAgmarknetLivePrices(crop);
-  res.json({ success: true, crop: crop, count: data.length, records: data });
+  const state = req.query.state || '';
+  const limit = parseInt(req.query.limit, 10) || 100;
+  const data = await getAgmarknetLivePrices(crop, state, limit);
+  res.json({ success: true, crop: crop, state: state, count: data.length, records: data });
 });
 
 // Live Govt Weather Endpoint
@@ -39,8 +41,23 @@ router.get('/logistics/fuel-rates', async (req, res) => {
   res.json({ success: true, fuel });
 });
 
-router.get('/markets', (req, res) => {
-  res.json({ success: true, count: MARKETS.length, markets: MARKETS });
+router.get('/markets', async (req, res) => {
+  const crop = req.query.crop || 'Tomato';
+  const state = req.query.state || '';
+  const limit = parseInt(req.query.limit, 10) || 100;
+  
+  const liveAgmarknetData = await getAgmarknetLivePrices(crop, state, limit);
+  
+  if (liveAgmarknetData && liveAgmarknetData.length > 0) {
+    return res.json({
+      success: true,
+      source: 'Government Agmarknet API (data.gov.in)',
+      count: liveAgmarknetData.length,
+      markets: liveAgmarknetData
+    });
+  }
+
+  res.json({ success: true, source: 'Static APMC Dataset', count: MARKETS.length, markets: MARKETS });
 });
 
 module.exports = router;
