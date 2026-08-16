@@ -14,6 +14,7 @@ import {
   Phone
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const NewBookingModal = ({ isOpen, onClose, initialData = {} }) => {
   const { addBooking, setActiveTab, cropDetails } = useAppStore();
@@ -103,7 +104,7 @@ export const NewBookingModal = ({ isOpen, onClose, initialData = {} }) => {
                 onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-forest-500 bg-white"
               >
-                {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                {CROP_OPTIONS.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>

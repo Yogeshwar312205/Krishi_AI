@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Calendar, ArrowUpRight, Award, ShieldCheck, Info, Sparkles, RefreshCw, Thermometer, Droplets, Gauge } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const PriceForecaster = () => {
   const { cropDetails, setCropDetails, setActiveTab } = useAppStore();
@@ -107,7 +108,7 @@ export const PriceForecaster = () => {
                 onChange={(e) => setCropDetails({ cropType: e.target.value })}
                 className="bg-forest-50 border border-forest-200 text-forest-900 rounded-xl px-3 py-1.5 font-bold text-sm outline-none cursor-pointer"
               >
-                {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                {CROP_OPTIONS.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>

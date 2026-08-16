@@ -14,6 +14,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const DateVehicleBooking = () => {
   const { 
@@ -156,7 +157,7 @@ export const DateVehicleBooking = () => {
                   onChange={(e) => setCropType(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-slate-200 font-bold bg-white"
                 >
-                  {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                  {CROP_OPTIONS.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>

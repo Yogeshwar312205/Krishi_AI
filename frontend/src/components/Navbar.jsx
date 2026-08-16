@@ -21,6 +21,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { useSocket } from '../hooks/useSocket';
 import { getTranslation } from '../utils/translations';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const Navbar = () => {
   const { 
@@ -153,7 +154,7 @@ export const Navbar = () => {
                 onChange={(e) => setCropDetails({ cropType: e.target.value })}
                 className="bg-white text-forest-900 border border-slate-200 rounded-lg px-2 py-1 font-bold shadow-2xs outline-none cursor-pointer hover:border-forest-400"
               >
-                {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                {CROP_OPTIONS.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>

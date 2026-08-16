@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calculator, ArrowRight, ShieldCheck, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const ProfitabilityEstimator = () => {
   const { cropDetails, setCropDetails } = useAppStore();
@@ -86,7 +87,7 @@ export const ProfitabilityEstimator = () => {
                 onChange={(e) => setCropDetails({ cropType: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-200 text-forest-900 rounded-xl px-3.5 py-2 font-bold text-sm outline-none focus:border-forest-500"
               >
-                {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                {CROP_OPTIONS.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>

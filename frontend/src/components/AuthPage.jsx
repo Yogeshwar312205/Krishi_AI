@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { loginUser, registerUser } from '../services/api';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const AuthPage = () => {
   const { user, setAuth, logout, setActiveTab, bookings } = useAppStore();
@@ -498,7 +499,7 @@ export const AuthPage = () => {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20 bg-white"
                   >
-                    {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                    {CROP_OPTIONS.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>

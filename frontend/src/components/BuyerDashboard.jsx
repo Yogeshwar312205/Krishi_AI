@@ -16,6 +16,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const BuyerDashboard = () => {
   const { 
@@ -154,7 +155,7 @@ export const BuyerDashboard = () => {
                     onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
                     className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-amber-500"
                   >
-                    {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                    {CROP_OPTIONS.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>

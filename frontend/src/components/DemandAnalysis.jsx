@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BarChart3, TrendingUp, Users, AlertCircle, ArrowUpRight, ShieldCheck, Flame, PieChart } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const DemandAnalysis = () => {
   const { cropDetails, setCropDetails } = useAppStore();
@@ -42,7 +43,7 @@ export const DemandAnalysis = () => {
             onChange={(e) => setCropDetails({ cropType: e.target.value })}
             className="bg-forest-800 text-white border border-forest-600 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
           >
-            {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+            {CROP_OPTIONS.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>

@@ -15,6 +15,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
 
 export const FarmerDashboard = () => {
   const { 
@@ -104,7 +105,7 @@ export const FarmerDashboard = () => {
                   onChange={(e) => setCropDetails({ cropType: e.target.value })}
                   className="w-full bg-slate-800 text-white text-[11px] font-bold rounded-lg px-2 py-1 border border-slate-700 outline-none mt-1 cursor-pointer"
                 >
-                  {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
+                  {CROP_OPTIONS.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
