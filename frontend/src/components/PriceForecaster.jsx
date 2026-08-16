@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Calendar, ArrowUpRight, Award, ShieldCheck, Info, Sparkles, RefreshCw, Thermometer, Droplets, Gauge, Wheat } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { fetchLiveAgmarknetMarkets } from '../services/api';
 import { CROP_OPTIONS } from '../utils/constants';
 import { Select } from './ui/Select';
 
@@ -11,21 +12,20 @@ export const PriceForecaster = () => {
   const [loadingGovt, setLoadingGovt] = useState(false);
 
   useEffect(() => {
-    const fetchLiveGovtRates = async () => {
+    // Ignore a resolved response if the crop changed while it was in flight,
+    // so a slow earlier request can't overwrite the newer crop's rates.
+    let cancelled = false;
+
+    const loadLiveGovtRates = async () => {
       setLoadingGovt(true);
-      try {
-        const res = await fetch(`/api/agmarknet/live-rates?crop=${cropDetails.cropType || 'Tomato'}`);
-        const data = await res.json();
-        if (data.records) {
-          setLiveGovtRecords(data.records);
-        }
-      } catch (err) {
-        console.log('Using local fallback for Govt rates stream');
-      } finally {
-        setLoadingGovt(false);
-      }
+      const data = await fetchLiveAgmarknetMarkets(cropDetails.cropType || 'Tomato');
+      if (cancelled) return;
+      setLiveGovtRecords(data.records || []);
+      setLoadingGovt(false);
     };
-    fetchLiveGovtRates();
+
+    loadLiveGovtRates();
+    return () => { cancelled = true; };
   }, [cropDetails.cropType]);
 
   // Dynamic price forecast generator based on selected crop

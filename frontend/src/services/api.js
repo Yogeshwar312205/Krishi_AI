@@ -99,6 +99,17 @@ export const fetchLiveAgmarknetMarkets = async (crop = 'Tomato', state = '') => 
   }
 };
 
+export const sendPriceAlertSms = async ({ phone, cropType, targetPrice, currentPrice, mandiName }) => {
+  try {
+    const response = await apiClient.post('/alerts/send-sms', {
+      phone, cropType, targetPrice, currentPrice, mandiName
+    });
+    return response.data;
+  } catch (err) {
+    throw toApiError(err, 'Could not send the alert SMS.');
+  }
+};
+
 export const fetchAllMarkets = async (crop = 'Tomato', state = '') => {
   try {
     const response = await apiClient.get('/markets', {

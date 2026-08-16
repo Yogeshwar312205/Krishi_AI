@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bell, Plus, CheckCircle2, AlertTriangle, Send, Phone, MessageSquare, Trash2, Zap, ShieldCheck, Wheat, Store } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { sendPriceAlertSms } from '../services/api';
 import { CROP_OPTIONS } from '../utils/constants';
 import { Select } from './ui/Select';
 
@@ -74,23 +75,23 @@ export const PriceAlerts = () => {
   };
 
   const triggerSimulatedAlert = async (alert) => {
+    const alertText = `"${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`;
     try {
-      // Call backend SMS gateway endpoint
-      const response = await fetch('/api/alerts/send-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: alert.phone,
-          cropType: alert.crop,
-          targetPrice: alert.targetPrice,
-          currentPrice: alert.currentPrice,
-          mandiName: alert.mandi
-        })
+      await sendPriceAlertSms({
+        phone: alert.phone,
+        cropType: alert.crop,
+        targetPrice: alert.targetPrice,
+        currentPrice: alert.currentPrice,
+        mandiName: alert.mandi
       });
-      const data = await response.json();
-      setSimulatedAlert(`SMS sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`);
+      setSimulatedAlert({ ok: true, text: `SMS sent to ${alert.phone}: ${alertText}` });
     } catch (err) {
-      setSimulatedAlert(`SMS sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`);
+      // Previously both branches claimed delivery, so a dead SMS gateway still
+      // reported success. Say what actually happened.
+      setSimulatedAlert({
+        ok: false,
+        text: `Could not send the SMS to ${alert.phone}. ${err.message}`
+      });
     }
 
     setAlerts(alerts.map(a => a.id === alert.id ? { ...a, status: 'TRIGGERED', currentPrice: alert.targetPrice, triggeredAt: 'Just now' } : a));
@@ -115,14 +116,23 @@ export const PriceAlerts = () => {
         </div>
       </div>
 
-      {/* Simulated Trigger Alert Banner */}
+      {/* Alert delivery result banner */}
       {simulatedAlert && (
-        <div className="p-4 rounded-2xl bg-emerald-600 text-white font-bold text-sm shadow-xl flex items-center justify-between animate-pulse">
+        <div
+          role="status"
+          className={`p-4 rounded-2xl text-white font-bold text-sm shadow-xl flex items-center justify-between gap-4 ${
+            simulatedAlert.ok ? 'bg-emerald-600' : 'bg-rose-600'
+          }`}
+        >
           <div className="flex items-center space-x-3">
-            <Zap className="h-5 w-5 fill-amber-300 text-amber-300" />
-            <span>{simulatedAlert}</span>
+            {simulatedAlert.ok
+              ? <Zap className="h-5 w-5 fill-amber-300 text-amber-300 shrink-0" />
+              : <AlertTriangle className="h-5 w-5 shrink-0" />}
+            <span>{simulatedAlert.text}</span>
           </div>
-          <span className="text-xs bg-white/20 px-2.5 py-1 rounded-md">SMS Delivered</span>
+          <span className="text-xs bg-white/20 px-2.5 py-1 rounded-md shrink-0 whitespace-nowrap">
+            {simulatedAlert.ok ? 'SMS Delivered' : 'Send Failed'}
+          </span>
         </div>
       )}
 
