@@ -58,6 +58,36 @@
   transform: translateY(-1px);
 }
 
+/*
+  Signature divider: a row of tilled-field furrows under section headings.
+  Used sparingly — one recurring motif rather than scattered decoration.
+*/
+.furrow-divider {
+  height: 1px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(24, 83, 43, 0.35) 0,
+    rgba(24, 83, 43, 0.35) 6px,
+    transparent 6px,
+    transparent 13px
+  );
+}
+
+.badge-turmeric {
+  background-color: rgba(224, 168, 58, 0.16);
+  color: #a4701c;
+  border: 1px solid rgba(224, 168, 58, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
