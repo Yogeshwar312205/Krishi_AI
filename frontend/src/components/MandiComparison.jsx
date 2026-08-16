@@ -450,7 +450,7 @@ export const MandiComparison = () => {
             <Globe className="h-3.5 w-3.5 text-emerald-300" />
             <span>Govt Agmarknet API Live Feed Connected</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-white">
             Mandi Price & Profit Comparison
           </h1>
           <p className="text-sm text-slate-300 font-medium">

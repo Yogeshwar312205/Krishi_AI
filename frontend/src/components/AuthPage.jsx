@@ -135,7 +135,7 @@ export const AuthPage = () => {
               </div>
               <div>
                 <div className="flex items-center space-x-2">
-                  <h2 className="text-xl sm:text-2xl font-black text-forest-900">{user.name}</h2>
+                  <h2 className="font-display text-xl sm:text-2xl font-semibold text-forest-900">{user.name}</h2>
                   <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
                     Active Farmer
                   </span>
@@ -271,7 +271,7 @@ export const AuthPage = () => {
           <ShieldCheck className="h-4 w-4 text-emerald-600" />
           <span>Secure Kisan AI Portal</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-forest-900 tracking-tight">
+        <h1 className="font-display text-3xl sm:text-4xl font-semibold text-forest-900 tracking-tight">
           Farmer Login & Registration
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-xl mx-auto">

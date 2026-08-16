@@ -71,7 +71,7 @@ export const PriceForecaster = () => {
               <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-spin-slow" />
               <span>Agmarknet & LSTM AI Engine V2 · Live Predictions</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white tracking-tight">
               AI Crop Price Forecasting
             </h1>
             <p className="text-sm text-slate-300 font-medium leading-relaxed">
