@@ -1,7 +1,21 @@
 import React, { useState } from 'react';
-import { Bell, Plus, CheckCircle2, AlertTriangle, Send, Phone, MessageSquare, Trash2, Zap, ShieldCheck } from 'lucide-react';
+import { Bell, Plus, CheckCircle2, AlertTriangle, Send, Phone, MessageSquare, Trash2, Zap, ShieldCheck, Wheat, Store } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
+
+const MANDI_OPTIONS = [
+  { value: 'Vashi Wholesale APMC (Mumbai)', label: 'Vashi Wholesale APMC (Mumbai)' },
+  { value: 'Nashik APMC Mandi', label: 'Nashik APMC Mandi' },
+  { value: 'Gultekdi APMC Market (Pune)', label: 'Gultekdi APMC Market (Pune)' },
+  { value: 'Surat APMC Hub', label: 'Surat APMC Hub' },
+];
+
+const CHANNEL_OPTIONS = [
+  { value: 'SMS & WhatsApp', label: 'SMS & WhatsApp' },
+  { value: 'WhatsApp Only', label: 'WhatsApp Only' },
+  { value: 'In-App Push Only', label: 'In-App Push Only' },
+];
 
 export const PriceAlerts = () => {
   const { cropDetails } = useAppStore();
@@ -74,9 +88,9 @@ export const PriceAlerts = () => {
         })
       });
       const data = await response.json();
-      setSimulatedAlert(`🔔 SMS Sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`);
+      setSimulatedAlert(`SMS sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`);
     } catch (err) {
-      setSimulatedAlert(`🔔 SMS Sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`);
+      setSimulatedAlert(`SMS sent to ${alert.phone}: "${alert.crop} price in ${alert.mandi} has reached ₹${alert.targetPrice}/kg!"`);
     }
 
     setAlerts(alerts.map(a => a.id === alert.id ? { ...a, status: 'TRIGGERED', currentPrice: alert.targetPrice, triggeredAt: 'Just now' } : a));
@@ -89,10 +103,10 @@ export const PriceAlerts = () => {
       <div className="bg-gradient-to-r from-forest-900 via-forest-800 to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-2 max-w-2xl">
           <div className="inline-flex items-center space-x-2 rounded-full bg-emerald-500/20 border border-emerald-400/30 px-3.5 py-1 text-xs font-bold text-emerald-300">
-            <Bell className="h-3.5 w-3.5 text-emerald-300 animate-bounce" />
+            <Bell className="h-3.5 w-3.5 text-emerald-300" />
             <span>Instant SMS & WhatsApp Price Alerts</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white tracking-tight">
             Market Price Alerts & Notifications
           </h1>
           <p className="text-sm text-slate-300 font-medium">
@@ -127,30 +141,27 @@ export const PriceAlerts = () => {
             {/* Commodity Select */}
             <div className="space-y-1">
               <label className="text-xs font-extrabold text-slate-700">Crop Commodity</label>
-              <select
+              <Select
+                icon={Wheat}
+                tone="slate"
                 value={newCrop}
                 onChange={(e) => setNewCrop(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-forest-900 rounded-xl px-3.5 py-2 font-bold text-sm outline-none focus:border-forest-500"
-              >
-                {CROP_OPTIONS.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+                className="w-full"
+              />
             </div>
 
             {/* Target Mandi */}
             <div className="space-y-1">
               <label className="text-xs font-extrabold text-slate-700">Target APMC Mandi</label>
-              <select
+              <Select
+                icon={Store}
+                tone="slate"
                 value={newMandi}
                 onChange={(e) => setNewMandi(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-forest-900 rounded-xl px-3.5 py-2 font-bold text-sm outline-none focus:border-forest-500"
-              >
-                <option value="Vashi Wholesale APMC (Mumbai)">Vashi Wholesale APMC (Mumbai)</option>
-                <option value="Nashik APMC Mandi">Nashik APMC Mandi</option>
-                <option value="Gultekdi APMC Market (Pune)">Gultekdi APMC Market (Pune)</option>
-                <option value="Surat APMC Hub">Surat APMC Hub</option>
-              </select>
+                options={MANDI_OPTIONS}
+                className="w-full"
+              />
             </div>
 
             {/* Target Price */}
@@ -167,15 +178,14 @@ export const PriceAlerts = () => {
             {/* Notification Channel */}
             <div className="space-y-1">
               <label className="text-xs font-extrabold text-slate-700">Notification Channel</label>
-              <select
+              <Select
+                icon={MessageSquare}
+                tone="slate"
                 value={newChannel}
                 onChange={(e) => setNewChannel(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-forest-900 rounded-xl px-3.5 py-2 font-bold text-sm outline-none focus:border-forest-500"
-              >
-                <option value="SMS & WhatsApp">SMS & WhatsApp</option>
-                <option value="WhatsApp Only">WhatsApp Only</option>
-                <option value="In-App Push Only">In-App Push Only</option>
-              </select>
+                options={CHANNEL_OPTIONS}
+                className="w-full"
+              />
             </div>
 
             {/* Farmer Phone */}

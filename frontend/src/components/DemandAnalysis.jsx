@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { BarChart3, TrendingUp, Users, AlertCircle, ArrowUpRight, ShieldCheck, Flame, PieChart } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, AlertCircle, ArrowUpRight, ShieldCheck, Flame, PieChart, Wheat } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
 
 export const DemandAnalysis = () => {
   const { cropDetails, setCropDetails } = useAppStore();
@@ -27,7 +28,7 @@ export const DemandAnalysis = () => {
             <BarChart3 className="h-3.5 w-3.5 text-emerald-300" />
             <span>Agmarknet & Retail Consumption Trends</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white tracking-tight">
             Demand Analysis & Market Trends
           </h1>
           <p className="text-sm text-slate-300 font-medium">
@@ -38,15 +39,13 @@ export const DemandAnalysis = () => {
         {/* Quick Crop Selector */}
         <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3.5 flex items-center space-x-3 text-xs font-bold">
           <span>Select Commodity:</span>
-          <select
+          <Select
+            icon={Wheat}
+            tone="dark"
             value={cropDetails.cropType}
             onChange={(e) => setCropDetails({ cropType: e.target.value })}
-            className="bg-forest-800 text-white border border-forest-600 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
-          >
-            {CROP_OPTIONS.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+            options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+          />
         </div>
       </div>
 

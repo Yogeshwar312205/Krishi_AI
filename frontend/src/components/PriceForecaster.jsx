@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Calendar, ArrowUpRight, Award, ShieldCheck, Info, Sparkles, RefreshCw, Thermometer, Droplets, Gauge } from 'lucide-react';
+import { TrendingUp, Calendar, ArrowUpRight, Award, ShieldCheck, Info, Sparkles, RefreshCw, Thermometer, Droplets, Gauge, Wheat } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
 
 export const PriceForecaster = () => {
   const { cropDetails, setCropDetails, setActiveTab } = useAppStore();
@@ -103,15 +104,13 @@ export const PriceForecaster = () => {
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div className="flex items-center space-x-3">
               <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Crop:</span>
-              <select
+              <Select
+                icon={Wheat}
+                tone="forest"
                 value={cropDetails.cropType}
                 onChange={(e) => setCropDetails({ cropType: e.target.value })}
-                className="bg-forest-50 border border-forest-200 text-forest-900 rounded-xl px-3 py-1.5 font-bold text-sm outline-none cursor-pointer"
-              >
-                {CROP_OPTIONS.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+              />
             </div>
 
             {/* Timeframe Toggle Buttons */}

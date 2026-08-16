@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Calculator, ArrowRight, ShieldCheck, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Calculator, ArrowRight, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Calendar, Sparkles, CheckCircle2, Wheat } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
 
 export const ProfitabilityEstimator = () => {
   const { cropDetails, setCropDetails } = useAppStore();
@@ -41,7 +42,7 @@ export const ProfitabilityEstimator = () => {
             <Calculator className="h-3.5 w-3.5 text-emerald-300" />
             <span>Financial Tradeoff & Spoilage Math Model</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white tracking-tight">
             Sell Today vs. Hold Calculator
           </h1>
           <p className="text-sm text-slate-300 font-medium">
@@ -55,10 +56,10 @@ export const ProfitabilityEstimator = () => {
             ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200' 
             : 'bg-rose-500/20 border-rose-400/40 text-rose-200'
         }`}>
-          <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-white font-black text-xl ${
+          <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-white ${
             isHoldProfitable ? 'bg-emerald-600' : 'bg-rose-600'
           }`}>
-            {isHoldProfitable ? '+$' : '-$'}
+            {isHoldProfitable ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-wider">Estimated Profit Gain</div>
@@ -82,15 +83,14 @@ export const ProfitabilityEstimator = () => {
             {/* Commodity Selector */}
             <div className="space-y-1.5">
               <label className="text-xs font-extrabold text-slate-700">Crop Commodity</label>
-              <select
+              <Select
+                icon={Wheat}
+                tone="slate"
                 value={cropDetails.cropType}
                 onChange={(e) => setCropDetails({ cropType: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 text-forest-900 rounded-xl px-3.5 py-2 font-bold text-sm outline-none focus:border-forest-500"
-              >
-                {CROP_OPTIONS.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+                className="w-full"
+              />
             </div>
 
             {/* Quantity Input */}
