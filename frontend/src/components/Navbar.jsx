@@ -105,8 +105,8 @@ export const Navbar = () => {
             <Sprout className="h-6 w-6 stroke-[2.4]" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-black tracking-tight text-forest-900 leading-none">
-              Krushi<span className="text-[#E67E22]">Flow</span>
+            <span className="font-display text-xl font-semibold tracking-tight text-forest-900 leading-none">
+              Krushi<span className="text-terracotta-500">Flow</span>
             </span>
             <span className="text-[10px] font-bold text-forest-600 tracking-wider uppercase mt-0.5">
               AI Market Intelligence

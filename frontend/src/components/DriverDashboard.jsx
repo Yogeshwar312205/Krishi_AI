@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  Truck, 
-  MapPin, 
-  Play, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Navigation, 
-  Thermometer, 
-  Zap, 
-  DollarSign, 
-  Clock, 
-  PhoneCall, 
+import React, { useState, Suspense, lazy } from 'react';
+import {
+  Truck,
+  MapPin,
+  Play,
+  AlertTriangle,
+  CheckCircle2,
+  Navigation,
+  Thermometer,
+  Zap,
+  DollarSign,
+  Clock,
+  PhoneCall,
   ShieldCheck,
   Plus,
   Calendar,
@@ -19,8 +19,10 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSocket } from '../hooks/useSocket';
-import { MapView } from './MapView';
 import { RegisterVehicleModal } from './RegisterVehicleModal';
+
+// Lazy-loaded: keeps Leaflet out of the initial bundle for farmer/buyer sessions.
+const MapView = lazy(() => import('./MapView').then((m) => ({ default: m.MapView })));
 
 export const DriverDashboard = () => {
   const { 
@@ -323,7 +325,9 @@ export const DriverDashboard = () => {
         {/* Map View Widget */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
-            <MapView />
+            <Suspense fallback={<div className="krushi-card h-full min-h-[320px] animate-pulse" />}>
+              <MapView />
+            </Suspense>
           </div>
 
           {/* Active Job Guidance Panel */}
