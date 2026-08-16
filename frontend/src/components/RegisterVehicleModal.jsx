@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Truck, Plus, CheckCircle2, ShieldCheck, Thermometer, MapPin } from 'lucide-react';
+import { Truck, Plus, CheckCircle2, ShieldCheck, Thermometer, MapPin, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 export const RegisterVehicleModal = ({ isOpen, onClose }) => {
-  const { addRegisteredVehicle } = useAppStore();
+  const { addRegisteredVehicle, user } = useAppStore();
 
+  // Prefill with the signed-in driver's own details; both stay editable.
   const [formData, setFormData] = useState({
-    driverName: 'Suresh Shinde',
-    driverPhone: '+91 98230 11223',
-    vehicleNo: 'MH 15 GH 8899',
+    driverName: user?.name || '',
+    driverPhone: user?.phone || '',
+    vehicleNo: '',
     vehicleType: 'Refrigerated Van',
     capacityKg: 3500,
     ratePerKm: 18,
@@ -57,11 +58,13 @@ export const RegisterVehicleModal = ({ isOpen, onClose }) => {
               <Truck className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900">Register Driver Vehicle Details</h3>
+              <h3 className="font-display text-base font-semibold text-slate-900">Register Driver Vehicle Details</h3>
               <p className="text-[11px] text-slate-500 font-medium">Add your truck specs to receive Uber-like date booking requests from farmers.</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
+          <button onClick={onClose} className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {submitted ? (
@@ -81,6 +84,7 @@ export const RegisterVehicleModal = ({ isOpen, onClose }) => {
                   type="text"
                   value={formData.driverName}
                   onChange={(e) => setFormData({ ...formData, driverName: e.target.value })}
+                  placeholder="e.g. Suresh Shinde"
                   required
                   className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-blue-500"
                 />
@@ -92,6 +96,7 @@ export const RegisterVehicleModal = ({ isOpen, onClose }) => {
                   type="text"
                   value={formData.driverPhone}
                   onChange={(e) => setFormData({ ...formData, driverPhone: e.target.value })}
+                  placeholder="+91 98230 11223"
                   required
                   className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-blue-500"
                 />

@@ -2,6 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { Store, MapPin, Truck, ArrowUpDown, CheckCircle2, ShieldAlert, Award, ChevronRight, Filter, Search, RotateCcw, RefreshCw, Globe, Sparkles } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { fetchAllMarkets } from '../services/api';
+import { Select } from './ui/Select';
+
+const DIVISION_OPTIONS = [
+  { value: 'ALL', label: 'All Maharashtra Regions (16 APMCs)' },
+  { value: 'Konkan', label: 'Konkan Division (Vashi / Mumbai / Ratnagiri)' },
+  { value: 'Nashik', label: 'Nashik Division (Nashik / Pimpalgaon / Jalgaon)' },
+  { value: 'Pune', label: 'Pune Division (Pune / Kolhapur / Sangli / Satara)' },
+  { value: 'Marathwada', label: 'Marathwada Division (Aurangabad / Latur / Nanded)' },
+  { value: 'Vidarbha', label: 'Vidarbha Division (Nagpur / Amravati)' },
+];
+
+const TRANSPORT_OPTIONS = [
+  { value: 'ALL', label: 'All Transport Types' },
+  { value: 'REFRIGERATED', label: 'Refrigerated Cold-Chain Vans' },
+  { value: 'NON_REFRIGERATED', label: 'Non-Refrigerated Bulk Trucks' },
+];
+
+const DISTANCE_OPTIONS = [
+  { value: 'ALL', label: 'All Distance Ranges' },
+  { value: '100', label: 'Within 100 km (Local Mandis)' },
+  { value: '250', label: 'Within 250 km (Regional Hubs)' },
+  { value: '500', label: 'Within 500 km (Statewide Mandis)' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'netProfit', label: 'Highest Net Profit (₹)' },
+  { value: 'price', label: 'Highest Mandi Price (₹/kg)' },
+  { value: 'distance', label: 'Nearest Distance (km)' },
+];
 
 export const MandiComparison = () => {
   const { cropDetails, recommendations, setSelectedRecommendation, setActiveTab } = useAppStore();
@@ -450,7 +479,7 @@ export const MandiComparison = () => {
             <Globe className="h-3.5 w-3.5 text-emerald-300" />
             <span>Govt Agmarknet API Live Feed Connected</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-white">
             Mandi Price & Profit Comparison
           </h1>
           <p className="text-sm text-slate-300 font-medium">
@@ -516,61 +545,53 @@ export const MandiComparison = () => {
           {/* 1. Administrative Division Filter */}
           <div className="space-y-1">
             <label className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Region Division</label>
-            <select
+            <Select
+              icon={MapPin}
+              tone="slate"
               value={divisionFilter}
               onChange={(e) => setDivisionFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-forest-900 rounded-xl px-3 py-2 outline-none focus:border-forest-600 cursor-pointer"
-            >
-              <option value="ALL">All Maharashtra Regions (16 APMCs)</option>
-              <option value="Konkan">Konkan Division (Vashi / Mumbai / Ratnagiri)</option>
-              <option value="Nashik">Nashik Division (Nashik / Pimpalgaon / Jalgaon)</option>
-              <option value="Pune">Pune Division (Pune / Kolhapur / Sangli / Satara)</option>
-              <option value="Marathwada">Marathwada Division (Aurangabad / Latur / Nanded)</option>
-              <option value="Vidarbha">Vidarbha Division (Nagpur / Amravati)</option>
-            </select>
+              options={DIVISION_OPTIONS}
+              className="w-full"
+            />
           </div>
 
           {/* 2. Cold Chain Logistics Filter */}
           <div className="space-y-1">
             <label className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Logistics Transport</label>
-            <select
+            <Select
+              icon={Truck}
+              tone="slate"
               value={refrigeratedFilter}
               onChange={(e) => setRefrigeratedFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-forest-900 rounded-xl px-3 py-2 outline-none focus:border-forest-600 cursor-pointer"
-            >
-              <option value="ALL">All Transport Types</option>
-              <option value="REFRIGERATED">Refrigerated Cold-Chain Vans</option>
-              <option value="NON_REFRIGERATED">Non-Refrigerated Bulk Trucks</option>
-            </select>
+              options={TRANSPORT_OPTIONS}
+              className="w-full"
+            />
           </div>
 
           {/* 3. Radius Distance Filter */}
           <div className="space-y-1">
             <label className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Distance Radius</label>
-            <select
+            <Select
+              icon={Filter}
+              tone="slate"
               value={maxDistanceFilter}
               onChange={(e) => setMaxDistanceFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-forest-900 rounded-xl px-3 py-2 outline-none focus:border-forest-600 cursor-pointer"
-            >
-              <option value="ALL">All Distance Ranges</option>
-              <option value="100">Within 100 km (Local Mandis)</option>
-              <option value="250">Within 250 km (Regional Hubs)</option>
-              <option value="500">Within 500 km (Statewide Mandis)</option>
-            </select>
+              options={DISTANCE_OPTIONS}
+              className="w-full"
+            />
           </div>
 
           {/* 4. Sort By Criterion */}
           <div className="space-y-1">
             <label className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Sort Metric</label>
-            <select
+            <Select
+              icon={ArrowUpDown}
+              tone="dark"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full bg-forest-800 text-white border border-forest-600 rounded-xl px-3 py-2 outline-none cursor-pointer"
-            >
-              <option value="netProfit">Highest Net Profit (₹)</option>
-              <option value="price">Highest Mandi Price (₹/kg)</option>
-              <option value="distance">Nearest Distance (km)</option>
-            </select>
+              options={SORT_OPTIONS}
+              className="w-full"
+            />
           </div>
 
         </div>
@@ -608,12 +629,16 @@ export const MandiComparison = () => {
           return (
             <div
               key={mkt.id || mkt.marketId}
-              className={`krushi-card bg-white border rounded-3xl p-5 space-y-4 relative flex flex-col justify-between transition-all duration-300 ${
-                isBest 
-                  ? 'border-emerald-400 shadow-2xl ring-2 ring-emerald-400/50 bg-gradient-to-b from-emerald-50/50 to-white' 
-                  : 'border-forest-100 shadow-md hover:shadow-xl'
+              className={`krushi-card krushi-card-hover overflow-hidden bg-white border rounded-3xl p-5 space-y-4 relative flex flex-col justify-between ${
+                isBest
+                  ? 'border-emerald-400 shadow-2xl ring-2 ring-emerald-400/50 bg-gradient-to-b from-emerald-50/50 to-white'
+                  : 'border-forest-100 shadow-md'
               }`}
             >
+              {isBest && (
+                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-terracotta-400 via-turmeric-400 to-terracotta-400" />
+              )}
+
               {/* Top Badge */}
               <div className="flex items-center justify-between">
                 <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full ${
@@ -628,7 +653,7 @@ export const MandiComparison = () => {
 
               {/* Mandi Name & City */}
               <div>
-                <h3 className="text-lg font-black text-forest-900 tracking-tight leading-snug">
+                <h3 className="font-display text-lg font-semibold text-forest-900 tracking-tight leading-snug">
                   {mkt.name}
                 </h3>
                 <div className="flex items-center space-x-1 text-xs text-slate-500 font-bold mt-0.5">

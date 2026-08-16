@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Package, Calendar, Thermometer, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { MapPin, Package, Calendar, Thermometer, Sparkles, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { submitOptimization } from '../services/api';
 
@@ -11,9 +11,10 @@ const FARM_PRESETS = [
 ];
 
 export const CropWizard = () => {
-  const { cropDetails, setCropDetails, farmerOrigin, setFarmerOrigin, setRecommendations } = useAppStore();
+  const { user, cropDetails, setCropDetails, farmerOrigin, farmerAddress, setFarmerOrigin, setRecommendations } = useAppStore();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handlePresetSelect = (preset) => {
     setFarmerOrigin(preset.coords, preset.name);
@@ -22,12 +23,14 @@ export const CropWizard = () => {
   const handleOptimizeSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg('');
     try {
       const payload = {
-        farmerName: 'Ramesh Singh',
-        farmerPhone: '+91 98765 43210',
+        // Attribute the request to the signed-in farmer.
+        farmerName: user?.name || 'Guest Farmer',
+        farmerPhone: user?.phone || '',
         farmLocation: {
-          address: useAppStore.getState().farmerAddress,
+          address: farmerAddress,
           coordinates: farmerOrigin
         },
         cropDetails: cropDetails
@@ -37,7 +40,8 @@ export const CropWizard = () => {
       setRecommendations(result);
       setStep(3);
     } catch (err) {
-      console.error('Optimization error:', err);
+      // Surface the failure instead of leaving the wizard silently stuck on step 2.
+      setErrorMsg(err.message || 'Could not reach the routing engine. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -200,6 +204,16 @@ export const CropWizard = () => {
                 )}
               </button>
             </div>
+
+            {errorMsg && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
           </div>
         )}
 

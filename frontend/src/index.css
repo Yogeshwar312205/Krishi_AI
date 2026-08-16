@@ -58,6 +58,74 @@
   transform: translateY(-1px);
 }
 
+/*
+  Signature divider: a row of tilled-field furrows under section headings.
+  Used sparingly — one recurring motif rather than scattered decoration.
+*/
+.furrow-divider {
+  height: 1px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(24, 83, 43, 0.35) 0,
+    rgba(24, 83, 43, 0.35) 6px,
+    transparent 6px,
+    transparent 13px
+  );
+}
+
+.badge-turmeric {
+  background-color: rgba(224, 168, 58, 0.16);
+  color: #a4701c;
+  border: 1px solid rgba(224, 168, 58, 0.4);
+}
+
+/*
+  Devanagari sits on a taller body with stacked matras above and below the
+  shirorekha, so the tight Latin leading/tracking clips it. Loosen both when
+  the document is in Hindi or Marathi.
+*/
+:root:lang(hi) body,
+:root:lang(mr) body {
+  line-height: 1.7;
+}
+
+:lang(hi) .font-display,
+:lang(mr) .font-display {
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+/* Devanagari has no uppercase; faux-uppercasing just mangles the glyphs. */
+:lang(hi) .uppercase,
+:lang(mr) .uppercase {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+@keyframes section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-enter {
+  animation: section-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

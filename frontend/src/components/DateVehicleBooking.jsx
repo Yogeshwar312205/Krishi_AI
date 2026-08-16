@@ -1,26 +1,38 @@
 import React, { useState } from 'react';
-import { 
-  Calendar, 
-  Clock, 
-  Truck, 
-  MapPin, 
-  CheckCircle2, 
-  ShieldCheck, 
-  Thermometer, 
+import {
+  Calendar,
+  Clock,
+  Truck,
+  MapPin,
+  CheckCircle2,
+  ShieldCheck,
+  Thermometer,
   ArrowRight,
   Sparkles,
   Zap,
   PhoneCall,
-  UserCheck
+  UserCheck,
+  Wheat
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
+
+const TIME_SLOT_OPTIONS = [
+  { value: 'Morning (06:00 AM - 10:00 AM)', label: 'Morning (06:00 AM - 10:00 AM)' },
+  { value: 'Afternoon (01:00 PM - 05:00 PM)', label: 'Afternoon (01:00 PM - 05:00 PM)' },
+  { value: 'Night Dispatch (09:00 PM - 01:00 AM)', label: 'Night Dispatch (09:00 PM - 01:00 AM)' },
+  { value: 'Full Day Dedicated Rental', label: 'Full Day Dedicated Rental' },
+];
 
 export const DateVehicleBooking = () => {
-  const { 
-    registeredVehicles, 
-    dateBookings, 
+  const {
+    user,
+    registeredVehicles,
+    dateBookings,
     createDateBooking,
     cropDetails,
+    farmerAddress,
     setActiveTab
   } = useAppStore();
 
@@ -30,7 +42,7 @@ export const DateVehicleBooking = () => {
   const [timeSlot, setTimeSlot] = useState('Morning (06:00 AM - 10:00 AM)');
   const [cropType, setCropType] = useState(cropDetails.cropType || 'Tomato');
   const [quantityKg, setQuantityKg] = useState(cropDetails.quantityKg || 2500);
-  const [origin, setOrigin] = useState('Nashik Farm HQ, Maharashtra');
+  const [origin, setOrigin] = useState(farmerAddress || 'Nashik Farm HQ, Maharashtra');
   const [destination, setDestination] = useState('Vashi Wholesale APMC, Navi Mumbai');
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(registeredVehicles[0]?.id || 'VEH-101');
@@ -47,8 +59,8 @@ export const DateVehicleBooking = () => {
     
     const newBooking = {
       id: 'UBER-' + Math.floor(500 + Math.random() * 500),
-      farmerName: 'Ramesh Singh',
-      farmerPhone: '+91 98765 43210',
+      farmerName: user?.name || 'Guest Farmer',
+      farmerPhone: user?.phone || '',
       pickupDate,
       timeSlot,
       cropType,
@@ -84,7 +96,7 @@ export const DateVehicleBooking = () => {
           <span>On-Demand Agri Logistics • Date-Based Truck Dispatch</span>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+        <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
           Book Cold-Chain Transport for Specific Harvest Dates
         </h1>
 
@@ -136,30 +148,27 @@ export const DateVehicleBooking = () => {
               <label className="font-extrabold text-slate-700 block uppercase tracking-wider">
                 Time Window / Slot
               </label>
-              <select
+              <Select
+                icon={Clock}
+                tone="slate"
                 value={timeSlot}
                 onChange={(e) => setTimeSlot(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-200 font-bold bg-white focus:outline-none focus:border-forest-500"
-              >
-                <option value="Morning (06:00 AM - 10:00 AM)">Morning (06:00 AM - 10:00 AM)</option>
-                <option value="Afternoon (01:00 PM - 05:00 PM)">Afternoon (01:00 PM - 05:00 PM)</option>
-                <option value="Night Dispatch (09:00 PM - 01:00 AM)">Night Dispatch (09:00 PM - 01:00 AM)</option>
-                <option value="Full Day Dedicated Rental">Full Day Dedicated Rental</option>
-              </select>
+                options={TIME_SLOT_OPTIONS}
+                className="w-full"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-bold text-slate-700 block">Crop Type</label>
-                <select
+                <Select
+                  icon={Wheat}
+                  tone="slate"
                   value={cropType}
                   onChange={(e) => setCropType(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 font-bold bg-white"
-                >
-                  {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+                  className="w-full"
+                />
               </div>
 
               <div className="space-y-1">
@@ -302,7 +311,9 @@ export const DateVehicleBooking = () => {
                           : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                       }`}
                     >
-                      {isSelected ? '✓ Selected' : 'Select Truck'}
+                      {isSelected ? (
+                        <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Selected</span>
+                      ) : 'Select Truck'}
                     </button>
                   </div>
                 </div>
@@ -354,7 +365,7 @@ export const DateVehicleBooking = () => {
                 <div>Time Slot: <span className="text-amber-300 font-bold">{b.timeSlot}</span></div>
                 <div>Crop: {b.cropType} ({b.quantityKg} kg)</div>
                 <div>Driver: <strong className="text-white">{b.driverName}</strong> ({b.driverPhone}) • Vehicle: {b.vehicleNo}</div>
-                <div>From: {b.origin} ➔ To: <strong className="text-emerald-300">{b.destination}</strong></div>
+                <div className="flex items-center gap-1">From: {b.origin} <ArrowRight className="h-3 w-3 inline text-slate-500" /> To: <strong className="text-emerald-300">{b.destination}</strong></div>
               </div>
 
               <div className="pt-2 border-t border-white/10 flex items-center justify-between">

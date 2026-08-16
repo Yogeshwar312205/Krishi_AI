@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Calendar, ArrowUpRight, Award, ShieldCheck, Info, Sparkles, RefreshCw, Thermometer, Droplets, Gauge } from 'lucide-react';
+import { TrendingUp, Calendar, ArrowUpRight, Award, ShieldCheck, Info, Sparkles, RefreshCw, Thermometer, Droplets, Gauge, Wheat } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { fetchLiveAgmarknetMarkets } from '../services/api';
+import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
 
 export const PriceForecaster = () => {
   const { cropDetails, setCropDetails, setActiveTab } = useAppStore();
@@ -9,21 +12,20 @@ export const PriceForecaster = () => {
   const [loadingGovt, setLoadingGovt] = useState(false);
 
   useEffect(() => {
-    const fetchLiveGovtRates = async () => {
+    // Ignore a resolved response if the crop changed while it was in flight,
+    // so a slow earlier request can't overwrite the newer crop's rates.
+    let cancelled = false;
+
+    const loadLiveGovtRates = async () => {
       setLoadingGovt(true);
-      try {
-        const res = await fetch(`/api/agmarknet/live-rates?crop=${cropDetails.cropType || 'Tomato'}`);
-        const data = await res.json();
-        if (data.records) {
-          setLiveGovtRecords(data.records);
-        }
-      } catch (err) {
-        console.log('Using local fallback for Govt rates stream');
-      } finally {
-        setLoadingGovt(false);
-      }
+      const data = await fetchLiveAgmarknetMarkets(cropDetails.cropType || 'Tomato');
+      if (cancelled) return;
+      setLiveGovtRecords(data.records || []);
+      setLoadingGovt(false);
     };
-    fetchLiveGovtRates();
+
+    loadLiveGovtRates();
+    return () => { cancelled = true; };
   }, [cropDetails.cropType]);
 
   // Dynamic price forecast generator based on selected crop
@@ -71,7 +73,7 @@ export const PriceForecaster = () => {
               <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-spin-slow" />
               <span>Agmarknet & LSTM AI Engine V2 · Live Predictions</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white tracking-tight">
               AI Crop Price Forecasting
             </h1>
             <p className="text-sm text-slate-300 font-medium leading-relaxed">
@@ -102,15 +104,13 @@ export const PriceForecaster = () => {
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div className="flex items-center space-x-3">
               <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Crop:</span>
-              <select
+              <Select
+                icon={Wheat}
+                tone="forest"
                 value={cropDetails.cropType}
                 onChange={(e) => setCropDetails({ cropType: e.target.value })}
-                className="bg-forest-50 border border-forest-200 text-forest-900 rounded-xl px-3 py-1.5 font-bold text-sm outline-none cursor-pointer"
-              >
-                {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+              />
             </div>
 
             {/* Timeframe Toggle Buttons */}

@@ -1,19 +1,30 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Truck, 
-  MapPin, 
-  Sprout, 
-  Thermometer, 
-  Calendar, 
-  DollarSign, 
-  CheckCircle2, 
-  ShieldCheck, 
+import {
+  X,
+  Truck,
+  MapPin,
+  Sprout,
+  Thermometer,
+  Calendar,
+  DollarSign,
+  CheckCircle2,
+  ShieldCheck,
   ArrowRight,
   User,
-  Phone
+  Phone,
+  Wheat,
+  Store
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
+
+const DESTINATION_OPTIONS = [
+  { value: 'Vashi Wholesale APMC', label: 'Vashi Wholesale APMC (High Return)' },
+  { value: 'Mumbai Central APMC', label: 'Mumbai Central APMC' },
+  { value: 'Pune Wholesale Mandi', label: 'Pune Wholesale Mandi' },
+  { value: 'Nagpur APMC Hub', label: 'Nagpur APMC Hub' },
+];
 
 export const NewBookingModal = ({ isOpen, onClose, initialData = {} }) => {
   const { addBooking, setActiveTab, cropDetails } = useAppStore();
@@ -78,7 +89,7 @@ export const NewBookingModal = ({ isOpen, onClose, initialData = {} }) => {
               <Truck className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-forest-900">Book Cold-Chain Vehicle</h3>
+              <h3 className="font-display text-lg font-semibold text-forest-900">Book Cold-Chain Vehicle</h3>
               <p className="text-xs text-slate-500 font-semibold">VRP Optimized Dispatch & APMC Market Route</p>
             </div>
           </div>
@@ -98,15 +109,14 @@ export const NewBookingModal = ({ isOpen, onClose, initialData = {} }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-slate-700 font-bold block">Crop Type</label>
-              <select
+              <Select
+                icon={Wheat}
+                tone="slate"
                 value={formData.cropType}
                 onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-forest-500 bg-white"
-              >
-                {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+                className="w-full"
+              />
             </div>
 
             <div className="space-y-1">
@@ -140,16 +150,14 @@ export const NewBookingModal = ({ isOpen, onClose, initialData = {} }) => {
 
             <div className="space-y-1">
               <label className="text-slate-700 font-bold block">Destination APMC Mandi</label>
-              <select
+              <Select
+                icon={Store}
+                tone="slate"
                 value={formData.destination}
                 onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-forest-500 bg-white"
-              >
-                <option value="Vashi Wholesale APMC">Vashi Wholesale APMC (High Return)</option>
-                <option value="Mumbai Central APMC">Mumbai Central APMC</option>
-                <option value="Pune Wholesale Mandi">Pune Wholesale Mandi</option>
-                <option value="Nagpur APMC Hub">Nagpur APMC Hub</option>
-              </select>
+                options={DESTINATION_OPTIONS}
+                className="w-full"
+              />
             </div>
           </div>
 

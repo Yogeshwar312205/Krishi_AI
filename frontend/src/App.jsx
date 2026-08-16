@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { Navbar } from './components/Navbar';
 import { HomePage } from './components/HomePage';
 import { PriceForecaster } from './components/PriceForecaster';
@@ -8,14 +8,17 @@ import { ProfitabilityEstimator } from './components/ProfitabilityEstimator';
 import { PriceAlerts } from './components/PriceAlerts';
 import { AuthPage } from './components/AuthPage';
 import { MyBookings } from './components/MyBookings';
-import { KisanVoiceBot } from './components/KisanVoiceBot';
 import { CropWizard } from './components/CropWizard';
 import { RecommendationCards } from './components/RecommendationCards';
-import { MapView } from './components/MapView';
 import { DevTriggerBar } from './components/DevTriggerBar';
 import { DateVehicleBooking } from './components/DateVehicleBooking';
 import { DriverDashboard } from './components/DriverDashboard';
 import { BuyerDashboard } from './components/BuyerDashboard';
+
+// Lazy-loaded: both pull in heavy dependencies (Leaflet, socket audio) that
+// most sessions never touch (only the logistics tab / voice assistant).
+const MapView = lazy(() => import('./components/MapView').then((m) => ({ default: m.MapView })));
+const KisanVoiceBot = lazy(() => import('./components/KisanVoiceBot').then((m) => ({ default: m.KisanVoiceBot })));
 
 import { useSocket } from './hooks/useSocket';
 import { useAppStore } from './store/useAppStore';
@@ -27,31 +30,37 @@ export function App() {
   const { startVehicleSimulation } = useSocket();
 
   useEffect(() => {
-    const loadHealth = async () => {
-      const health = await fetchHealthStatus();
-      setSystemHealth(health);
-    };
-    loadHealth();
+    // Guards against applying responses after unmount (e.g. React 18 StrictMode's
+    // double-invoked effects in development).
+    let cancelled = false;
 
-    const loadInitialOptimization = async () => {
+    const bootstrap = async () => {
+      const health = await fetchHealthStatus();
+      if (!cancelled) setSystemHealth(health);
+
+      // Warm the recommendations panel with the current farmer's own details.
+      const { user, farmerOrigin, farmerAddress, cropDetails } = useAppStore.getState();
       try {
-        const payload = {
-          farmerName: 'Ramesh Singh',
-          farmerPhone: '+91 98765 43210',
-          farmLocation: { address: 'Nashik Farm HQ', coordinates: [73.7898, 19.9975] },
-          cropDetails: { cropType: 'Tomato', quantityKg: 2500, temperatureSensitivity: 'High' }
-        };
-        const initialResult = await submitOptimization(payload);
-        setRecommendations(initialResult);
+        const initialResult = await submitOptimization({
+          farmerName: user?.name || 'Guest Farmer',
+          farmerPhone: user?.phone || '',
+          farmLocation: { address: farmerAddress, coordinates: farmerOrigin },
+          cropDetails
+        });
+        if (!cancelled) setRecommendations(initialResult);
       } catch (err) {
-        console.log('Initial optimization loaded');
+        // Non-fatal: the dashboards render from seeded state until the engine
+        // is reachable. Log the real reason rather than a false success.
+        console.warn('Initial optimization unavailable:', err.message);
       }
     };
-    loadInitialOptimization();
-  }, []);
+
+    bootstrap();
+    return () => { cancelled = true; };
+  }, [setSystemHealth, setRecommendations]);
 
   return (
-    <div className="min-h-screen bg-[#edf8ef] bg-dot-pattern text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="min-h-screen bg-[#edf8ef] bg-dot-pattern text-slate-800 flex flex-col font-sans">
       {/* Navigation Header */}
       <Navbar />
 
@@ -62,7 +71,7 @@ export function App() {
         <DevTriggerBar />
 
         {/* FEATURE CONTAINER DRIVEN BY ACTIVE NAVIGATION TAB */}
-        <section className="space-y-6">
+        <section key={activeTab} className="space-y-6 section-enter">
           {activeTab === 'home' && <HomePage />}
           {activeTab === 'forecasting' && <PriceForecaster />}
           {activeTab === 'mandi-comparison' && <MandiComparison />}
@@ -84,23 +93,26 @@ export function App() {
           {/* LOGISTICS & VRP INTERACTIVE SECTION */}
           {activeTab === 'logistics' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-forest-200/80 pb-4">
-                <div>
-                  <h2 className="text-2xl font-black text-forest-900 tracking-tight">
-                    Live VRP Logistics & Vehicle Rerouting
-                  </h2>
-                  <p className="text-xs text-slate-600 font-medium">
-                    Input crop details to calculate 2dsphere vehicle matching and optimal market routes.
-                  </p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-display text-2xl font-semibold text-forest-900 tracking-tight">
+                      Live VRP Logistics & Vehicle Rerouting
+                    </h2>
+                    <p className="text-xs text-slate-600 font-medium">
+                      Input crop details to calculate 2dsphere vehicle matching and optimal market routes.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={startVehicleSimulation}
+                    className="btn-forest-primary px-5 py-2.5 text-xs flex items-center gap-1.5"
+                  >
+                    <Play className="h-3.5 w-3.5 fill-white" />
+                    <span>Simulate Live Truck Movement</span>
+                  </button>
                 </div>
-                
-                <button
-                  onClick={startVehicleSimulation}
-                  className="btn-forest-primary px-5 py-2.5 text-xs flex items-center gap-1.5"
-                >
-                  <Play className="h-3.5 w-3.5 fill-white" />
-                  <span>Simulate Live Truck Movement</span>
-                </button>
+                <div className="furrow-divider" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -109,7 +121,9 @@ export function App() {
                 </div>
 
                 <div className="lg:col-span-7">
-                  <MapView />
+                  <Suspense fallback={<div className="krushi-card h-full min-h-[320px] animate-pulse" />}>
+                    <MapView />
+                  </Suspense>
                 </div>
               </div>
 
@@ -124,10 +138,14 @@ export function App() {
 
       {/* Clean Footer */}
       <footer className="border-t border-forest-200/80 bg-white py-6 text-center text-xs text-slate-500 font-semibold mt-12">
-        KrishiFlow © 2026 — Intelligent Crop Price Prediction & Market Insights Platform
+        <span className="font-display italic font-medium text-forest-800/80">KrishiFlow</span>
+        <span className="mx-1.5 text-terracotta-400">·</span>
+        © 2026 — Intelligent Crop Price Prediction & Market Insights Platform
       </footer>
       {/* Floating Kisan Voice AI Assistant */}
-      <KisanVoiceBot />
+      <Suspense fallback={null}>
+        <KisanVoiceBot />
+      </Suspense>
     </div>
   );
 }

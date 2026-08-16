@@ -1,33 +1,38 @@
-import React, { useState } from 'react';
-import { 
-  Truck, 
-  MapPin, 
-  Play, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Navigation, 
-  Thermometer, 
-  Zap, 
-  DollarSign, 
-  Clock, 
-  PhoneCall, 
+import React, { useState, Suspense, lazy } from 'react';
+import {
+  Truck,
+  MapPin,
+  Play,
+  AlertTriangle,
+  CheckCircle2,
+  Navigation,
+  Thermometer,
+  Zap,
+  DollarSign,
+  Clock,
+  PhoneCall,
   ShieldCheck,
   Plus,
   Calendar,
   Layers,
-  XCircle
+  XCircle,
+  Star,
+  ArrowRight
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSocket } from '../hooks/useSocket';
-import { MapView } from './MapView';
 import { RegisterVehicleModal } from './RegisterVehicleModal';
 
+// Lazy-loaded: keeps Leaflet out of the initial bundle for farmer/buyer sessions.
+const MapView = lazy(() => import('./MapView').then((m) => ({ default: m.MapView })));
+
 export const DriverDashboard = () => {
-  const { 
-    driverJobs, 
-    updateDriverJobStatus, 
-    trackedVehicle, 
-    trafficAlert, 
+  const {
+    user,
+    driverJobs,
+    updateDriverJobStatus,
+    trackedVehicle,
+    trafficAlert,
     clearTrafficAlert,
     registeredVehicles,
     dateBookings,
@@ -35,6 +40,11 @@ export const DriverDashboard = () => {
   } = useAppStore();
 
   const { startVehicleSimulation, triggerDevTrafficJam } = useSocket();
+
+  // Header reflects the signed-in driver and their own primary vehicle rather
+  // than a fixed demo identity.
+  const driverName = user?.name || 'Driver';
+  const primaryVehicle = registeredVehicles[0];
 
   const [isOnDuty, setIsOnDuty] = useState(true);
   const [activeJobId, setActiveJobId] = useState('JOB-301');
@@ -70,17 +80,24 @@ export const DriverDashboard = () => {
 
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-2xl font-black text-white">Suresh Shinde</h1>
+                <h1 className="font-display text-2xl font-semibold text-white">{driverName}</h1>
                 <span className="text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2.5 py-0.5 rounded-full">
                   Cold-Chain Fleet Transporter
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-medium mt-0.5">
-                Primary Truck: <strong className="text-white">MH 15 GH 4921</strong> (Refrigerated Van • 3.5 Ton)
+                {primaryVehicle ? (
+                  <>
+                    Primary Truck: <strong className="text-white">{primaryVehicle.vehicleNo}</strong>{' '}
+                    ({primaryVehicle.vehicleType} • {(primaryVehicle.capacityKg / 1000).toFixed(1)} Ton)
+                  </>
+                ) : (
+                  <>No vehicle registered yet — add one to start receiving bookings.</>
+                )}
               </p>
-              <div className="flex items-center space-x-3 text-xs text-slate-400 font-medium mt-1">
-                <span>📍 Base: Nashik Logistics Hub</span>
-                <span>⭐ Rating: 4.9 (142 Trips)</span>
+              <div className="flex items-center space-x-4 text-xs text-slate-400 font-medium mt-1">
+                <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Base: {primaryVehicle?.baseLocation || 'Not set'}</span>
+                <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> Rating: 4.9 (142 Trips)</span>
               </div>
             </div>
           </div>
@@ -160,7 +177,7 @@ export const DriverDashboard = () => {
               <Calendar className="h-4 w-4 text-blue-600" />
               <span>Uber-Like Schedule Requests</span>
             </div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               Incoming Date-Based Farmer Booking Requests
             </h2>
             <p className="text-xs text-slate-600 font-medium">
@@ -203,7 +220,7 @@ export const DriverDashboard = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-medium">Route:</span>
-                    <span className="text-slate-700 font-medium">{b.origin} ➔ {b.destination}</span>
+                    <span className="text-slate-700 font-medium inline-flex items-center gap-1">{b.origin} <ArrowRight className="h-3 w-3 text-slate-400" /> {b.destination}</span>
                   </div>
                 </div>
 
@@ -231,8 +248,9 @@ export const DriverDashboard = () => {
                     </button>
                   </div>
                 ) : b.status === 'Accepted' ? (
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold text-center">
-                    ✅ Booking Accepted for {b.pickupDate}! Scheduled in your calendar.
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 w-full">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>Booking Accepted for {b.pickupDate}! Scheduled in your calendar.</span>
                   </div>
                 ) : (
                   <div className="p-2 rounded-xl bg-slate-100 text-slate-500 text-xs font-bold text-center">
@@ -249,7 +267,7 @@ export const DriverDashboard = () => {
       <section className="space-y-4">
         <div className="flex items-center justify-between border-b border-forest-200/80 pb-3">
           <div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               My Registered Vehicles Fleet
             </h2>
             <p className="text-xs text-slate-600 font-medium">
@@ -296,7 +314,7 @@ export const DriverDashboard = () => {
               <Navigation className="h-4 w-4 text-blue-600" />
               <span>Real-Time Navigation Guidance</span>
             </div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               Active VRP Navigation & Smart Rerouting
             </h2>
           </div>
@@ -323,7 +341,9 @@ export const DriverDashboard = () => {
         {/* Map View Widget */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
-            <MapView />
+            <Suspense fallback={<div className="krushi-card h-full min-h-[320px] animate-pulse" />}>
+              <MapView />
+            </Suspense>
           </div>
 
           {/* Active Job Guidance Panel */}

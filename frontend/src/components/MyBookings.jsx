@@ -16,17 +16,17 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { getTranslation } from '../utils/translations';
+import { useTranslation } from '../hooks/useTranslation';
 import { WaybillModal } from './WaybillModal';
 import { NewBookingModal } from './NewBookingModal';
 
 export const MyBookings = () => {
-  const { bookings, language, setActiveTab } = useAppStore();
+  const { bookings, setActiveTab } = useAppStore();
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'active' | 'completed'
   const [selectedBookingForWaybill, setSelectedBookingForWaybill] = useState(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
 
-  const t = (key) => getTranslation(language, key);
+  const { t } = useTranslation();
 
   const filteredBookings = bookings.filter((b) => {
     if (activeFilter === 'active') return b.status === 'In Transit' || b.status === 'Active';
@@ -129,13 +129,17 @@ export const MyBookings = () => {
 
                 <div className="flex items-center space-x-2">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-black shadow-2xs ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-2xs ${
                       b.status === 'In Transit' || b.status === 'Active'
                         ? 'bg-emerald-500 text-white'
                         : 'bg-slate-100 text-slate-700 border border-slate-200'
                     }`}
                   >
-                    {b.status === 'In Transit' ? '🚚 In Transit' : '✅ Completed'}
+                    {b.status === 'In Transit' ? (
+                      <><Truck className="h-3.5 w-3.5" /> In Transit</>
+                    ) : (
+                      <><CheckCircle2 className="h-3.5 w-3.5" /> Completed</>
+                    )}
                   </span>
                 </div>
               </div>

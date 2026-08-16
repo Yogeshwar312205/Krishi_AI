@@ -1,30 +1,47 @@
 import React, { useState } from 'react';
-import { 
-  Store, 
-  Plus, 
-  Trash2, 
-  Truck, 
-  TrendingUp, 
-  CheckCircle2, 
-  Sparkles, 
-  MapPin, 
-  Building2, 
-  UserCheck, 
-  Clock, 
-  DollarSign, 
-  BarChart3, 
-  AlertCircle 
+import {
+  Store,
+  Plus,
+  Trash2,
+  Truck,
+  TrendingUp,
+  CheckCircle2,
+  Sparkles,
+  MapPin,
+  Building2,
+  UserCheck,
+  Clock,
+  DollarSign,
+  BarChart3,
+  AlertCircle,
+  X,
+  Wheat
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
+
+const BUYER_MANDI_OPTIONS = [
+  { value: 'Vashi Wholesale APMC', label: 'Vashi Wholesale APMC' },
+  { value: 'Nashik Main APMC', label: 'Nashik Main APMC' },
+  { value: 'Gultekdi APMC (Pune)', label: 'Gultekdi APMC (Pune)' },
+  { value: 'Nagpur APMC', label: 'Nagpur APMC' },
+];
 
 export const BuyerDashboard = () => {
-  const { 
-    buyerPostings, 
-    addBuyerPosting, 
-    deleteBuyerPosting, 
+  const {
+    user,
+    buyerPostings,
+    addBuyerPosting,
+    deleteBuyerPosting,
     inboundShipments,
-    setActiveTab 
+    setActiveTab
   } = useAppStore();
+
+  // Postings are attributed to the signed-in merchant, not a fixed demo trader.
+  const buyerName = user?.name || 'APMC Buyer';
+  const buyerCompany = user?.company || 'Independent Commission Agent';
+  const buyerPhone = user?.phone || '—';
 
   const [showPostModal, setShowPostModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -45,8 +62,8 @@ export const BuyerDashboard = () => {
       requiredQuantityKg: Number(formData.requiredQuantityKg),
       receivedQuantityKg: 0,
       mandiName: formData.mandiName,
-      traderName: 'Rajesh Mehta (Mehta Produce Corp)',
-      traderPhone: '+91 98200 55443',
+      traderName: `${buyerName} (${buyerCompany})`,
+      traderPhone: buyerPhone,
       status: 'Active Procurement',
       expiresIn: '7 Days'
     };
@@ -69,17 +86,18 @@ export const BuyerDashboard = () => {
 
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-2xl font-black text-white">Rajesh Mehta</h1>
+                <h1 className="font-display text-2xl font-semibold text-white">{buyerName}</h1>
                 <span className="text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
                   APMC Licensed Commission Merchant
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-medium mt-0.5">
-                Company: <strong className="text-white">Mehta Produce Corp • Lic #APMC-MH-8842</strong>
+                Company: <strong className="text-white">{buyerCompany}</strong>
+                {user?.licenseNo && <> • Lic #{user.licenseNo}</>}
               </p>
-              <div className="flex items-center space-x-3 text-xs text-slate-400 font-medium mt-1">
-                <span>📍 Primary Mandi: Vashi Wholesale APMC Market</span>
-                <span>🏛️ Secondary: Nashik APMC</span>
+              <div className="flex items-center space-x-4 text-xs text-slate-400 font-medium mt-1">
+                <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Primary Mandi: Vashi Wholesale APMC Market</span>
+                <span className="inline-flex items-center gap-1"><Building2 className="h-3.5 w-3.5" /> Secondary: Nashik APMC</span>
               </div>
             </div>
           </div>
@@ -140,24 +158,25 @@ export const BuyerDashboard = () => {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
                 <Store className="h-5 w-5 text-amber-600" />
-                <h3 className="text-lg font-black text-slate-900">Post APMC Buying Rate</h3>
+                <h3 className="font-display text-lg font-semibold text-slate-900">Post APMC Buying Rate</h3>
               </div>
-              <button onClick={() => setShowPostModal(false)} className="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
+              <button onClick={() => setShowPostModal(false)} className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
             <form onSubmit={handleCreatePosting} className="space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700 block">Crop Type</label>
-                  <select
+                  <Select
+                    icon={Wheat}
+                    tone="slate"
                     value={formData.cropType}
                     onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-amber-500"
-                  >
-                    {['Tomato', 'Potato', 'Onion', 'Wheat', 'Rice', 'Mango', 'Banana'].map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                    options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+                    className="w-full"
+                  />
                 </div>
 
                 <div className="space-y-1">
@@ -198,16 +217,14 @@ export const BuyerDashboard = () => {
 
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700 block">Target APMC Mandi</label>
-                  <select
+                  <Select
+                    icon={Store}
+                    tone="slate"
                     value={formData.mandiName}
                     onChange={(e) => setFormData({ ...formData, mandiName: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="Vashi Wholesale APMC">Vashi Wholesale APMC</option>
-                    <option value="Nashik Main APMC">Nashik Main APMC</option>
-                    <option value="Gultekdi APMC (Pune)">Gultekdi APMC (Pune)</option>
-                    <option value="Nagpur APMC">Nagpur APMC</option>
-                  </select>
+                    options={BUYER_MANDI_OPTIONS}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -239,7 +256,7 @@ export const BuyerDashboard = () => {
               <Store className="h-4 w-4 text-amber-600" />
               <span>APMC Trading Desk</span>
             </div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               My Active Produce Buying Orders & Rates
             </h2>
             <p className="text-xs text-slate-600 font-medium">
@@ -313,7 +330,7 @@ export const BuyerDashboard = () => {
               <Truck className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">Inbound Farmer Consignments & Truck Tracking</h3>
+              <h3 className="font-display text-lg font-semibold text-white">Inbound Farmer Consignments & Truck Tracking</h3>
               <p className="text-xs text-slate-400 font-medium">Produce trucks currently en route to your APMC shop.</p>
             </div>
           </div>
