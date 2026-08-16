@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Truck, Plus, CheckCircle2, ShieldCheck, Thermometer, MapPin } from 'lucide-react';
+import { Truck, Plus, CheckCircle2, ShieldCheck, Thermometer, MapPin, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 export const RegisterVehicleModal = ({ isOpen, onClose }) => {
@@ -57,11 +57,13 @@ export const RegisterVehicleModal = ({ isOpen, onClose }) => {
               <Truck className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900">Register Driver Vehicle Details</h3>
+              <h3 className="font-display text-base font-semibold text-slate-900">Register Driver Vehicle Details</h3>
               <p className="text-[11px] text-slate-500 font-medium">Add your truck specs to receive Uber-like date booking requests from farmers.</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
+          <button onClick={onClose} className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {submitted ? (

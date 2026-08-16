@@ -15,7 +15,9 @@ import {
   Plus,
   Calendar,
   Layers,
-  XCircle
+  XCircle,
+  Star,
+  ArrowRight
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSocket } from '../hooks/useSocket';
@@ -80,9 +82,9 @@ export const DriverDashboard = () => {
               <p className="text-xs text-slate-300 font-medium mt-0.5">
                 Primary Truck: <strong className="text-white">MH 15 GH 4921</strong> (Refrigerated Van • 3.5 Ton)
               </p>
-              <div className="flex items-center space-x-3 text-xs text-slate-400 font-medium mt-1">
-                <span>📍 Base: Nashik Logistics Hub</span>
-                <span>⭐ Rating: 4.9 (142 Trips)</span>
+              <div className="flex items-center space-x-4 text-xs text-slate-400 font-medium mt-1">
+                <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Base: Nashik Logistics Hub</span>
+                <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> Rating: 4.9 (142 Trips)</span>
               </div>
             </div>
           </div>
@@ -205,7 +207,7 @@ export const DriverDashboard = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-medium">Route:</span>
-                    <span className="text-slate-700 font-medium">{b.origin} ➔ {b.destination}</span>
+                    <span className="text-slate-700 font-medium inline-flex items-center gap-1">{b.origin} <ArrowRight className="h-3 w-3 text-slate-400" /> {b.destination}</span>
                   </div>
                 </div>
 
@@ -233,8 +235,9 @@ export const DriverDashboard = () => {
                     </button>
                   </div>
                 ) : b.status === 'Accepted' ? (
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold text-center">
-                    ✅ Booking Accepted for {b.pickupDate}! Scheduled in your calendar.
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 w-full">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>Booking Accepted for {b.pickupDate}! Scheduled in your calendar.</span>
                   </div>
                 ) : (
                   <div className="p-2 rounded-xl bg-slate-100 text-slate-500 text-xs font-bold text-center">

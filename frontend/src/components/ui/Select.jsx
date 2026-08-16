@@ -13,7 +13,7 @@ const TONES = {
  * a consistent chevron — keeps built-in keyboard/a11y behavior instead of
  * reimplementing a listbox.
  */
-export const Select = ({ icon: Icon, value, onChange, options, tone = 'forest', className = '', compact = false }) => {
+export const Select = ({ icon: Icon, value, onChange, options, tone = 'forest', className = '', compact = false, ...selectProps }) => {
   const toneClasses = TONES[tone] || TONES.forest;
 
   return (
@@ -23,6 +23,7 @@ export const Select = ({ icon: Icon, value, onChange, options, tone = 'forest', 
         value={value}
         onChange={onChange}
         className={`appearance-none bg-transparent outline-none cursor-pointer rounded-xl w-full py-1.5 pr-7 focus:ring-2 ${Icon ? 'pl-8' : 'pl-3'}`}
+        {...selectProps}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>

@@ -12,7 +12,8 @@ import {
   CheckCircle2, 
   Zap,
   PhoneCall,
-  ShieldCheck
+  ShieldCheck,
+  Star
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { CROP_OPTIONS } from '../utils/constants';
@@ -175,8 +176,8 @@ export const FarmerDashboard = () => {
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <span className="text-xs font-extrabold text-forest-900">{m.name}</span>
                 {m.isBest && (
-                  <span className="text-[10px] font-black badge-turmeric px-2 py-0.5 rounded-full">
-                    ★ Highest Return
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black badge-turmeric px-2 py-0.5 rounded-full">
+                    <Star className="h-2.5 w-2.5 fill-current" /> Highest Return
                   </span>
                 )}
               </div>

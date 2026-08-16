@@ -14,11 +14,14 @@ import {
   LogOut, 
   UserCheck,
   AlertCircle,
-  Loader2
+  Loader2,
+  Landmark,
+  Wheat
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { loginUser, registerUser } from '../services/api';
 import { CROP_OPTIONS } from '../utils/constants';
+import { Select } from './ui/Select';
 
 export const AuthPage = () => {
   const { user, setAuth, logout, setActiveTab, bookings } = useAppStore();
@@ -211,8 +214,8 @@ export const AuthPage = () => {
                       <span className="font-extrabold text-emerald-400">{b.id}</span>
                       <span className="text-slate-300 font-medium">• {b.cropType} ({b.quantityKg} kg)</span>
                     </div>
-                    <div className="text-[11px] text-slate-400">
-                      {b.origin} ➔ <strong className="text-white">{b.destination}</strong>
+                    <div className="text-[11px] text-slate-400 inline-flex items-center gap-1">
+                      {b.origin} <ArrowRight className="h-3 w-3 text-slate-500" /> <strong className="text-white">{b.destination}</strong>
                     </div>
                   </div>
 
@@ -337,7 +340,7 @@ export const AuthPage = () => {
                 className="py-2 px-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] rounded-xl shadow-md transition-all text-center flex flex-col items-center gap-1"
               >
                 <Sprout className="h-3.5 w-3.5" />
-                <span>🌾 Farmer</span>
+                <span>Farmer</span>
               </button>
 
               <button
@@ -347,7 +350,7 @@ export const AuthPage = () => {
                 className="py-2 px-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] rounded-xl shadow-md transition-all text-center flex flex-col items-center gap-1"
               >
                 <Truck className="h-3.5 w-3.5" />
-                <span>🚚 Driver</span>
+                <span>Driver</span>
               </button>
 
               <button
@@ -356,8 +359,8 @@ export const AuthPage = () => {
                 disabled={loading}
                 className="py-2 px-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-[10px] rounded-xl shadow-md transition-all text-center flex flex-col items-center gap-1"
               >
-                <User className="h-3.5 w-3.5" />
-                <span>🏛️ Buyer</span>
+                <Landmark className="h-3.5 w-3.5" />
+                <span>Buyer</span>
               </button>
             </div>
           </div>
@@ -493,16 +496,15 @@ export const AuthPage = () => {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Primary Crop</label>
-                  <select
+                  <Select
+                    icon={Wheat}
+                    tone="slate"
                     name="primaryCrop"
                     value={formData.primaryCrop}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20 bg-white"
-                  >
-                    {CROP_OPTIONS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                    options={CROP_OPTIONS.map((c) => ({ value: c, label: c }))}
+                    className="w-full"
+                  />
                 </div>
               </div>
             )}
