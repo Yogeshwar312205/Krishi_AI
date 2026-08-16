@@ -65,7 +65,7 @@ export function App() {
         <DevTriggerBar />
 
         {/* FEATURE CONTAINER DRIVEN BY ACTIVE NAVIGATION TAB */}
-        <section className="space-y-6">
+        <section key={activeTab} className="space-y-6 section-enter">
           {activeTab === 'home' && <HomePage />}
           {activeTab === 'forecasting' && <PriceForecaster />}
           {activeTab === 'mandi-comparison' && <MandiComparison />}
