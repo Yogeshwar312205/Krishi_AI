@@ -51,7 +51,10 @@ export default {
         }
       },
       fontFamily: {
-        display: ['"Fraunces"', 'ui-serif', 'Georgia', 'serif'],
+        // Devanagari faces trail the Latin ones: browsers fall through per-glyph,
+        // so Hindi/Marathi text picks them up without any conditional classes.
+        display: ['"Fraunces"', '"Tiro Devanagari Hindi"', 'ui-serif', 'Georgia', 'serif'],
+        sans: ['"Plus Jakarta Sans"', '"Mukta"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
         'dot-pattern': "radial-gradient(#18532B 0.75px, transparent 0.75px)",

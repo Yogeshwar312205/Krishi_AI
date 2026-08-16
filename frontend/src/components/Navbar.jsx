@@ -21,34 +21,35 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSocket } from '../hooks/useSocket';
-import { getTranslation } from '../utils/translations';
+import { useTranslation } from '../hooks/useTranslation';
 import { CROP_OPTIONS } from '../utils/constants';
 import { Select } from './ui/Select';
 
-const ROLE_OPTIONS = [
-  { value: 'Farmer', label: 'Farmer View' },
-  { value: 'Driver', label: 'Driver / Transporter View' },
-  { value: 'APMC Buyer', label: 'APMC Buyer View' },
+// Option labels are built per render from `t` so they re-translate on switch.
+const buildRoleOptions = (t) => [
+  { value: 'Farmer', label: t('farmerView') },
+  { value: 'Driver', label: t('driverView') },
+  { value: 'APMC Buyer', label: t('buyerView') },
 ];
 
-const ROLE_OPTIONS_COMPACT = [
-  { value: 'Farmer', label: 'Farmer' },
-  { value: 'Driver', label: 'Driver' },
-  { value: 'APMC Buyer', label: 'Buyer' },
+const buildRoleOptionsCompact = (t) => [
+  { value: 'Farmer', label: t('farmerShort') },
+  { value: 'Driver', label: t('driverShort') },
+  { value: 'APMC Buyer', label: t('buyerShort') },
 ];
 
+// Each language is listed in its own script — the standard for a language picker,
+// so a Marathi speaker can find "मराठी" without reading the current language.
 const LANGUAGE_OPTIONS = [
   { value: 'en', label: 'English' },
-  { value: 'hi', label: 'Hindi' },
-  { value: 'mr', label: 'Marathi' },
+  { value: 'hi', label: 'हिन्दी' },
+  { value: 'mr', label: 'मराठी' },
 ];
 
 export const Navbar = () => {
-  const { 
+  const {
     user,
-    backendStatus, 
-    aiEngineStatus, 
-    activeTab, 
+    activeTab,
     setActiveTab,
     cropDetails,
     setCropDetails,
@@ -56,27 +57,23 @@ export const Navbar = () => {
     setLanguage,
     activeRole,
     setActiveRole,
-    setAuth
   } = useAppStore();
   const { triggerDevTrafficJam } = useSocket();
-
-  const t = (key) => getTranslation(language, key);
+  const { t } = useTranslation();
 
   const handleRoleChange = (newRole) => {
+    // setActiveRole carries the role onto the signed-in user; the account's own
+    // name and email stay untouched.
     setActiveRole(newRole);
     setActiveTab('home'); // Reset to home dashboard on role switch
-    if (user) {
-      const demoNames = {
-        Farmer: 'Ramesh Singh (Farmer)',
-        Driver: 'Suresh Shinde (Transporter)',
-        'APMC Buyer': 'Rajesh Mehta (APMC Merchant)'
-      };
-      setAuth({ ...user, role: newRole, name: demoNames[newRole] || user.name }, localStorage.getItem('token') || 'demo-token');
-    }
   };
 
   // Determine effective role
   const currentRole = activeRole || user?.role || 'Farmer';
+
+  // The account tab shows the user's own first name once signed in.
+  const accountLabel = (fallbackKey) =>
+    user ? (user.name ? user.name.split(' ')[0] : t(fallbackKey)) : t('login');
 
   // STRICT ROLE-BASED NAVIGATION ITEMS
   let navItems = [];
@@ -89,26 +86,26 @@ export const Navbar = () => {
       { id: 'demand-analysis', label: t('demandAnalysis'), icon: BarChart3 },
       { id: 'profitability', label: t('profitability'), icon: Calculator },
       { id: 'price-alerts', label: t('priceAlerts'), icon: Bell },
-      { id: 'book-truck', label: 'Book Vehicle (Date)', icon: Calendar },
+      { id: 'book-truck', label: t('bookVehicleDate'), icon: Calendar },
       { id: 'bookings', label: t('bookings'), icon: Package },
-      { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : 'Profile') : 'Login', icon: UserCheck },
+      { id: 'auth', label: accountLabel('profile'), icon: UserCheck },
     ];
   } else if (currentRole === 'Driver' || currentRole === 'Transporter') {
     navItems = [
-      { id: 'home', label: 'Driver Workstation', icon: Home },
-      { id: 'driver-jobs', label: 'Schedule Booking Requests', icon: Calendar },
-      { id: 'driver-vehicles', label: 'My Registered Vehicles', icon: Truck },
-      { id: 'logistics', label: 'Live VRP Navigation', icon: Navigation },
-      { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : 'Driver Profile') : 'Login', icon: UserCheck },
+      { id: 'home', label: t('driverWorkstation'), icon: Home },
+      { id: 'driver-jobs', label: t('scheduleRequests'), icon: Calendar },
+      { id: 'driver-vehicles', label: t('myVehicles'), icon: Truck },
+      { id: 'logistics', label: t('liveVRPNavigation'), icon: Navigation },
+      { id: 'auth', label: accountLabel('driverProfile'), icon: UserCheck },
     ];
   } else {
     // APMC Buyer / Trader
     navItems = [
-      { id: 'home', label: 'APMC Buyer Desk', icon: Landmark },
-      { id: 'buyer-postings', label: 'Post Buying Rates', icon: Store },
-      { id: 'inbound-shipments', label: 'Inbound Mandi Arrivals', icon: Truck },
-      { id: 'demand-analysis', label: 'Market Demand Metrics', icon: BarChart3 },
-      { id: 'auth', label: user ? (user.name ? user.name.split(' ')[0] : 'Merchant Profile') : 'Login', icon: UserCheck },
+      { id: 'home', label: t('buyerDesk'), icon: Landmark },
+      { id: 'buyer-postings', label: t('postBuyingRates'), icon: Store },
+      { id: 'inbound-shipments', label: t('inboundArrivals'), icon: Truck },
+      { id: 'demand-analysis', label: t('marketDemandMetrics'), icon: BarChart3 },
+      { id: 'auth', label: accountLabel('merchantProfile'), icon: UserCheck },
     ];
   }
 
@@ -142,7 +139,7 @@ export const Navbar = () => {
             tone="forest"
             value={currentRole}
             onChange={(e) => handleRoleChange(e.target.value)}
-            options={ROLE_OPTIONS}
+            options={buildRoleOptions(t)}
             className="min-w-[9.5rem]"
           />
 
@@ -174,17 +171,17 @@ export const Navbar = () => {
             compact
             value={currentRole}
             onChange={(e) => handleRoleChange(e.target.value)}
-            options={ROLE_OPTIONS_COMPACT}
+            options={buildRoleOptionsCompact(t)}
             className="md:hidden"
           />
 
           <button
             onClick={() => triggerDevTrafficJam('m1', [73.5, 19.5])}
             className="flex items-center space-x-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-md transition-all active:scale-95"
-            title="Simulate sudden traffic blockage on primary market route"
+            title={t('trafficSimTitle')}
           >
             <AlertTriangle className="h-4 w-4 text-amber-100" />
-            <span className="hidden sm:inline">Traffic Sim</span>
+            <span className="hidden sm:inline">{t('trafficSim')}</span>
           </button>
 
           <button
@@ -196,7 +193,7 @@ export const Navbar = () => {
             }`}
           >
             {user ? <User className="h-4 w-4 text-emerald-700" /> : <UserCheck className="h-4 w-4" />}
-            <span>{user ? user.name || 'Profile' : 'Login'}</span>
+            <span>{user ? user.name || t('profile') : t('login')}</span>
           </button>
         </div>
 

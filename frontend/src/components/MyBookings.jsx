@@ -16,17 +16,17 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { getTranslation } from '../utils/translations';
+import { useTranslation } from '../hooks/useTranslation';
 import { WaybillModal } from './WaybillModal';
 import { NewBookingModal } from './NewBookingModal';
 
 export const MyBookings = () => {
-  const { bookings, language, setActiveTab } = useAppStore();
+  const { bookings, setActiveTab } = useAppStore();
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'active' | 'completed'
   const [selectedBookingForWaybill, setSelectedBookingForWaybill] = useState(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
 
-  const t = (key) => getTranslation(language, key);
+  const { t } = useTranslation();
 
   const filteredBookings = bookings.filter((b) => {
     if (activeFilter === 'active') return b.status === 'In Transit' || b.status === 'Active';

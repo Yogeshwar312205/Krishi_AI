@@ -1,15 +1,55 @@
 import { create } from 'zustand';
 
+const SUPPORTED_LANGUAGES = ['en', 'hi', 'mr'];
+
+/**
+ * The signed-in user is restored from localStorage rather than reconstructed,
+ * so a refresh keeps whoever actually logged in. (Previously any stored token
+ * rehydrated as a hardcoded demo farmer, overwriting the real identity.)
+ */
+const readStoredUser = () => {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
+const readStoredLanguage = () => {
+  const stored = localStorage.getItem('language');
+  return SUPPORTED_LANGUAGES.includes(stored) ? stored : 'en';
+};
+
+// Keep <html lang> in sync so the Devanagari CSS and screen readers both apply.
+const applyDocumentLanguage = (lang) => {
+  if (typeof document !== 'undefined') document.documentElement.lang = lang;
+};
+
+const storedUser = readStoredUser();
+const storedToken = localStorage.getItem('token');
+// A token without a user (or vice versa) is a broken half-session — drop both.
+const hasValidSession = Boolean(storedUser && storedToken);
+if (!hasValidSession) {
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+}
+
+const initialLanguage = readStoredLanguage();
+applyDocumentLanguage(initialLanguage);
+
 export const useAppStore = create((set, get) => ({
   // Auth state
-  user: localStorage.getItem('token') 
-    ? { name: 'Ramesh Singh', role: 'Farmer', email: 'ramesh.farmer@krishiflow.ai', location: 'Nashik, Maharashtra' } 
-    : null,
-  token: localStorage.getItem('token') || null,
-  activeRole: localStorage.getItem('activeRole') || 'Farmer', // 'Farmer' | 'Driver' | 'APMC Buyer'
+  user: hasValidSession ? storedUser : null,
+  token: hasValidSession ? storedToken : null,
+  activeRole: (hasValidSession && storedUser.role) || localStorage.getItem('activeRole') || 'Farmer',
 
   setAuth: (user, token) => {
     if (token) localStorage.setItem('token', token);
+    if (user) localStorage.setItem('user', JSON.stringify(user));
     const role = user?.role || 'Farmer';
     localStorage.setItem('activeRole', role);
     set({ user, token, activeRole: role });
@@ -17,11 +57,19 @@ export const useAppStore = create((set, get) => ({
 
   setActiveRole: (role) => {
     localStorage.setItem('activeRole', role);
-    set({ activeRole: role });
+    // Switching the dashboard view also switches the signed-in user's role, but
+    // never their identity — the name/email belong to the real account.
+    set((state) => {
+      if (!state.user) return { activeRole: role };
+      const updatedUser = { ...state.user, role };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return { activeRole: role, user: updatedUser };
+    });
   },
 
   logout: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     localStorage.removeItem('activeRole');
     set({ user: null, token: null, activeRole: 'Farmer' });
   },
@@ -80,8 +128,13 @@ export const useAppStore = create((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // Multilingual Support
-  language: 'en', // 'en' | 'hi' | 'mr'
-  setLanguage: (lang) => set({ language: lang }),
+  language: initialLanguage, // 'en' | 'hi' | 'mr'
+  setLanguage: (lang) => {
+    const next = SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en';
+    localStorage.setItem('language', next);
+    applyDocumentLanguage(next);
+    set({ language: next });
+  },
 
   // Registered Driver Vehicles (Driver Vehicle Management & Search)
   registeredVehicles: [
@@ -346,7 +399,7 @@ export const useAppStore = create((set, get) => ({
     },
     {
       id: 'DISP-7710',
-      farmerName: 'Sunita Patil',
+      farmerName: 'Anand Kulkarni',
       cropType: 'Onion',
       quantityKg: 5000,
       driverName: 'Sunita Patil',

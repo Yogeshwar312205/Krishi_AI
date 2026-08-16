@@ -79,6 +79,29 @@
   border: 1px solid rgba(224, 168, 58, 0.4);
 }
 
+/*
+  Devanagari sits on a taller body with stacked matras above and below the
+  shirorekha, so the tight Latin leading/tracking clips it. Loosen both when
+  the document is in Hindi or Marathi.
+*/
+:root:lang(hi) body,
+:root:lang(mr) body {
+  line-height: 1.7;
+}
+
+:lang(hi) .font-display,
+:lang(mr) .font-display {
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+/* Devanagari has no uppercase; faux-uppercasing just mangles the glyphs. */
+:lang(hi) .uppercase,
+:lang(mr) .uppercase {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
 @keyframes section-enter {
   from {
     opacity: 0;

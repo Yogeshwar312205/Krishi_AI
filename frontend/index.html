@@ -5,14 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KrushiFlow - Automated Farmer Logistics & VRP Platform</title>
-    <!-- Plus Jakarta Sans (UI/body) + Fraunces (warm editorial display face for headings) -->
+    <!--
+      Latin: Plus Jakarta Sans (UI/body) + Fraunces (editorial display).
+      Devanagari (Hindi/Marathi): Mukta (UI/body, by Ek Type) + Tiro Devanagari Hindi
+      (display). These sit after the Latin faces in the font stacks, so Devanagari
+      glyphs — absent from Fraunces/Jakarta — fall through to them automatically.
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=Mukta:wght@400;500;600;700;800&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   </head>
-  <body class="h-full font-['Plus_Jakarta_Sans',sans-serif] antialiased bg-[#edf8ef] text-slate-800 selection:bg-forest-700 selection:text-white">
+  <body class="h-full font-sans antialiased bg-[#edf8ef] text-slate-800 selection:bg-forest-700 selection:text-white">
     <div id="root" class="h-full"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

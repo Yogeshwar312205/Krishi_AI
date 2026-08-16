@@ -54,7 +54,7 @@ export function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#edf8ef] bg-dot-pattern text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="min-h-screen bg-[#edf8ef] bg-dot-pattern text-slate-800 flex flex-col font-sans">
       {/* Navigation Header */}
       <Navbar />
 
