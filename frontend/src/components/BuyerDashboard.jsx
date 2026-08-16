@@ -69,7 +69,7 @@ export const BuyerDashboard = () => {
 
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-2xl font-black text-white">Rajesh Mehta</h1>
+                <h1 className="font-display text-2xl font-semibold text-white">Rajesh Mehta</h1>
                 <span className="text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
                   APMC Licensed Commission Merchant
                 </span>
@@ -239,7 +239,7 @@ export const BuyerDashboard = () => {
               <Store className="h-4 w-4 text-amber-600" />
               <span>APMC Trading Desk</span>
             </div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               My Active Produce Buying Orders & Rates
             </h2>
             <p className="text-xs text-slate-600 font-medium">
@@ -313,7 +313,7 @@ export const BuyerDashboard = () => {
               <Truck className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">Inbound Farmer Consignments & Truck Tracking</h3>
+              <h3 className="font-display text-lg font-semibold text-white">Inbound Farmer Consignments & Truck Tracking</h3>
               <p className="text-xs text-slate-400 font-medium">Produce trucks currently en route to your APMC shop.</p>
             </div>
           </div>

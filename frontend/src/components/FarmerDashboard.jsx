@@ -47,7 +47,7 @@ export const FarmerDashboard = () => {
               <span>Farmer Workstation • Nashik APMC Circle</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
+            <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight leading-tight">
               Kisan Market Intelligence & Net Profit Hub
             </h1>
 
@@ -134,23 +134,26 @@ export const FarmerDashboard = () => {
 
       {/* MANDI PRICE COMPARISON & NET RETURN QUICK WIDGET */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between border-b border-forest-200/80 pb-3">
-          <div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
-              Multi-Mandi Net Return Comparison ({cropDetails.cropType})
-            </h2>
-            <p className="text-xs text-slate-600 font-medium">
-              Calculates your true profit after subtracting freight charges, diesel tariffs, and mandi commissions.
-            </p>
-          </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
+                Multi-Mandi Net Return Comparison ({cropDetails.cropType})
+              </h2>
+              <p className="text-xs text-slate-600 font-medium">
+                Calculates your true profit after subtracting freight charges, diesel tariffs, and mandi commissions.
+              </p>
+            </div>
 
-          <button
-            onClick={() => setActiveTab('mandi-comparison')}
-            className="text-xs font-extrabold text-forest-700 hover:underline flex items-center gap-1"
-          >
-            <span>View All 16 Mandis</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
+            <button
+              onClick={() => setActiveTab('mandi-comparison')}
+              className="text-xs font-extrabold text-forest-700 hover:underline flex items-center gap-1"
+            >
+              <span>View All 16 Mandis</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="furrow-divider" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -171,7 +174,7 @@ export const FarmerDashboard = () => {
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <span className="text-xs font-extrabold text-forest-900">{m.name}</span>
                 {m.isBest && (
-                  <span className="text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-black badge-turmeric px-2 py-0.5 rounded-full">
                     ★ Highest Return
                   </span>
                 )}
@@ -212,19 +215,20 @@ export const FarmerDashboard = () => {
 
       {/* DIRECT APMC BUYER PROCUREMENT OFFERS FOR FARMERS */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between border-b border-forest-200/80 pb-3">
+        <div className="space-y-3">
           <div>
             <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider mb-0.5">
               <Store className="h-4 w-4 text-emerald-600" />
               <span>Direct Mandi Buyer Connection</span>
             </div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               Verified APMC Buyer Procurement Offers
             </h2>
             <p className="text-xs text-slate-600 font-medium">
               Accept direct purchase contracts from registered APMC commission merchants.
             </p>
           </div>
+          <div className="furrow-divider" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -289,7 +293,7 @@ export const FarmerDashboard = () => {
               <Truck className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">My Active Dispatches & Cold-Chain Vehicles</h3>
+              <h3 className="font-display text-lg font-semibold text-white">My Active Dispatches & Cold-Chain Vehicles</h3>
               <p className="text-xs text-slate-400 font-medium">Real-time status of your crops en route to mandis.</p>
             </div>
           </div>

@@ -72,7 +72,7 @@ export const DriverDashboard = () => {
 
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-2xl font-black text-white">Suresh Shinde</h1>
+                <h1 className="font-display text-2xl font-semibold text-white">Suresh Shinde</h1>
                 <span className="text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2.5 py-0.5 rounded-full">
                   Cold-Chain Fleet Transporter
                 </span>
@@ -162,7 +162,7 @@ export const DriverDashboard = () => {
               <Calendar className="h-4 w-4 text-blue-600" />
               <span>Uber-Like Schedule Requests</span>
             </div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               Incoming Date-Based Farmer Booking Requests
             </h2>
             <p className="text-xs text-slate-600 font-medium">
@@ -251,7 +251,7 @@ export const DriverDashboard = () => {
       <section className="space-y-4">
         <div className="flex items-center justify-between border-b border-forest-200/80 pb-3">
           <div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               My Registered Vehicles Fleet
             </h2>
             <p className="text-xs text-slate-600 font-medium">
@@ -298,7 +298,7 @@ export const DriverDashboard = () => {
               <Navigation className="h-4 w-4 text-blue-600" />
               <span>Real-Time Navigation Guidance</span>
             </div>
-            <h2 className="text-xl font-black text-forest-900 tracking-tight">
+            <h2 className="font-display text-xl font-semibold text-forest-900 tracking-tight">
               Active VRP Navigation & Smart Rerouting
             </h2>
           </div>
