@@ -29,13 +29,19 @@ const BUYER_MANDI_OPTIONS = [
 ];
 
 export const BuyerDashboard = () => {
-  const { 
-    buyerPostings, 
-    addBuyerPosting, 
-    deleteBuyerPosting, 
+  const {
+    user,
+    buyerPostings,
+    addBuyerPosting,
+    deleteBuyerPosting,
     inboundShipments,
-    setActiveTab 
+    setActiveTab
   } = useAppStore();
+
+  // Postings are attributed to the signed-in merchant, not a fixed demo trader.
+  const buyerName = user?.name || 'APMC Buyer';
+  const buyerCompany = user?.company || 'Independent Commission Agent';
+  const buyerPhone = user?.phone || '—';
 
   const [showPostModal, setShowPostModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -56,8 +62,8 @@ export const BuyerDashboard = () => {
       requiredQuantityKg: Number(formData.requiredQuantityKg),
       receivedQuantityKg: 0,
       mandiName: formData.mandiName,
-      traderName: 'Rajesh Mehta (Mehta Produce Corp)',
-      traderPhone: '+91 98200 55443',
+      traderName: `${buyerName} (${buyerCompany})`,
+      traderPhone: buyerPhone,
       status: 'Active Procurement',
       expiresIn: '7 Days'
     };
@@ -80,13 +86,14 @@ export const BuyerDashboard = () => {
 
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="font-display text-2xl font-semibold text-white">Rajesh Mehta</h1>
+                <h1 className="font-display text-2xl font-semibold text-white">{buyerName}</h1>
                 <span className="text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
                   APMC Licensed Commission Merchant
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-medium mt-0.5">
-                Company: <strong className="text-white">Mehta Produce Corp • Lic #APMC-MH-8842</strong>
+                Company: <strong className="text-white">{buyerCompany}</strong>
+                {user?.licenseNo && <> • Lic #{user.licenseNo}</>}
               </p>
               <div className="flex items-center space-x-4 text-xs text-slate-400 font-medium mt-1">
                 <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Primary Mandi: Vashi Wholesale APMC Market</span>

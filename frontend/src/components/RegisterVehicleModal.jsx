@@ -3,12 +3,13 @@ import { Truck, Plus, CheckCircle2, ShieldCheck, Thermometer, MapPin, X } from '
 import { useAppStore } from '../store/useAppStore';
 
 export const RegisterVehicleModal = ({ isOpen, onClose }) => {
-  const { addRegisteredVehicle } = useAppStore();
+  const { addRegisteredVehicle, user } = useAppStore();
 
+  // Prefill with the signed-in driver's own details; both stay editable.
   const [formData, setFormData] = useState({
-    driverName: 'Suresh Shinde',
-    driverPhone: '+91 98230 11223',
-    vehicleNo: 'MH 15 GH 8899',
+    driverName: user?.name || '',
+    driverPhone: user?.phone || '',
+    vehicleNo: '',
     vehicleType: 'Refrigerated Van',
     capacityKg: 3500,
     ratePerKm: 18,
@@ -83,6 +84,7 @@ export const RegisterVehicleModal = ({ isOpen, onClose }) => {
                   type="text"
                   value={formData.driverName}
                   onChange={(e) => setFormData({ ...formData, driverName: e.target.value })}
+                  placeholder="e.g. Suresh Shinde"
                   required
                   className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-blue-500"
                 />
@@ -94,6 +96,7 @@ export const RegisterVehicleModal = ({ isOpen, onClose }) => {
                   type="text"
                   value={formData.driverPhone}
                   onChange={(e) => setFormData({ ...formData, driverPhone: e.target.value })}
+                  placeholder="+91 98230 11223"
                   required
                   className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-blue-500"
                 />

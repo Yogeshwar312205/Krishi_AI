@@ -26,11 +26,13 @@ const TIME_SLOT_OPTIONS = [
 ];
 
 export const DateVehicleBooking = () => {
-  const { 
-    registeredVehicles, 
-    dateBookings, 
+  const {
+    user,
+    registeredVehicles,
+    dateBookings,
     createDateBooking,
     cropDetails,
+    farmerAddress,
     setActiveTab
   } = useAppStore();
 
@@ -40,7 +42,7 @@ export const DateVehicleBooking = () => {
   const [timeSlot, setTimeSlot] = useState('Morning (06:00 AM - 10:00 AM)');
   const [cropType, setCropType] = useState(cropDetails.cropType || 'Tomato');
   const [quantityKg, setQuantityKg] = useState(cropDetails.quantityKg || 2500);
-  const [origin, setOrigin] = useState('Nashik Farm HQ, Maharashtra');
+  const [origin, setOrigin] = useState(farmerAddress || 'Nashik Farm HQ, Maharashtra');
   const [destination, setDestination] = useState('Vashi Wholesale APMC, Navi Mumbai');
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(registeredVehicles[0]?.id || 'VEH-101');
@@ -57,8 +59,8 @@ export const DateVehicleBooking = () => {
     
     const newBooking = {
       id: 'UBER-' + Math.floor(500 + Math.random() * 500),
-      farmerName: 'Ramesh Singh',
-      farmerPhone: '+91 98765 43210',
+      farmerName: user?.name || 'Guest Farmer',
+      farmerPhone: user?.phone || '',
       pickupDate,
       timeSlot,
       cropType,

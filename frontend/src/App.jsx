@@ -30,28 +30,34 @@ export function App() {
   const { startVehicleSimulation } = useSocket();
 
   useEffect(() => {
-    const loadHealth = async () => {
-      const health = await fetchHealthStatus();
-      setSystemHealth(health);
-    };
-    loadHealth();
+    // Guards against applying responses after unmount (e.g. React 18 StrictMode's
+    // double-invoked effects in development).
+    let cancelled = false;
 
-    const loadInitialOptimization = async () => {
+    const bootstrap = async () => {
+      const health = await fetchHealthStatus();
+      if (!cancelled) setSystemHealth(health);
+
+      // Warm the recommendations panel with the current farmer's own details.
+      const { user, farmerOrigin, farmerAddress, cropDetails } = useAppStore.getState();
       try {
-        const payload = {
-          farmerName: 'Ramesh Singh',
-          farmerPhone: '+91 98765 43210',
-          farmLocation: { address: 'Nashik Farm HQ', coordinates: [73.7898, 19.9975] },
-          cropDetails: { cropType: 'Tomato', quantityKg: 2500, temperatureSensitivity: 'High' }
-        };
-        const initialResult = await submitOptimization(payload);
-        setRecommendations(initialResult);
+        const initialResult = await submitOptimization({
+          farmerName: user?.name || 'Guest Farmer',
+          farmerPhone: user?.phone || '',
+          farmLocation: { address: farmerAddress, coordinates: farmerOrigin },
+          cropDetails
+        });
+        if (!cancelled) setRecommendations(initialResult);
       } catch (err) {
-        console.log('Initial optimization loaded');
+        // Non-fatal: the dashboards render from seeded state until the engine
+        // is reachable. Log the real reason rather than a false success.
+        console.warn('Initial optimization unavailable:', err.message);
       }
     };
-    loadInitialOptimization();
-  }, []);
+
+    bootstrap();
+    return () => { cancelled = true; };
+  }, [setSystemHealth, setRecommendations]);
 
   return (
     <div className="min-h-screen bg-[#edf8ef] bg-dot-pattern text-slate-800 flex flex-col font-sans">
