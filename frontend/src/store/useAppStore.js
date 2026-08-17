@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-
-const SUPPORTED_LANGUAGES = ['en', 'hi', 'mr'];
+import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../i18n';
 
 /**
  * The signed-in user is restored from localStorage rather than reconstructed,
@@ -21,7 +20,7 @@ const readStoredUser = () => {
 
 const readStoredLanguage = () => {
   const stored = localStorage.getItem('language');
-  return SUPPORTED_LANGUAGES.includes(stored) ? stored : 'en';
+  return SUPPORTED_LANGUAGES.includes(stored) ? stored : DEFAULT_LANGUAGE;
 };
 
 // Keep <html lang> in sync so the Devanagari CSS and screen readers both apply.
@@ -130,13 +129,22 @@ export const useAppStore = create((set, get) => ({
   // Multilingual Support
   language: initialLanguage, // 'en' | 'hi' | 'mr'
   setLanguage: (lang) => {
-    const next = SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en';
+    const next = SUPPORTED_LANGUAGES.includes(lang) ? lang : DEFAULT_LANGUAGE;
     localStorage.setItem('language', next);
     applyDocumentLanguage(next);
     set({ language: next });
   },
 
-  // Registered Driver Vehicles (Driver Vehicle Management & Search)
+  /*
+   * Registered driver vehicles.
+   *
+   * `ratePerKm` is the vehicle's own quoted freight rate and it has to stay
+   * consistent with data/demoMarket.js, where the Price screen deducts freight
+   * per KILO to work out "You get". The two describe the same trip: Vashi is
+   * 165 km at ₹3.4/kg on 2,500 kg — ₹8,500, or about ₹52/km. The rates here
+   * used to be ₹12–28/km, so the same journey was quoted at a third of what
+   * the rate comparison had already subtracted from it.
+   */
   registeredVehicles: [
     {
       id: 'VEH-101',
@@ -145,7 +153,7 @@ export const useAppStore = create((set, get) => ({
       vehicleNo: 'MH 15 GH 4921',
       vehicleType: 'Refrigerated Van',
       capacityKg: 3500,
-      ratePerKm: 18,
+      ratePerKm: 52,
       isRefrigerated: true,
       baseLocation: 'Nashik APMC Hub',
       availableFrom: new Date().toISOString().split('T')[0],
@@ -160,7 +168,7 @@ export const useAppStore = create((set, get) => ({
       vehicleNo: 'MH 31 CB 7810',
       vehicleType: 'Heavy Freighter',
       capacityKg: 10000,
-      ratePerKm: 28,
+      ratePerKm: 78,
       isRefrigerated: true,
       baseLocation: 'Nagpur & Vashi APMC',
       availableFrom: new Date().toISOString().split('T')[0],
@@ -175,7 +183,7 @@ export const useAppStore = create((set, get) => ({
       vehicleNo: 'MH 12 AB 9910',
       vehicleType: 'E-Pickup Express',
       capacityKg: 1500,
-      ratePerKm: 12,
+      ratePerKm: 34,
       isRefrigerated: false,
       baseLocation: 'Pune & Satara Circle',
       availableFrom: new Date().toISOString().split('T')[0],

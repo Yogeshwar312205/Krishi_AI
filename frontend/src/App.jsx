@@ -1,153 +1,55 @@
-import React, { useEffect, Suspense, lazy } from 'react';
-import { Navbar } from './components/Navbar';
-import { HomePage } from './components/HomePage';
-import { PriceForecaster } from './components/PriceForecaster';
-import { MandiComparison } from './components/MandiComparison';
-import { DemandAnalysis } from './components/DemandAnalysis';
-import { ProfitabilityEstimator } from './components/ProfitabilityEstimator';
-import { PriceAlerts } from './components/PriceAlerts';
-import { AuthPage } from './components/AuthPage';
-import { MyBookings } from './components/MyBookings';
-import { CropWizard } from './components/CropWizard';
-import { RecommendationCards } from './components/RecommendationCards';
-import { DevTriggerBar } from './components/DevTriggerBar';
-import { DateVehicleBooking } from './components/DateVehicleBooking';
-import { DriverDashboard } from './components/DriverDashboard';
-import { BuyerDashboard } from './components/BuyerDashboard';
-
-// Lazy-loaded: both pull in heavy dependencies (Leaflet, socket audio) that
-// most sessions never touch (only the logistics tab / voice assistant).
-const MapView = lazy(() => import('./components/MapView').then((m) => ({ default: m.MapView })));
-const KisanVoiceBot = lazy(() => import('./components/KisanVoiceBot').then((m) => ({ default: m.KisanVoiceBot })));
-
-import { useSocket } from './hooks/useSocket';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { AppShell } from './app/AppShell';
 import { useAppStore } from './store/useAppStore';
-import { fetchHealthStatus, submitOptimization } from './services/api';
-import { Play } from 'lucide-react';
+import { fetchHealthStatus } from './services/api';
+
+/*
+ * Split from the shell: the auth screen is the one thing a returning user with
+ * a live session never sees, and the shell is the one thing a first-time
+ * visitor cannot reach. Neither should be in the other's bundle.
+ */
+const AuthScreen = lazy(() => import('./features/auth/AuthScreen').then((m) => ({ default: m.AuthScreen })));
 
 export function App() {
-  const { setSystemHealth, setRecommendations, activeTab } = useAppStore();
-  const { startVehicleSimulation } = useSocket();
+  const setSystemHealth = useAppStore((state) => state.setSystemHealth);
+  const user = useAppStore((state) => state.user);
 
   useEffect(() => {
-    // Guards against applying responses after unmount (e.g. React 18 StrictMode's
-    // double-invoked effects in development).
+    // Guards against applying a response after unmount (React 18 StrictMode
+    // double-invokes effects in development).
     let cancelled = false;
 
-    const bootstrap = async () => {
-      const health = await fetchHealthStatus();
+    fetchHealthStatus().then((health) => {
       if (!cancelled) setSystemHealth(health);
+    });
 
-      // Warm the recommendations panel with the current farmer's own details.
-      const { user, farmerOrigin, farmerAddress, cropDetails } = useAppStore.getState();
-      try {
-        const initialResult = await submitOptimization({
-          farmerName: user?.name || 'Guest Farmer',
-          farmerPhone: user?.phone || '',
-          farmLocation: { address: farmerAddress, coordinates: farmerOrigin },
-          cropDetails
-        });
-        if (!cancelled) setRecommendations(initialResult);
-      } catch (err) {
-        // Non-fatal: the dashboards render from seeded state until the engine
-        // is reachable. Log the real reason rather than a false success.
-        console.warn('Initial optimization unavailable:', err.message);
-      }
-    };
-
-    bootstrap();
     return () => { cancelled = true; };
-  }, [setSystemHealth, setRecommendations]);
+  }, [setSystemHealth]);
 
-  return (
-    <div className="min-h-screen bg-[#edf8ef] bg-dot-pattern text-slate-800 flex flex-col font-sans">
-      {/* Navigation Header */}
-      <Navbar />
+  /*
+   * The optimisation call that used to run here on mount was removed: it fired
+   * on every page load, for every role, to warm a panel most sessions never
+   * opened. The Transport screen will request a route when a farmer actually
+   * asks for one — which is also the only point at which we know the crop,
+   * quantity and destination they mean.
+   */
 
-      {/* Main Container */}
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-        
-        {/* Dev Trigger Alert Banner */}
-        <DevTriggerBar />
-
-        {/* FEATURE CONTAINER DRIVEN BY ACTIVE NAVIGATION TAB */}
-        <section key={activeTab} className="space-y-6 section-enter">
-          {activeTab === 'home' && <HomePage />}
-          {activeTab === 'forecasting' && <PriceForecaster />}
-          {activeTab === 'mandi-comparison' && <MandiComparison />}
-          {activeTab === 'demand-analysis' && <DemandAnalysis />}
-          {activeTab === 'profitability' && <ProfitabilityEstimator />}
-          {activeTab === 'price-alerts' && <PriceAlerts />}
-          {activeTab === 'bookings' && <MyBookings />}
-          {activeTab === 'auth' && <AuthPage />}
-
-          {/* UBER-LIKE DATE VEHICLE BOOKING FOR FARMERS */}
-          {activeTab === 'book-truck' && <DateVehicleBooking />}
-
-          {/* DRIVER SPECIFIC TABS */}
-          {(activeTab === 'driver-jobs' || activeTab === 'driver-vehicles') && <DriverDashboard />}
-
-          {/* BUYER SPECIFIC TABS */}
-          {(activeTab === 'buyer-postings' || activeTab === 'inbound-shipments') && <BuyerDashboard />}
-
-          {/* LOGISTICS & VRP INTERACTIVE SECTION */}
-          {activeTab === 'logistics' && (
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="font-display text-2xl font-semibold text-forest-900 tracking-tight">
-                      Live VRP Logistics & Vehicle Rerouting
-                    </h2>
-                    <p className="text-xs text-slate-600 font-medium">
-                      Input crop details to calculate 2dsphere vehicle matching and optimal market routes.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={startVehicleSimulation}
-                    className="btn-forest-primary px-5 py-2.5 text-xs flex items-center gap-1.5"
-                  >
-                    <Play className="h-3.5 w-3.5 fill-white" />
-                    <span>Simulate Live Truck Movement</span>
-                  </button>
-                </div>
-                <div className="furrow-divider" />
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div className="lg:col-span-5">
-                  <CropWizard />
-                </div>
-
-                <div className="lg:col-span-7">
-                  <Suspense fallback={<div className="krushi-card h-full min-h-[320px] animate-pulse" />}>
-                    <MapView />
-                  </Suspense>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <RecommendationCards />
-              </div>
-            </div>
-          )}
-        </section>
-
-      </main>
-
-      {/* Clean Footer */}
-      <footer className="border-t border-forest-200/80 bg-white py-6 text-center text-xs text-slate-500 font-semibold mt-12">
-        <span className="font-display italic font-medium text-forest-800/80">KrishiFlow</span>
-        <span className="mx-1.5 text-terracotta-400">·</span>
-        © 2026 — Intelligent Crop Price Prediction & Market Insights Platform
-      </footer>
-      {/* Floating Kisan Voice AI Assistant */}
-      <Suspense fallback={null}>
-        <KisanVoiceBot />
+  /*
+   * The gate. Until this existed the app booted straight into a farmer
+   * dashboard with nobody signed in — greeting an anonymous visitor by no name,
+   * showing a stranger's crop, and offering a "Book a vehicle" button that had
+   * no account to book against. Sign-in is not a screen the user visits; it is
+   * the condition for there being an app at all.
+   */
+  if (!user) {
+    return (
+      <Suspense fallback={<div className="min-h-full bg-paper" />}>
+        <AuthScreen />
       </Suspense>
-    </div>
-  );
+    );
+  }
+
+  return <AppShell />;
 }
 
 export default App;

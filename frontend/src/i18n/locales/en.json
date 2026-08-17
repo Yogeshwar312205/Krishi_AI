@@ -1,0 +1,383 @@
+{
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "close": "Close",
+    "done": "Done",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "error": "Something went wrong",
+    "offline": "No internet. Showing last saved information.",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "seeAll": "See all",
+    "km": "km",
+    "kg": "kg",
+    "quintal": "quintal",
+    "perKg": "per kg",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "demoBadge": "Sample data",
+    "demoTip": "These numbers are for the demo only. Real mandi rates will come from the government Agmarknet feed.",
+    "listen": "Listen",
+    "call": "Call"
+  },
+
+  "crops": {
+    "Tomato": "Tomato",
+    "Potato": "Potato",
+    "Onion": "Onion",
+    "Wheat": "Wheat",
+    "Rice": "Rice",
+    "Mango": "Mango",
+    "Banana": "Banana"
+  },
+
+  "mandis": {
+    "Vashi": "Vashi",
+    "Pune": "Pune",
+    "Nashik": "Nashik",
+    "Pimpalgaon": "Pimpalgaon"
+  },
+
+  "lang": {
+    "label": "Language",
+    "en": "English",
+    "hi": "हिन्दी",
+    "mr": "मराठी",
+    "changed": "Language changed to English"
+  },
+
+  "roles": {
+    "label": "I am a",
+    "farmer": "Farmer",
+    "driver": "Driver",
+    "buyer": "Buyer"
+  },
+
+  "nav": {
+    "farmer": {
+      "today": "Today",
+      "price": "Price",
+      "transport": "Vehicle",
+      "crop": "My Crop"
+    },
+    "driver": {
+      "jobs": "Jobs",
+      "route": "Route",
+      "vehicles": "My Vehicles"
+    },
+    "buyer": {
+      "rates": "My Rates",
+      "inbound": "Arrivals",
+      "profile": "Profile"
+    }
+  },
+
+  "today": {
+    "greeting": "Ram Ram, {{name}}",
+    "greetingAnon": "Ram Ram",
+    "yourCrop": "Your crop",
+    "question": "What should you do today?",
+    "sell": "Sell now",
+    "hold": "Wait a few days",
+    "sellWhy": "The rate is high right now. It may fall next week.",
+    "holdWhy": "The rate is rising. You will get more if you wait.",
+    "bestMandi": "Best mandi today",
+    "rateToday": "Today's rate",
+    "rateUp": "₹{{amount}} higher than yesterday",
+    "rateDown": "₹{{amount}} lower than yesterday",
+    "rateSame": "Same as yesterday",
+    "youCouldEarn": "You could earn",
+    "forQuantity": "for {{qty}} kg",
+    "seePrices": "See all rates",
+    "bookVehicle": "Book a vehicle",
+    "noCrop": "Tell us your crop first",
+    "noCropWhy": "Once you add your crop, we will show you the best rate every day.",
+    "addCrop": "Add my crop"
+  },
+
+  "price": {
+    "title": "Crop rates",
+    "subtitle": "Where to sell {{crop}} for the most money",
+    "bestHere": "Best rate here",
+    "tab": {
+      "rates": "Mandi rates",
+      "forecast": "Coming days",
+      "costs": "My earning"
+    },
+    "verdict": {
+      "sell": "Good time to sell",
+      "hold": "Better to wait",
+      "watch": "Rate is steady"
+    },
+    "forecast": {
+      "title": "Rate in the coming days",
+      "nextDays": "Next {{count}} days",
+      "confidence": "Confidence",
+      "explain": "Guessed from past mandi rates. Not a promise.",
+      "high": "Highest expected",
+      "low": "Lowest expected",
+      "todayMark": "Today",
+      "past": "Already happened",
+      "ahead": "Our guess"
+    },
+    "mandis": {
+      "title": "Compare mandis",
+      "name": "Mandi",
+      "rate": "Rate",
+      "distance": "Distance",
+      "freight": "Vehicle cost",
+      "net": "You get",
+      "best": "Most money",
+      "nearest": "Nearest",
+      "explain": "\"You get\" is after taking off vehicle cost and mandi commission."
+    },
+    "demand": {
+      "title": "How much buyers want it",
+      "high": "High demand",
+      "medium": "Normal demand",
+      "low": "Low demand"
+    },
+    "costs": {
+      "title": "Your earning breakdown",
+      "gross": "Total sale",
+      "freight": "Vehicle cost",
+      "commission": "Mandi commission",
+      "labour": "Loading and unloading",
+      "net": "Money in your hand"
+    },
+    "alert": {
+      "title": "Tell me when the rate goes up",
+      "on": "Alert on",
+      "off": "Alert off",
+      "target": "Tell me when the rate crosses",
+      "smsTo": "SMS will come to {{phone}}",
+      "saved": "We will send you an SMS"
+    }
+  },
+
+  "transport": {
+    "title": "Vehicle",
+    "book": {
+      "title": "Book a vehicle",
+      "when": "Which day?",
+      "slot": "What time?",
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening",
+      "morningTime": "6 am to 10 am",
+      "afternoonTime": "1 pm to 5 pm",
+      "eveningTime": "5 pm to 9 pm",
+      "whereTo": "Which mandi?",
+      "find": "Find a vehicle",
+      "searching": "Looking for vehicles near you…",
+      "load": "What you are sending",
+      "change": "Change",
+      "toMandi": "To {{mandi}}"
+    },
+    "vehicle": {
+      "available": "{{count}} vehicles available",
+      "type": "Vehicle",
+      "capacity": "Can carry",
+      "rate": "Rate",
+      "perKm": "per km",
+      "driver": "Driver",
+      "cold": "Cold vehicle",
+      "normal": "Normal vehicle",
+      "coldWhy": "Keeps your crop cool so it does not spoil",
+      "total": "Total cost",
+      "book": "Book this vehicle",
+      "booked": "Vehicle booked. The driver will call you.",
+      "empty": "No vehicle is free that day. Try another day.",
+      "tooSmall": "Cannot carry your full load"
+    },
+    "route": {
+      "title": "Your route",
+      "showMap": "Show on map",
+      "hideMap": "Hide map",
+      "distance": "Distance",
+      "time": "Time",
+      "pickup": "Pickup",
+      "drop": "Drop",
+      "why": "Why this route?",
+      "whyExplain": "This route gives you the most money after vehicle cost and crop spoilage.",
+      "alternatives": "Other routes",
+      "rerouted": "Route changed because of traffic"
+    },
+    "bookings": {
+      "title": "My bookings",
+      "active": "Going now",
+      "past": "Finished",
+      "empty": "No bookings yet",
+      "emptyCta": "Book your first vehicle",
+      "vehicleNo": "Vehicle number",
+      "reachBy": "Will reach by",
+      "track": "Track vehicle",
+      "callDriver": "Call driver",
+      "receipt": "Mandi receipt"
+    },
+    "status": {
+      "pending": "Waiting for driver",
+      "accepted": "Driver accepted",
+      "onTheWay": "On the way",
+      "arrived": "Reached mandi",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    }
+  },
+
+  "crop": {
+    "title": "My crop",
+    "which": "Which crop?",
+    "howMuch": "How much?",
+    "where": "Where is your farm?",
+    "harvest": "When did you harvest?",
+    "useLocation": "Use my location",
+    "locating": "Finding your location…",
+    "locationFailed": "Could not find your location. Please type your village.",
+    "village": "Village or area",
+    "spoils": "Spoils quickly",
+    "spoilsWhy": "We will suggest a cold vehicle for this crop",
+    "saveCrop": "Save",
+    "saved": "Your crop details are saved.",
+    "quantityHint": "In kilos. 1 quintal is 100 kilos.",
+    "profile": {
+      "title": "My details",
+      "name": "Name",
+      "phone": "Mobile number",
+      "village": "Village",
+      "logout": "Log out",
+      "email": "Email",
+      "notSet": "Not given"
+    }
+  },
+
+  "auth": {
+    "login": "Log in",
+    "signup": "Create account",
+    "phone": "Mobile number",
+    "phoneHint": "We will send an OTP",
+    "otp": "OTP",
+    "sendOtp": "Send OTP",
+    "verify": "Verify",
+    "name": "Your name",
+    "chooseRole": "You are a",
+    "welcome": "Welcome, {{name}}",
+    "failed": "Could not log in. Please check and try again.",
+    "tagline": "Today's rate, the best mandi, and a vehicle to get there.",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Password again",
+    "passwordHint": "At least 6 letters or numbers",
+    "namePlaceholder": "Ramesh Singh",
+    "village": "Village or area",
+    "crop": "Your main crop",
+    "working": "Please wait…",
+    "mismatch": "The two passwords are not the same.",
+    "required": "Please fill in every box.",
+    "shortPassword": "Make the password at least 6 letters long.",
+    "demoTitle": "Only looking around?",
+    "demoHint": "Open a sample account. No password needed.",
+    "offlineNote": "The server is not reachable, so you are on sample data.",
+    "terms": "By continuing you agree to our terms and privacy policy."
+  },
+
+  "voice": {
+    "open": "Ask by voice",
+    "title": "Ask me",
+    "subtitle": "Speak in Hindi, Marathi or English",
+    "close": "Close",
+    "tap": "Tap and speak",
+    "listening": "Listening…",
+    "stopSpeaking": "Stop",
+    "notUnderstood": "I did not catch that. Try asking about rates, or say \"book a vehicle\".",
+    "unsupported": "Voice does not work in this browser. Please type your question instead.",
+    "typeInstead": "Or type your question",
+    "send": "Send",
+    "tryAsking": "Try asking",
+    "example1": "What is the rate today?",
+    "example2": "Book a vehicle",
+    "example3": "Should I sell or wait?",
+    "answer": {
+      "rate": "{{crop}} is {{rate}} per kg at {{mandi}} today.",
+      "opening": "Opening {{screen}}."
+    }
+  },
+
+  "driver": {
+    "jobs": {
+      "title": "Job requests",
+      "new": "New requests",
+      "mine": "My trips",
+      "empty": "No requests right now",
+      "from": "Farmer",
+      "pickup": "Pickup from",
+      "drop": "Drop at",
+      "load": "Load",
+      "pay": "You earn",
+      "accept": "Accept",
+      "reject": "Reject",
+      "start": "Start trip",
+      "complete": "Trip finished"
+    },
+    "route": {
+      "title": "Navigation",
+      "nextStop": "Next stop",
+      "openMaps": "Open in Maps"
+    },
+    "vehicles": {
+      "title": "My vehicles",
+      "add": "Add a vehicle",
+      "number": "Vehicle number",
+      "type": "Type",
+      "capacity": "Capacity",
+      "ratePerKm": "Rate per km",
+      "isCold": "Has cooling",
+      "available": "Available",
+      "unavailable": "Not available"
+    }
+  },
+
+  "buyer": {
+    "rates": {
+      "title": "My buying rates",
+      "post": "Post a rate",
+      "crop": "Crop",
+      "grade": "Quality",
+      "price": "Price per kg",
+      "quantity": "Quantity needed",
+      "received": "Received so far",
+      "expires": "Open for",
+      "remove": "Remove"
+    },
+    "inbound": {
+      "title": "Arrivals",
+      "eta": "Reaching at",
+      "from": "From farmer",
+      "value": "Total value",
+      "empty": "No arrivals today"
+    }
+  },
+
+  "demo": {
+    "title": "Demo controls",
+    "subtitle": "For judges — not shown to farmers",
+    "trafficJam": "Simulate traffic jam",
+    "trafficJamHint": "Blocks the main route and shows live re-routing",
+    "moveVehicle": "Simulate vehicle movement",
+    "resetData": "Reset demo data",
+    "close": "Close"
+  },
+
+  "health": {
+    "online": "Connected",
+    "offline": "Not connected",
+    "engineOffline": "Rate service not reachable"
+  }
+}
