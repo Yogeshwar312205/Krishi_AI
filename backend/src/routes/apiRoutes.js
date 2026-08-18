@@ -6,10 +6,12 @@ const { recommendLogistics, getPriceForecast, getDemandAnalysis, MARKETS } = req
 const { sendSMSAlert } = require('../controllers/alertController');
 const { getAgmarknetLivePrices, getLiveGovtWeather, getLiveGovtFuelRates } = require('../services/agmarknetService');
 const { apiLimiter } = require('../middlewares/rateLimiter');
+const { protect, authorize } = require('../middlewares/auth');
 
 // Rate limited API routes
 router.get('/vehicles/nearby', apiLimiter, getNearbyVehicles);
-router.post('/vehicles/seed', seedVehicles);
+// Destructive fleet reset — operator/admin only, never client-triggerable.
+router.post('/vehicles/seed', apiLimiter, protect, authorize('Admin'), seedVehicles);
 router.post('/recommend', apiLimiter, recommendLogistics);
 
 router.get('/prices/forecast', apiLimiter, getPriceForecast);
