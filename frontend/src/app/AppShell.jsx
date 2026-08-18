@@ -19,13 +19,15 @@ const TransportScreen = lazy(() => import('../features/farmer/transport/Transpor
 const CropScreen = lazy(() => import('../features/farmer/crop/CropScreen').then((m) => ({ default: m.CropScreen })));
 
 /*
- * Screens still on the legacy components are lazy-loaded, so a farmer who never
- * opens the driver or buyer views never downloads them.
+ * Driver and buyer screens are lazy-loaded, so a farmer who never opens those
+ * views never downloads them.
  */
-const DriverDashboard = lazy(() => import('../components/DriverDashboard').then((m) => ({ default: m.DriverDashboard })));
-const BuyerDashboard = lazy(() => import('../components/BuyerDashboard').then((m) => ({ default: m.BuyerDashboard })));
+const DriverJobsScreen = lazy(() => import('../features/driver/DriverJobsScreen').then((m) => ({ default: m.DriverJobsScreen })));
+const DriverVehiclesScreen = lazy(() => import('../features/driver/DriverVehiclesScreen').then((m) => ({ default: m.DriverVehiclesScreen })));
+const DriverRouteScreen = lazy(() => import('../features/driver/DriverRouteScreen').then((m) => ({ default: m.DriverRouteScreen })));
+const BuyerRatesScreen = lazy(() => import('../features/buyer/BuyerRatesScreen').then((m) => ({ default: m.BuyerRatesScreen })));
+const BuyerInboundScreen = lazy(() => import('../features/buyer/BuyerInboundScreen').then((m) => ({ default: m.BuyerInboundScreen })));
 const ProfilePanel = lazy(() => import('../features/profile/ProfilePanel').then((m) => ({ default: m.ProfilePanel })));
-const LegacyLogistics = lazy(() => import('../features/driver/LegacyLogistics').then((m) => ({ default: m.LegacyLogistics })));
 
 /* The assistant is deferred but always mounted — see VoiceAssistant for why. */
 const VoiceAssistant = lazy(() => import('../shared/voice/VoiceAssistant').then((m) => ({ default: m.VoiceAssistant })));
@@ -51,14 +53,16 @@ const screenFor = (tabId) => {
       return <div className="pt-4"><ProfilePanel /></div>;
 
     case 'driver-jobs':
+      return <DriverJobsScreen />;
     case 'driver-vehicles':
-      return <DriverDashboard />;
+      return <DriverVehiclesScreen />;
     case 'driver-route':
-      return <LegacyLogistics />;
+      return <DriverRouteScreen />;
 
     case 'buyer-rates':
+      return <BuyerRatesScreen />;
     case 'buyer-inbound':
-      return <BuyerDashboard />;
+      return <BuyerInboundScreen />;
     case 'buyer-profile':
       return <div className="pt-4"><ProfilePanel /></div>;
 

@@ -600,7 +600,7 @@ export const MandiComparison = () => {
 
       {/* EMPTY FILTER STATE NOTICE */}
       {sortedMandis.length === 0 && (
-        <div className="bg-white border border-dashed border-amber-300 rounded-3xl p-10 text-center space-y-3 shadow-sm">
+        <div className="bg-white border border-amber-300 rounded-3xl p-10 text-center space-y-3 shadow-sm">
           <ShieldAlert className="h-10 w-10 text-amber-500 mx-auto" />
           <h3 className="text-lg font-black text-forest-900">No APMC Mandis Match Your Current Search & Filters</h3>
           <p className="text-xs font-semibold text-slate-500 max-w-md mx-auto">
@@ -685,7 +685,7 @@ export const MandiComparison = () => {
                   <span className="font-bold text-amber-600">-₹{mkt.spoilageLoss.toLocaleString('en-IN')}</span>
                 </div>
 
-                <div className="flex justify-between items-center pt-2 border-t border-dashed border-slate-200">
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200">
                   <span className="font-extrabold text-forest-900">Net Take-Home:</span>
                   <span className="text-lg font-black text-emerald-700">₹{mkt.netProfit.toLocaleString('en-IN')}</span>
                 </div>

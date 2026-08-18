@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Mail, Lock, User, Phone, MapPin, Sprout, Truck, Store,
-  ArrowRight, Loader2, AlertTriangle, CloudOff, IndianRupee, Route, BellRing, ChevronDown,
+  ArrowRight, ArrowLeft, Loader2, AlertTriangle, CloudOff, IndianRupee, Route, BellRing, ChevronDown,
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useT } from '../../i18n/useT';
@@ -57,7 +57,7 @@ const PROMISES = [
   { icon: Route, titleKey: 'transport.book.title', noteKey: 'transport.route.whyExplain' },
 ];
 
-export const AuthScreen = () => {
+export const AuthScreen = ({ initialMode = 'login', onBack }) => {
   const setAuth = useAppStore((state) => state.setAuth);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const setCropDetails = useAppStore((state) => state.setCropDetails);
@@ -69,7 +69,7 @@ export const AuthScreen = () => {
   const isOffline = useAppStore((state) => state.backendStatus === 'offline');
   const { t } = useT();
 
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [mode, setMode] = useState(initialMode); // 'login' | 'signup'
   const [role, setRole] = useState(ROLES.FARMER);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -182,8 +182,8 @@ export const AuthScreen = () => {
           are worth reading once, but they are not worth a scroll before the
           password box.
         */}
-        <section className="lg:col-span-5 bg-forest-700 px-5 py-6 text-white sm:px-8 lg:px-9 lg:py-10">
-          <div className="mb-7 flex items-center justify-between gap-4">
+        <section className="lg:col-span-5 bg-forest-700 px-5 py-7 text-white sm:px-8 sm:py-8 lg:px-9 lg:py-12">
+          <div className="mb-8 flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="h-9 w-1.5 shrink-0 bg-turmeric-300" aria-hidden="true" />
               <span className="font-display text-3xl leading-none tracking-tight">
@@ -223,8 +223,19 @@ export const AuthScreen = () => {
         </section>
 
         {/* ---- The form ---- */}
-        <section className="lg:col-span-7 px-5 py-7 sm:px-8 lg:px-10 lg:py-10">
-          <div className="mx-auto w-full max-w-lg space-y-5">
+        <section className="lg:col-span-7 px-5 py-8 sm:px-8 sm:py-9 lg:px-10 lg:py-12">
+          <div className="mx-auto w-full max-w-lg space-y-6">
+
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="lift -mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-ink-soft hover:text-ink"
+              >
+                <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden="true" />
+                {t('common.back')}
+              </button>
+            )}
 
             <SegmentedToggle
               options={[

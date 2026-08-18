@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { AppShell } from './app/AppShell';
 import { useAppStore } from './store/useAppStore';
 import { fetchHealthStatus } from './services/api';
@@ -9,6 +9,22 @@ import { fetchHealthStatus } from './services/api';
  * visitor cannot reach. Neither should be in the other's bundle.
  */
 const AuthScreen = lazy(() => import('./features/auth/AuthScreen').then((m) => ({ default: m.AuthScreen })));
+const LandingScreen = lazy(() => import('./features/auth/LandingScreen').then((m) => ({ default: m.LandingScreen })));
+
+/*
+ * The unauthenticated pair: a hero screen that sells the product in five
+ * seconds, then the form. `stage` doubles as the AuthScreen's initial mode
+ * ('login' | 'signup') so the landing page's two buttons land straight on the
+ * right panel instead of always opening login.
+ */
+const Gate = () => {
+  const [stage, setStage] = useState('landing'); // 'landing' | 'login' | 'signup'
+
+  if (stage === 'landing') {
+    return <LandingScreen onEnter={setStage} />;
+  }
+  return <AuthScreen initialMode={stage} onBack={() => setStage('landing')} />;
+};
 
 export function App() {
   const setSystemHealth = useAppStore((state) => state.setSystemHealth);
@@ -43,8 +59,8 @@ export function App() {
    */
   if (!user) {
     return (
-      <Suspense fallback={<div className="min-h-full bg-paper" />}>
-        <AuthScreen />
+      <Suspense fallback={<div className="min-h-full bg-forest-700" />}>
+        <Gate />
       </Suspense>
     );
   }

@@ -258,6 +258,15 @@
     }
   },
 
+  "landing": {
+    "eyebrow": "Today's board",
+    "headline": "The nearest mandi isn't always the one that pays.",
+    "sub": "Compare every nearby mandi's rate, the freight, and what actually lands in your hand — before the truck leaves.",
+    "roleFarmer": "Check today's rate at every mandi, and what you will really take home.",
+    "roleDriver": "Find loads near your route and get paid the moment you deliver.",
+    "roleBuyer": "See fresh arrivals across mandis and place your order early."
+  },
+
   "auth": {
     "login": "Log in",
     "signup": "Create account",
@@ -329,7 +338,10 @@
     "route": {
       "title": "Navigation",
       "nextStop": "Next stop",
-      "openMaps": "Open in Maps"
+      "openMaps": "Open in Maps",
+      "empty": "No trip in progress right now.",
+      "simulate": "Simulate movement",
+      "simulateJam": "Simulate a jam"
     },
     "vehicles": {
       "title": "My vehicles",
@@ -340,7 +352,9 @@
       "ratePerKm": "Rate per km",
       "isCold": "Has cooling",
       "available": "Available",
-      "unavailable": "Not available"
+      "unavailable": "Not available",
+      "base": "Base location",
+      "empty": "No vehicles added yet."
     }
   },
 
@@ -354,7 +368,9 @@
       "quantity": "Quantity needed",
       "received": "Received so far",
       "expires": "Open for",
-      "remove": "Remove"
+      "remove": "Remove",
+      "mandi": "Mandi",
+      "empty": "No buying rates posted yet."
     },
     "inbound": {
       "title": "Arrivals",

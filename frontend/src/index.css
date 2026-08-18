@@ -144,18 +144,19 @@
   }
 
   /*
-   * Signature motif: tilled furrows. The one recurring ornament, used to open
+   * Signature motif: the furrow mark. The one recurring ornament, used to open
    * a section — never scattered.
+   *
+   * Was a repeating-linear-gradient striped bar (literal alternating dashes),
+   * meant to read as tilled soil rows. At 3px tall it instead read as a broken
+   * dashed border — several rounds of user testing flagged it as a rendering
+   * glitch before anyone read it as a motif. A solid tapered bar keeps the
+   * "one mark before a heading" idea without needing the viewer to squint at
+   * it to tell the difference.
    */
   .furrow {
-    height: 3px;
-    background-image: repeating-linear-gradient(
-      90deg,
-      var(--forest) 0,
-      var(--forest) 7px,
-      transparent 7px,
-      transparent 14px
-    );
+    height: 4px;
+    background-image: linear-gradient(90deg, var(--forest) 0%, #329e4d 100%);
   }
 
   /* ---- Eyebrow label --------------------------------------------------- */
