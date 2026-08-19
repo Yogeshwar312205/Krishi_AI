@@ -17,17 +17,17 @@ import { SUPPORTED_LANGUAGES } from '../i18n';
 const NATIVE_NAMES = { en: 'ENG', hi: 'हिं', mr: 'मरा' };
 const FULL_NAMES = { en: 'English', hi: 'हिन्दी', mr: 'मराठी' };
 
-export const LanguagePicker = ({ compact = false }) => {
+export const LanguagePicker = ({ compact = false, fullWidth = false }) => {
   const { lang, setLang, t } = useT();
 
   return (
     <div
       role="group"
       aria-label={t('lang.label')}
-      className="flex items-stretch border-2 border-ink"
+      className={`flex items-stretch border-2 border-ink ${fullWidth ? 'w-full' : ''}`}
     >
       {!compact && (
-        <span className="flex items-center px-2 bg-ink text-paper" aria-hidden="true">
+        <span className="flex items-center px-3 bg-ink text-paper" aria-hidden="true">
           <Languages className="h-4 w-4" strokeWidth={2.5} />
         </span>
       )}
@@ -42,8 +42,9 @@ export const LanguagePicker = ({ compact = false }) => {
             aria-pressed={isActive}
             aria-label={FULL_NAMES[code]}
             className={`
-              min-w-[2.75rem] px-2 py-1.5 text-sm font-bold leading-none
+              min-w-[3.25rem] px-3.5 py-2.5 text-sm font-bold leading-none
               border-l-2 border-ink first:border-l-0
+              ${fullWidth ? 'flex-1 text-center' : ''}
               ${isActive ? 'bg-forest-700 text-white' : 'bg-white text-ink hover:bg-forest-50'}
             `}
           >

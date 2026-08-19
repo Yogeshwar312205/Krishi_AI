@@ -46,6 +46,12 @@ const SAMPLE_ACCOUNTS = [
 ];
 const SAMPLE_PASSWORD = 'password123';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Indian mobile numbers: 10 digits starting 6-9, an optional +91/91 country
+// prefix and any spaces/dashes the user typed stripped out first.
+const PHONE_PATTERN = /^[6-9]\d{9}$/;
+const isStrongPassword = (value) => value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
+
 /*
  * What the farmer actually gets, in the order the app delivers it. Each line
  * reuses the string the corresponding screen already shows — so the promise
@@ -124,12 +130,20 @@ export const AuthScreen = ({ initialMode = 'login', onBack }) => {
       setError(t('auth.required'));
       return;
     }
+    if (!EMAIL_PATTERN.test(form.email.trim())) {
+      setError(t('auth.invalidEmail'));
+      return;
+    }
     if (isSignup) {
-      if (!form.name.trim()) {
+      if (!form.name.trim() || !form.phone.trim()) {
         setError(t('auth.required'));
         return;
       }
-      if (form.password.length < 6) {
+      if (!PHONE_PATTERN.test(form.phone.trim().replace(/^(\+?91[\s-]?)/, '').replace(/[\s-]/g, ''))) {
+        setError(t('auth.invalidPhone'));
+        return;
+      }
+      if (!isStrongPassword(form.password)) {
         setError(t('auth.shortPassword'));
         return;
       }
@@ -182,7 +196,7 @@ export const AuthScreen = ({ initialMode = 'login', onBack }) => {
           are worth reading once, but they are not worth a scroll before the
           password box.
         */}
-        <section className="lg:col-span-5 bg-forest-700 px-5 py-7 text-white sm:px-8 sm:py-8 lg:px-9 lg:py-12">
+        <section className="flex min-h-full flex-col lg:col-span-5 bg-forest-700 px-5 py-7 text-white sm:px-8 sm:py-8 lg:px-9 lg:py-12">
           <div className="mb-8 flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="h-9 w-1.5 shrink-0 bg-turmeric-300" aria-hidden="true" />
@@ -215,10 +229,16 @@ export const AuthScreen = ({ initialMode = 'login', onBack }) => {
             })}
           </ul>
 
-          {/* `lg:flex`, not `lg:block` — a segmented control should hug its
-              three options, not stretch to the width of the panel. */}
-          <div className="mt-8 hidden lg:flex">
-            <LanguagePicker />
+          {/* mt-auto pins the picker to the panel's own bottom edge instead of
+              trailing the promise list with a fixed gap — on tall viewports the
+              green panel now stretches to fill the row (min-h-full + flex-col),
+              so without mt-auto the picker would sit stranded above a dead
+              green gap instead of anchored where a footer control belongs.
+              fullWidth so the control reaches the same right edge as the
+              tagline/promises above it, instead of shrinking to its own
+              content width and leaving green space beside it. */}
+          <div className="mt-8 hidden lg:flex lg:mt-auto lg:pt-10">
+            <LanguagePicker fullWidth />
           </div>
         </section>
 
@@ -314,6 +334,7 @@ export const AuthScreen = ({ initialMode = 'login', onBack }) => {
                     placeholder="+91 98765 43210"
                     autoComplete="tel"
                     inputMode="tel"
+                    required
                   />
                   <Field
                     label={t('auth.village')}
@@ -390,33 +411,38 @@ export const AuthScreen = ({ initialMode = 'login', onBack }) => {
               </Button>
             </form>
 
-            {/* ---- Sample accounts ---- */}
-            <div className="border-2 border-ink bg-white p-4">
-              <p className="font-display text-2xl leading-none text-ink">{t('auth.demoTitle')}</p>
-              <p className="mt-1 text-sm text-ink-soft">{t('auth.demoHint')}</p>
+            {/* ---- Sample accounts ----
+                Only worth offering when there is no real server to sign in
+                to — with a live backend the demo rows are just extra
+                clutter next to a form that already works. */}
+            {isOffline && (
+              <div className="border-2 border-ink bg-white p-4">
+                <p className="font-display text-2xl leading-none text-ink">{t('auth.demoTitle')}</p>
+                <p className="mt-1 text-sm text-ink-soft">{t('auth.demoHint')}</p>
 
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {SAMPLE_ACCOUNTS.map((account) => {
-                  const Icon = account.icon;
-                  return (
-                    <button
-                      key={account.role}
-                      type="button"
-                      onClick={() => openSample(account)}
-                      disabled={busy}
-                      className="
-                        lift flex min-h-[3.5rem] flex-col items-center justify-center gap-1
-                        border-2 border-ink bg-paper px-2 py-2.5 text-ink
-                        hover:bg-turmeric-300 disabled:opacity-60
-                      "
-                    >
-                      <Icon className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
-                      <span className="text-sm font-bold leading-none">{t(account.labelKey)}</span>
-                    </button>
-                  );
-                })}
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {SAMPLE_ACCOUNTS.map((account) => {
+                    const Icon = account.icon;
+                    return (
+                      <button
+                        key={account.role}
+                        type="button"
+                        onClick={() => openSample(account)}
+                        disabled={busy}
+                        className="
+                          lift flex min-h-[3.5rem] flex-col items-center justify-center gap-1
+                          border-2 border-ink bg-paper px-2 py-2.5 text-ink
+                          hover:bg-turmeric-300 disabled:opacity-60
+                        "
+                      >
+                        <Icon className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
+                        <span className="text-sm font-bold leading-none">{t(account.labelKey)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             <p className="text-sm text-ink-faint">{t('auth.terms')}</p>
           </div>

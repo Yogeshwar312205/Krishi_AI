@@ -31,8 +31,8 @@ export const SegmentedToggle = ({ options, value, onChange, className = '' }) =>
           aria-controls={`panel-${option.id}`}
           onClick={() => onChange(option.id)}
           className={`
-            flex flex-1 items-center justify-center gap-2 px-2 py-3 text-sm
-            leading-none border-l-2 border-ink first:border-l-0
+            flex flex-1 min-w-0 items-center justify-center gap-1.5 px-2 py-3
+            text-xs sm:text-sm leading-tight border-l-2 border-ink first:border-l-0
             transition-colors duration-150
             ${isActive
               ? 'bg-forest-700 font-bold text-white'
@@ -40,7 +40,7 @@ export const SegmentedToggle = ({ options, value, onChange, className = '' }) =>
           `}
         >
           {Icon && <Icon className="h-4 w-4 shrink-0" strokeWidth={2.25} aria-hidden="true" />}
-          <span className="truncate">{option.label}</span>
+          <span className="min-w-0 text-center">{option.label}</span>
         </button>
       );
     })}
