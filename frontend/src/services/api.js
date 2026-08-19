@@ -99,6 +99,18 @@ export const fetchLiveAgmarknetMarkets = async (crop = 'Tomato', state = '') => 
   }
 };
 
+export const fetchAgmarknetHistory = async (crop = 'Tomato', state = 'Maharashtra', days = 14) => {
+  try {
+    const response = await apiClient.get('/agmarknet/history', {
+      params: { crop, state, days }
+    });
+    return response.data;
+  } catch (err) {
+    console.warn('Failed to fetch Agmarknet price history:', err.message);
+    return { success: false, days: [] };
+  }
+};
+
 export const sendPriceAlertSms = async ({ phone, cropType, targetPrice, currentPrice, mandiName }) => {
   try {
     const response = await apiClient.post('/alerts/send-sms', {

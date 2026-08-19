@@ -269,9 +269,82 @@ const getAgmarknetLivePrices = async (cropType = 'Tomato', stateFilter = '', lim
   return enrichedRecords;
 };
 
+/**
+ * 4. Fetch Recent Daily Price History for a Commodity (for trend charts)
+ *
+ * A single mandi rarely reports every day, so this aggregates the *average*
+ * modal price across all reporting markets in `stateFilter` for each of the
+ * last `days` distinct dates present in the feed — a real, government-sourced
+ * series, just aggregated rather than per-mandi.
+ */
+const getAgmarknetHistory = async (cropType = 'Tomato', stateFilter = 'Maharashtra', days = 14) => {
+  try {
+    const apiKey = process.env.AGMARKNET_API_KEY || '579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b';
+    const RESOURCE_ID = '35985678-0d79-46b4-9ed6-6f13308a1d24';
+
+    // A single national filter (like live-rates uses) is fast, but the most
+    // recent N postings nationwide are dominated by whichever states report
+    // most that day — Maharashtra can vanish entirely, collapsing 14 days of
+    // history into one. Filtering server-side by State too is the only way
+    // to get an actual multi-day series for this state, at the cost of a
+    // slower, more variable query (2s–40s+ observed) — worth the wait since
+    // this call runs off the critical path (see useLiveMarket.js).
+    let apiUrl = `https://api.data.gov.in/resource/${RESOURCE_ID}?api-key=${apiKey}&format=json&limit=150`
+      + `&filters[Commodity]=${encodeURIComponent(cropType)}`
+      + '&sort[Arrival_Date]=desc';
+    if (stateFilter) {
+      apiUrl += `&filters[State]=${encodeURIComponent(stateFilter)}`;
+    }
+
+    let response;
+    try {
+      response = await axios.get(apiUrl, { timeout: 12000 });
+    } catch (firstErr) {
+      // One retry — the timeouts above are transient congestion, not a dead
+      // endpoint, and a second, more patient attempt clears most of them.
+      response = await axios.get(apiUrl, { timeout: 20000 });
+    }
+
+    const records = (response.data && response.data.records) || [];
+    if (!records.length) return { days: [], isLiveGovtData: false };
+
+    const byDate = new Map();
+    for (const r of records) {
+      const date = r.Arrival_Date;
+      const modal = Number(r.Modal_Price);
+      if (!date || !modal) continue;
+      if (!byDate.has(date)) byDate.set(date, { sum: 0, count: 0 });
+      const bucket = byDate.get(date);
+      bucket.sum += modal;
+      bucket.count += 1;
+    }
+
+    // Arrival_Date is dd/mm/yyyy; sort chronologically, oldest first.
+    const toSortable = (d) => {
+      const [dd, mm, yyyy] = d.split('/');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const series = [...byDate.entries()]
+      .map(([date, { sum, count }]) => ({
+        date: toSortable(date),
+        avgRatePerKg: Math.round((sum / count / 100) * 100) / 100,
+        sampleCount: count
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-days);
+
+    return { days: series, isLiveGovtData: series.length > 0 };
+  } catch (err) {
+    logger.warn(`Agmarknet history Govt API error: ${err.message}.`);
+    return { days: [], isLiveGovtData: false };
+  }
+};
+
 module.exports = {
   getAgmarknetLivePrices,
   getLiveGovtWeather,
-  getLiveGovtFuelRates
+  getLiveGovtFuelRates,
+  getAgmarknetHistory
 };
 

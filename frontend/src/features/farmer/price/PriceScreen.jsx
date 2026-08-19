@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Store, LineChart, Wallet, MapPin, Truck } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
-import { buildVerdict, buildForecast, AHEAD_DAYS } from '../../../data/demoMarket';
+import { useLiveMarket } from '../../../data/useLiveMarket';
+import { AHEAD_DAYS } from '../../../data/demoMarket';
 import { SectionHead } from '../../../design/primitives/SectionHead';
 import { SegmentedToggle } from '../../../design/primitives/SegmentedToggle';
 import { LedgerRow } from '../../../design/primitives/LedgerRow';
-import { DemoStamp } from '../../../design/primitives/DemoStamp';
+import { MarketStatusStamp } from '../../../design/primitives/MarketStatusStamp';
 import { Button } from '../../../design/primitives/Button';
 import { ForecastChart } from './ForecastChart';
 
@@ -28,11 +29,7 @@ export const PriceScreen = () => {
 
   const [panel, setPanel] = useState('rates');
 
-  const { best, comparison } = useMemo(
-    () => buildVerdict(cropDetails.cropType, cropDetails.quantityKg),
-    [cropDetails.cropType, cropDetails.quantityKg]
-  );
-  const forecast = useMemo(() => buildForecast(cropDetails.cropType), [cropDetails.cropType]);
+  const { best, comparison, forecast, status } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
 
   const cropName = t(`crops.${cropDetails.cropType}`);
 
@@ -93,7 +90,7 @@ export const PriceScreen = () => {
               ))}
               <p className="py-3 text-sm leading-snug text-ink-faint">{t('price.mandis.explain')}</p>
             </div>
-            <DemoStamp />
+            <MarketStatusStamp status={status} />
           </div>
         )}
 
@@ -103,7 +100,7 @@ export const PriceScreen = () => {
               <p className="eyebrow mb-3">{t('price.forecast.nextDays', { count: AHEAD_DAYS })}</p>
               <ForecastChart points={forecast} />
             </div>
-            <DemoStamp />
+            <MarketStatusStamp status={status} />
           </div>
         )}
 
@@ -115,7 +112,7 @@ export const PriceScreen = () => {
               <LedgerRow label={t('price.costs.commission')} value={`− ${money(best.commission)}`} />
               <LedgerRow label={t('price.costs.net')} value={money(best.net)} emphasis />
             </div>
-            <DemoStamp />
+            <MarketStatusStamp status={status} />
           </div>
         )}
       </div>

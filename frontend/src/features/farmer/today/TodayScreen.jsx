@@ -1,13 +1,13 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus, Truck, IndianRupee, Sprout, MapPin } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
-import { buildVerdict } from '../../../data/demoMarket';
+import { useLiveMarket } from '../../../data/useLiveMarket';
 import { Slab } from '../../../design/primitives/Slab';
 import { Button } from '../../../design/primitives/Button';
 import { SectionHead } from '../../../design/primitives/SectionHead';
 import { LedgerRow } from '../../../design/primitives/LedgerRow';
-import { DemoStamp } from '../../../design/primitives/DemoStamp';
+import { MarketStatusStamp } from '../../../design/primitives/MarketStatusStamp';
 import { useCountUp } from '../../../design/useCountUp';
 
 /**
@@ -23,10 +23,7 @@ export const TodayScreen = () => {
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const { t, money, rate, number } = useT();
 
-  const { best, comparison, delta, action } = useMemo(
-    () => buildVerdict(cropDetails.cropType, cropDetails.quantityKg),
-    [cropDetails.cropType, cropDetails.quantityKg]
-  );
+  const { best, comparison, delta, action, status } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
 
   const cropName = t(`crops.${cropDetails.cropType}`);
   const firstName = user?.name ? user.name.split(' ')[0] : null;
@@ -103,7 +100,7 @@ export const TodayScreen = () => {
         </p>
 
         <div className="mt-4">
-          <DemoStamp />
+          <MarketStatusStamp status={status} />
         </div>
       </Slab>
 

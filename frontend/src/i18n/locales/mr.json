@@ -24,6 +24,10 @@
     "tomorrow": "उद्या",
     "demoBadge": "नमुना माहिती",
     "demoTip": "हे आकडे फक्त दाखवण्यासाठी आहेत. खरे बाजारभाव सरकारी Agmarknet वरून येतील.",
+    "liveBadge": "लाइव · Agmarknet",
+    "liveTip": "आजचा बाजारभाव सरकारी Agmarknet फीड (data.gov.in) वरून.",
+    "loadingBadge": "अपडेट होत आहे…",
+    "loadingTip": "नवीनतम सरकारी बाजारभाव आणले जात आहेत.",
     "listen": "ऐका",
     "call": "फोन करा"
   },

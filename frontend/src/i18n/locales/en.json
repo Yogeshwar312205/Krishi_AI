@@ -24,6 +24,10 @@
     "tomorrow": "Tomorrow",
     "demoBadge": "Sample data",
     "demoTip": "These numbers are for the demo only. Real mandi rates will come from the government Agmarknet feed.",
+    "liveBadge": "Live · Agmarknet",
+    "liveTip": "Today's mandi rate from the government Agmarknet feed (data.gov.in).",
+    "loadingBadge": "Updating…",
+    "loadingTip": "Fetching the latest government mandi rates.",
     "listen": "Listen",
     "call": "Call"
   },

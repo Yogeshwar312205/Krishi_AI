@@ -24,6 +24,10 @@
     "tomorrow": "कल",
     "demoBadge": "नमूना जानकारी",
     "demoTip": "ये आँकड़े सिर्फ़ दिखाने के लिए हैं। असली मंडी भाव सरकारी Agmarknet से आएँगे।",
+    "liveBadge": "लाइव · Agmarknet",
+    "liveTip": "आज का मंडी भाव सरकारी Agmarknet फ़ीड (data.gov.in) से।",
+    "loadingBadge": "अपडेट हो रहा है…",
+    "loadingTip": "नवीनतम सरकारी मंडी भाव लाए जा रहे हैं।",
     "listen": "सुनें",
     "call": "फ़ोन करें"
   },
