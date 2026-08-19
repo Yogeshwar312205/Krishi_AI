@@ -258,6 +258,90 @@ export const useAppStore = create((set, get) => ({
     dateBookings: state.dateBookings.map((b) => b.id === bookingId ? { ...b, status: newStatus } : b)
   })),
 
+  /*
+   * Mandi deals — the step that used to be missing entirely.
+   *
+   * A farmer does not hire a truck and then find out what the mandi will pay;
+   * they agree a price with a commission agent or trader first, and the truck
+   * is what happens after. The old Transport screen let a farmer book a vehicle
+   * straight off the rate board, which produced a booking with a destination
+   * nobody at that destination had agreed to receive.
+   *
+   * A deal carries the agreed rate, which is what the farmer actually gets —
+   * the Agmarknet modal price is the market's midpoint, not a quote made to
+   * this farmer for this lot. Everything downstream (booking value, waybill,
+   * the buyer's inbound list) reads the agreed rate, not the board rate.
+   */
+  deals: [
+    {
+      id: 'DEAL-4402',
+      mandiName: 'Mumbai APMC',
+      district: 'Mumbai',
+      distanceKm: 171,
+      cropType: 'Tomato',
+      quantityKg: 2500,
+      boardRatePerKg: 18,
+      agreedRatePerKg: 19.5,
+      farmerName: 'Ramesh Singh',
+      farmerPhone: '+91 98765 43210',
+      trader: {
+        name: 'Rajesh Mehta',
+        company: 'Mehta Produce Corp',
+        phone: '+91 98200 55443',
+        onPlatform: true,
+        postingId: 'BID-901',
+      },
+      status: 'Agreed',
+      messages: [
+        { from: 'farmer', text: 'Namaskar. 2,500 kg tomato, ready tomorrow. What rate can you give?', at: 'Yesterday, 04:10 PM' },
+        { from: 'trader', text: 'Send it. ₹19.50 a kg for Grade-A. Reach before 8 AM.', at: 'Yesterday, 05:22 PM' },
+      ],
+      bookingId: null,
+      createdAt: 'Yesterday, 04:10 PM',
+    },
+  ],
+
+  /**
+   * The mandi the farmer tapped on the Prices screen, handed to the Transport
+   * screen so it opens on that mandi instead of asking the question again.
+   */
+  pendingMandi: null,
+  setPendingMandi: (mandi) => set({ pendingMandi: mandi }),
+
+  createDeal: (deal) => set((state) => ({
+    deals: [deal, ...state.deals],
+    pendingMandi: null,
+  })),
+
+  sendDealMessage: (dealId, message) => set((state) => ({
+    deals: state.deals.map((deal) =>
+      deal.id === dealId ? { ...deal, messages: [...deal.messages, message] } : deal
+    ),
+  })),
+
+  /** Records the price the two sides settled on. This is what unlocks booking. */
+  agreeDeal: (dealId, { agreedRatePerKg, quantityKg }) => set((state) => ({
+    deals: state.deals.map((deal) =>
+      deal.id === dealId
+        ? {
+            ...deal,
+            agreedRatePerKg,
+            quantityKg: quantityKg ?? deal.quantityKg,
+            status: 'Agreed',
+          }
+        : deal
+    ),
+  })),
+
+  setDealStatus: (dealId, status) => set((state) => ({
+    deals: state.deals.map((deal) => (deal.id === dealId ? { ...deal, status } : deal)),
+  })),
+
+  /** Links a booking back to the deal it was made against, so neither can drift. */
+  attachBookingToDeal: (dealId, bookingId) => set((state) => ({
+    deals: state.deals.map((deal) => (deal.id === dealId ? { ...deal, bookingId } : deal)),
+  })),
+
   // Farmer Bookings & Consignments
   bookings: [
     {
@@ -348,7 +432,7 @@ export const useAppStore = create((set, get) => ({
       offeredPricePerKg: 46,
       requiredQuantityKg: 5000,
       receivedQuantityKg: 2500,
-      mandiName: 'Vashi Wholesale APMC',
+      mandiName: 'Mumbai APMC',
       traderName: 'Rajesh Mehta (Mehta Produce Corp)',
       traderPhone: '+91 98200 55443',
       status: 'Active Procurement',
@@ -361,7 +445,7 @@ export const useAppStore = create((set, get) => ({
       offeredPricePerKg: 34,
       requiredQuantityKg: 10000,
       receivedQuantityKg: 5000,
-      mandiName: 'Nashik Main APMC',
+      mandiName: 'Nasik APMC',
       traderName: 'Rajesh Mehta (Mehta Produce Corp)',
       traderPhone: '+91 98200 55443',
       status: 'Active Procurement',
@@ -387,7 +471,7 @@ export const useAppStore = create((set, get) => ({
       driverName: 'Suresh Shinde',
       driverPhone: '+91 98230 11223',
       vehicleNo: 'MH 15 GH 4921',
-      mandiName: 'Vashi Wholesale APMC',
+      mandiName: 'Mumbai APMC',
       eta: 'Today, 11:45 AM',
       agreedRate: '₹46 / kg',
       estTotalValue: '₹1,15,000',
@@ -401,7 +485,7 @@ export const useAppStore = create((set, get) => ({
       driverName: 'Sunita Patil',
       driverPhone: '+91 94221 88990',
       vehicleNo: 'MH 31 CB 7810',
-      mandiName: 'Vashi Wholesale APMC',
+      mandiName: 'Mumbai APMC',
       eta: 'Arrived at Gate #4',
       agreedRate: '₹34 / kg',
       estTotalValue: '₹1,70,000',

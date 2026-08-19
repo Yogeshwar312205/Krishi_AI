@@ -74,6 +74,16 @@ The farmer screens run on the real data.gov.in Agmarknet feed. `demoMarket.js` i
 - `frontend/src/data/marketCache.js` — one shared TTL cache (10 min) with in-flight de-duplication, a background refresh timer that only runs while something is subscribed, and `prefetch()` called once from `App.jsx`. Screens read it through `useSyncExternalStore`, so moving between Today / Prices / landing costs no network. Cache keys are **crop only**: distance and profit are recomputed client-side (`data/geo.js`) so changing quantity or farm location never re-fetches.
 - `useLiveMarket` returns `comparison` (all mandis by net), `best`, `topRate` (highest headline rate — used by the landing board, where there's no farm to measure a haul from), and `advantage`, the arithmetic proving the top mandi beats the *nearest* one. That last object is the product's whole claim; `WhyFurther.jsx` renders it, and `MandiRow.jsx` shows every row's full working.
 
+### The deal gate — a truck may not be booked without an agreed price
+
+`TransportScreen` runs three panels in a fixed order: **Mandi deal → Book a vehicle → My bookings**, and the vehicle panel is gated on an agreed deal for the *currently loaded crop*. This is a product invariant, not a layout preference: the screen used to open on vehicle search, so a farmer could hire a truck to a mandi where nobody had agreed to receive the lot, at a price nobody had quoted them.
+
+- `store.deals[]` carries `agreedRatePerKg`, which is what the farmer actually gets. The Agmarknet modal price (`boardRatePerKg`) is the market's midpoint for yesterday's arrivals — a reason to *choose* a mandi, never a quote. Bookings, waybills and the buyer's inbound list all read the agreed rate.
+- `data/traders.js` decides who the farmer can talk to. `sameMandi()` reconciles feed names ("Mumbai APMC") with buyer-typed ones ("Vashi Wholesale APMC") by dropping noise words and applying a small alias table. A match means an in-app thread; no match means we say so and offer the Kisan Call Centre. **Never invent a phone number for a mandi** — we hold none for the ~290 yards in the feed, and a wrong number on a screen a farmer is about to act on is worse than no number.
+- The Prices screen hands its selection over via `store.pendingMandi`, so the deal panel opens on the mandi the farmer tapped. The deal panel lists *every* reporting mandi, not a shortlist.
+- Deals filter by crop (`deal.cropType === cropDetails.cropType`). An agreed tomato price must never be attached to an onion consignment.
+- `BuyerInboundScreen` is the other half: enquiries above shipments, with reply and a quote action that writes `agreedRatePerKg` back.
+
 ### Real-time
 
 `backend/src/sockets/trackingSocket.js` + `frontend/src/hooks/useSocket.js`. Three events: `driver_location_update` (rebroadcast as `vehicle:location_changed`), `simulation:start_tracking` (server-side 2s interpolation Nashik→Vashi), and `dev_simulate_traffic` → `dev:traffic_reroute_event`, a scripted demo reroute with hardcoded metrics.

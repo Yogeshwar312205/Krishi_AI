@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import {
   Truck, CalendarDays, Sunrise, Sun, Sunset, Search, Snowflake, Phone,
-  MapPin, ClipboardList, Check, Loader2, PackageOpen,
+  MapPin, ClipboardList, Check, Loader2, PackageOpen, Handshake, ArrowLeft,
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
-import { DEMO_MANDIS, buildMandiComparison } from '../../../data/demoMarket';
+import { useLiveMarket, mandiLabel as liveMandiLabel } from '../../../data/useLiveMarket';
+import { DealPanel } from './DealPanel';
 import { SectionHead } from '../../../design/primitives/SectionHead';
 import { SegmentedToggle } from '../../../design/primitives/SegmentedToggle';
 import { ChoiceGrid } from '../../../design/primitives/ChoiceGrid';
@@ -15,16 +16,23 @@ import { Field } from '../../../design/primitives/Field';
 import { DemoStamp } from '../../../design/primitives/DemoStamp';
 
 /**
- * Booking a vehicle, and seeing the ones already booked.
+ * Selling the lot: agree the price, then send the truck, then watch it go.
  *
  * Replaces four legacy screens — CropWizard, DateVehicleBooking,
  * NewBookingModal and MyBookings — which between them asked the farmer for the
  * crop three times and the destination twice, across two modals.
  *
- * Here the crop is already known (the Crop screen owns it) and the destination
- * defaults to the mandi that pays most today. So the booking is three taps:
- * which day, what time, which vehicle. Everything else is either already
- * answered or is a number we should be working out, not asking for.
+ * The order of the two first panels is the fix, not a preference. This screen
+ * used to open straight onto vehicle search: a farmer could hire a truck to a
+ * mandi where nobody had agreed to buy anything, at a price nobody had quoted
+ * them, and the resulting booking named a destination that had never heard of
+ * the consignment. A rate on the Agmarknet board is a reason to choose a mandi;
+ * it is not a sale. So the deal comes first and the vehicle list is gated on
+ * it — the truck exists to serve an agreement that already exists.
+ *
+ * The crop is already known (the Crop screen owns it) and the destination
+ * comes from the deal, so booking is three taps: which day, what time, which
+ * vehicle.
  */
 
 /*
@@ -72,25 +80,45 @@ export const TransportScreen = () => {
   const createDateBooking = useAppStore((state) => state.createDateBooking);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const user = useAppStore((state) => state.user);
-  const { t, money, number, shortDate } = useT();
+  const { t, money, number, rate, shortDate } = useT();
 
-  const comparison = useMemo(
-    () => buildMandiComparison(cropDetails.cropType, cropDetails.quantityKg),
-    [cropDetails.cropType, cropDetails.quantityKg]
+  const deals = useAppStore((state) => state.deals);
+  const pendingMandi = useAppStore((state) => state.pendingMandi);
+  const attachBookingToDeal = useAppStore((state) => state.attachBookingToDeal);
+
+  // Every mandi reporting this crop today, ranked by what the farmer keeps —
+  // the same live list the Prices screen shows, not a four-entry demo table.
+  const { comparison } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
+
+  /*
+   * Opens on the deal panel unless there is already an agreed deal waiting for
+   * a truck. Arriving from the Prices screen ("contact this mandi") always
+   * means the deal panel, whatever else is open.
+   */
+  /*
+   * Only deals for the crop currently loaded. A farmer with an agreed tomato
+   * price and a shed full of onions must not be shown the tomato rate over an
+   * onion consignment — the two were briefly reconciled into one booking here,
+   * which is exactly the kind of quiet mismatch a waybill carries all the way
+   * to the mandi gate.
+   */
+  const agreedDeals = deals.filter(
+    (deal) => deal.status === 'Agreed' && !deal.bookingId && deal.cropType === cropDetails.cropType
   );
-
-  const [panel, setPanel] = useState('book');
-  // Default destination is the mandi that pays most — the answer the Price
-  // screen just gave. Asking again from a blank dropdown would discard it.
-  const [mandiId, setMandiId] = useState(comparison[0].id);
+  const [panel, setPanel] = useState(() =>
+    (!pendingMandi && agreedDeals.length ? 'book' : 'deal')
+  );
+  const [dealId, setDealId] = useState(() => agreedDeals[0]?.id || null);
   const [pickupDate, setPickupDate] = useState(todayISO());
   const [slot, setSlot] = useState('morning');
   const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [bookedId, setBookedId] = useState(null);
 
-  const mandi = DEMO_MANDIS.find((m) => m.id === mandiId) || DEMO_MANDIS[0];
-  const cropName = t(`crops.${cropDetails.cropType}`);
+  // The deal being fulfilled. Falls back to the oldest unbooked agreement so a
+  // farmer who agreed a price yesterday is not asked to pick it again.
+  const deal = agreedDeals.find((d) => d.id === dealId) || agreedDeals[0] || null;
+
 
   /*
    * A vehicle that cannot carry the load is shown, not filtered out — with the
@@ -103,11 +131,11 @@ export const TransportScreen = () => {
         .filter((vehicle) => vehicle.isAvailable)
         .map((vehicle) => ({
           ...vehicle,
-          fare: fareFor(vehicle, mandi.distanceKm),
-          fits: vehicle.capacityKg >= cropDetails.quantityKg,
+          fare: fareFor(vehicle, deal?.distanceKm || 0),
+          fits: vehicle.capacityKg >= (deal?.quantityKg || cropDetails.quantityKg),
         }))
         .sort((a, b) => (a.fits === b.fits ? a.fare - b.fare : a.fits ? -1 : 1)),
-    [registeredVehicles, mandi.distanceKm, cropDetails.quantityKg]
+    [registeredVehicles, deal, cropDetails.quantityKg]
   );
 
   const findVehicles = () => {
@@ -122,33 +150,41 @@ export const TransportScreen = () => {
   };
 
   const book = (offer) => {
+    if (!deal) return;
     const slotOption = SLOTS.find((s) => s.id === slot) || SLOTS[0];
     const id = `UBER-${Math.floor(Math.random() * 900 + 100)}`;
 
     createDateBooking({
       id,
+      dealId: deal.id,
       farmerName: user?.name || '',
       farmerPhone: user?.phone || '',
       pickupDate,
       timeSlot: `${t(slotOption.labelKey)} (${t(slotOption.timeKey)})`,
-      cropType: cropDetails.cropType,
-      quantityKg: cropDetails.quantityKg,
+      cropType: deal.cropType,
+      quantityKg: deal.quantityKg,
       origin: farmerAddress,
       // The English name is what the driver dashboard and the waybill read, so
-      // it stays canonical in the record. The id rides along so the farmer's own
-      // view can show the name in their language without translating data.
-      destination: mandi.name,
-      destinationId: mandi.id,
+      // it stays canonical in the record.
+      destination: deal.mandiName,
+      destinationId: deal.mandiNameKey ? deal.mandiName : null,
+      // The agreed rate, not the board rate — this is what the consignment is
+      // actually worth, and what the buyer expects to pay on arrival.
+      agreedRatePerKg: deal.agreedRatePerKg,
+      consignmentValue: money(deal.agreedRatePerKg * deal.quantityKg),
+      traderName: deal.trader?.name || null,
+      traderPhone: deal.trader?.phone || null,
       vehicleId: offer.id,
       vehicleNo: offer.vehicleNo,
       driverName: offer.driverName,
       driverPhone: offer.driverPhone,
-      estDistanceKm: mandi.distanceKm,
+      estDistanceKm: deal.distanceKm,
       estTotalFare: money(offer.fare),
       status: 'Pending Driver Acceptance',
       createdAt: shortDate(new Date()),
     });
 
+    attachBookingToDeal(deal.id, id);
     setBookedId(id);
     setShowResults(false);
   };
@@ -163,8 +199,7 @@ export const TransportScreen = () => {
    * carry only the English destination string, so fall back to it rather than
    * rendering the literal key "mandis.undefined".
    */
-  const mandiLabel = (booking) =>
-    (booking.destinationId ? t(`mandis.${booking.destinationId}`) : booking.destination);
+  const bookingMandi = (booking) => booking.destination;
 
   const renderBooking = (booking) => (
     <article key={booking.id} className="border-2 border-ink bg-white">
@@ -183,7 +218,7 @@ export const TransportScreen = () => {
         />
         <LedgerRow
           label={t('transport.route.drop')}
-          sub={mandiLabel(booking)}
+          sub={bookingMandi(booking)}
           value={<span className="font-sans text-base">{booking.timeSlot?.split(' ')[0]}</span>}
         />
         <LedgerRow
@@ -191,6 +226,13 @@ export const TransportScreen = () => {
           sub={`${t('transport.vehicle.driver')}: ${booking.driverName}`}
           value={<span className="font-sans text-base tnum">{booking.vehicleNo}</span>}
         />
+        {booking.agreedRatePerKg && (
+          <LedgerRow
+            label={t('deal.agreedTitle')}
+            sub={booking.traderName || undefined}
+            value={<span className="font-sans text-base tnum">{rate(booking.agreedRatePerKg)}/{t('common.kg')}</span>}
+          />
+        )}
         <LedgerRow
           label={t('transport.vehicle.total')}
           sub={`${number(booking.estDistanceKm)} ${t('common.km')} · ${t(`crops.${booking.cropType}`)} ${number(booking.quantityKg)} ${t('common.kg')}`}
@@ -220,6 +262,7 @@ export const TransportScreen = () => {
 
       <SegmentedToggle
         options={[
+          { id: 'deal', label: t('deal.tab'), icon: Handshake },
           { id: 'book', label: t('transport.book.title'), icon: Truck },
           { id: 'mine', label: t('transport.bookings.title'), icon: ClipboardList },
         ]}
@@ -229,14 +272,71 @@ export const TransportScreen = () => {
 
       <div key={panel} id={`panel-${panel}`} role="tabpanel" className="detail-enter space-y-5">
 
-        {panel === 'book' && (
+        {panel === 'deal' && (
+          <DealPanel
+            comparison={comparison}
+            onDealAgreed={(id) => { setDealId(id); setPanel('book'); setShowResults(false); }}
+          />
+        )}
+
+        {/* The gate. Not a disabled button — a farmer who lands here without a
+            deal needs to know what is missing and where to go, and a greyed-out
+            "Find vehicles" says neither. */}
+        {panel === 'book' && !deal && (
+          <div className="border-2 border-ink bg-white px-4 py-8 text-center">
+            <Handshake className="mx-auto h-10 w-10 text-ink-faint" strokeWidth={2} aria-hidden="true" />
+            <p className="mt-3 font-display text-3xl leading-none text-ink">{t('transport.book.needDeal')}</p>
+            <p className="mx-auto mt-2 max-w-sm leading-snug text-ink-soft">{t('transport.book.needDealWhy')}</p>
+            <div className="mx-auto mt-5 max-w-xs">
+              <Button icon={Handshake} onClick={() => setPanel('deal')}>
+                {t('deal.tab')}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {panel === 'book' && deal && (
           <>
+            {/* ---- The agreement this truck is serving. ---- */}
+            <div className="border-2 border-forest-700 bg-forest-50 px-4 py-3.5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="eyebrow flex items-center gap-1.5">
+                    <Handshake className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
+                    {t('deal.agreedWith')}
+                  </p>
+                  <p className="mt-1.5 font-display text-2xl leading-none text-ink">{deal.mandiName}</p>
+                  <p className="mt-1 text-sm text-ink-soft tnum">
+                    {number(deal.distanceKm)} {t('common.km')}
+                    {deal.trader?.name && ` · ${deal.trader.name}`}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="eyebrow">{t('deal.agreedTitle')}</p>
+                  <p className="font-display text-3xl leading-none tnum text-forest-700">
+                    {rate(deal.agreedRatePerKg)}
+                  </p>
+                  <p className="mt-1 text-sm text-ink-soft tnum">
+                    {money(deal.agreedRatePerKg * deal.quantityKg)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPanel('deal')}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-forest-700 underline underline-offset-2"
+              >
+                <ArrowLeft className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
+                {t('deal.changeDeal')}
+              </button>
+            </div>
+
             {/* ---- What is being sent. Stated, not asked. ---- */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-white px-4 py-3.5">
               <div className="min-w-0">
                 <p className="eyebrow">{t('transport.book.load')}</p>
                 <p className="mt-1 font-display text-2xl leading-none text-ink">
-                  {cropName} · <span className="tnum">{number(cropDetails.quantityKg)} {t('common.kg')}</span>
+                  {t(`crops.${deal.cropType}`)} · <span className="tnum">{number(deal.quantityKg)} {t('common.kg')}</span>
                 </p>
               </div>
               <button
@@ -247,37 +347,6 @@ export const TransportScreen = () => {
                 {t('transport.book.change')}
               </button>
             </div>
-
-            {/* ---- Which mandi ---- */}
-            <fieldset>
-              <legend className="field-label">{t('transport.book.whereTo')}</legend>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {comparison.map((option) => {
-                  const isActive = option.id === mandiId;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => { setMandiId(option.id); setShowResults(false); }}
-                      aria-pressed={isActive}
-                      className={`
-                        lift flex min-h-[4.5rem] flex-col items-center justify-center gap-1 border-2 px-2 py-2.5
-                        ${isActive
-                          ? 'border-ink bg-forest-700 text-white'
-                          : 'border-rule bg-white text-ink-soft hover:border-ink'}
-                      `}
-                    >
-                      <span className={`text-base leading-none ${isActive ? 'font-bold' : 'font-semibold'}`}>
-                        {t(`mandis.${option.id}`)}
-                      </span>
-                      <span className={`text-sm leading-none tnum ${isActive ? 'text-forest-100' : 'text-ink-faint'}`}>
-                        {number(option.distanceKm)} {t('common.km')}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
@@ -311,7 +380,7 @@ export const TransportScreen = () => {
               <section className="detail-enter space-y-3">
                 <SectionHead
                   title={t('transport.vehicle.available', { count: offers.length })}
-                  note={t('transport.book.toMandi', { mandi: t(`mandis.${mandi.id}`) })}
+                  note={t('transport.book.toMandi', { mandi: deal.mandiName })}
                 />
 
                 {offers.length === 0 && (

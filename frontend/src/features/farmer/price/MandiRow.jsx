@@ -1,7 +1,8 @@
 import React from 'react';
-import { MapPin, ChevronDown, Crosshair } from 'lucide-react';
+import { MapPin, ChevronDown, Crosshair, MessageSquare } from 'lucide-react';
 import { useT } from '../../../i18n/useT';
 import { mandiLabel, COMMISSION_RATE } from '../../../data/useLiveMarket';
+import { Button } from '../../../design/primitives/Button';
 
 /**
  * One mandi, and — on tap — the entire arithmetic behind its number.
@@ -12,7 +13,7 @@ import { mandiLabel, COMMISSION_RATE } from '../../../data/useLiveMarket';
  * list: "you get ₹76,918" is an assertion until the ₹5,332 of diesel and the
  * ₹5,250 of commission are on screen next to it.
  */
-export const MandiRow = ({ row, rank, expanded, onToggle }) => {
+export const MandiRow = ({ row, rank, expanded, onToggle, onContact }) => {
   const { t, money, rate, number, percent, shortDate } = useT();
 
   const name = mandiLabel(t, row);
@@ -133,6 +134,18 @@ export const MandiRow = ({ row, rank, expanded, onToggle }) => {
               </span>
             )}
           </div>
+
+          {/* The next real step. A rate on a board is not a sale — somebody at
+              that mandi has to agree to take the lot at a price, and that
+              conversation is what this button starts. Booking a truck comes
+              after it, not before. */}
+          {onContact && (
+            <div className="mt-4">
+              <Button icon={MessageSquare} onClick={() => onContact(row)}>
+                {t('deal.contactMandi')}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

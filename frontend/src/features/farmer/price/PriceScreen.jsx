@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, LineChart, Wallet, Truck, RefreshCw } from 'lucide-react';
+import { Store, LineChart, Wallet, RefreshCw, MessageSquare } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
 import { useLiveMarket, mandiLabel, COMMISSION_RATE } from '../../../data/useLiveMarket';
@@ -37,6 +37,7 @@ const COLLAPSED_ROWS = 6;
 export const PriceScreen = () => {
   const cropDetails = useAppStore((state) => state.cropDetails);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const setPendingMandi = useAppStore((state) => state.setPendingMandi);
   const { t, money, rate, number, shortDate } = useT();
 
   const [panel, setPanel] = useState('rates');
@@ -50,6 +51,26 @@ export const PriceScreen = () => {
 
   const cropName = t(`crops.${cropDetails.cropType}`);
   const visible = showAll ? comparison : comparison.slice(0, COLLAPSED_ROWS);
+
+  /*
+   * Hands the chosen mandi to the Transport screen and jumps there. The rate
+   * board is where the farmer decides *where* to sell; the deal and the truck
+   * both belong to that destination, so carrying the choice across is what
+   * stops the next screen asking the same question from a blank dropdown.
+   */
+  const startDeal = (row) => {
+    setPendingMandi({
+      id: row.id,
+      name: row.name,
+      nameKey: row.nameKey,
+      district: row.district,
+      distanceKm: row.distanceKm,
+      distanceApprox: row.distanceApprox,
+      ratePerKg: row.ratePerKg,
+      net: row.net,
+    });
+    setActiveTab('transport');
+  };
 
   const refresh = async () => {
     setRefreshing(true);
@@ -140,6 +161,7 @@ export const PriceScreen = () => {
                   rank={index}
                   expanded={openMandi === mandi.id}
                   onToggle={() => setOpenMandi(openMandi === mandi.id ? null : mandi.id)}
+                  onContact={startDeal}
                 />
               ))}
 
@@ -210,9 +232,10 @@ export const PriceScreen = () => {
         )}
       </div>
 
-      {/* One action, always the same one, wherever the farmer got to. */}
-      <Button icon={Truck} onClick={() => setActiveTab('transport')}>
-        {t('today.bookVehicle')}
+      {/* One action, always the same one, wherever the farmer got to — and it
+          leads to the deal with the best-paying mandi, not straight to a truck. */}
+      <Button icon={MessageSquare} onClick={() => startDeal(best)}>
+        {t('deal.contactBest', { mandi: mandiLabel(t, best) })}
       </Button>
     </div>
   );

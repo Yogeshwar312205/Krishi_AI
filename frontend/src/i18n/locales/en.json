@@ -219,7 +219,9 @@
       "searching": "Looking for vehicles near you…",
       "load": "What you are sending",
       "change": "Change",
-      "toMandi": "To {{mandi}}"
+      "toMandi": "To {{mandi}}",
+      "needDeal": "Settle the price first",
+      "needDealWhy": "A truck costs money whether or not anyone at the mandi is waiting for your crop. Agree a rate with a trader first, then send the vehicle."
     },
     "vehicle": {
       "available": "{{count}} vehicles available",
@@ -419,7 +421,17 @@
       "eta": "Reaching at",
       "from": "From farmer",
       "value": "Total value",
-      "empty": "No arrivals today"
+      "empty": "No arrivals today",
+      "shipments": "Produce on the way"
+    },
+    "deals": {
+      "title": "Farmers asking a price",
+      "from": "Farmer",
+      "reply": "Your reply",
+      "replyPlaceholder": "Send it tomorrow morning, Grade-A only.",
+      "quote": "Offer a rate per kg",
+      "sendQuote": "Send this rate",
+      "quotedMessage": "I can give {{rate}} a kg. Send the lot."
     }
   },
   "demo": {
@@ -435,5 +447,41 @@
     "online": "Connected",
     "offline": "Not connected",
     "engineOffline": "Rate service not reachable"
+  },
+  "deal": {
+    "tab": "Mandi deal",
+    "contactMandi": "Talk to this mandi",
+    "contactBest": "Talk to {{mandi}}",
+    "whichMandi": "Which mandi are you selling to?",
+    "mandiCount": "All {{count}} mandis reporting this crop today.",
+    "boardRate": "Today's board rate",
+    "boardRateWhy": "The market average. Your rate is what you settle with the trader.",
+    "lot": "Your lot",
+    "traderOnPlatform": "Trader on KrushiFlow",
+    "postedRate": "Their posted rate",
+    "message": "Your message",
+    "messagePlaceholder": "{{qty}} kg {{crop}} ready. What rate can you give?",
+    "send": "Send",
+    "sendEnquiry": "Send enquiry",
+    "callTrader": "Call trader",
+    "noTraderYet": "No trader here yet",
+    "noTraderWhy": "No trader from {{mandi}} has joined KrushiFlow yet, so we cannot message them for you.",
+    "helplineWhy": "We do not keep phone numbers for every APMC, and we will not show you a guess. Call the government farmer helpline, or your own commission agent, and record the rate here afterwards.",
+    "callHelpline": "Kisan helpline {{number}}",
+    "recordCta": "Price settled? Record it",
+    "recordTitle": "Record the settled price",
+    "agreedRate": "Agreed rate per kg",
+    "agreedRateHint": "Today's board rate is {{rate}}. Enter what the trader actually promised you.",
+    "confirm": "Confirm deal",
+    "agreedTitle": "Agreed rate",
+    "agreedWith": "Deal agreed with",
+    "agreedValue": "{{value}} for the whole lot",
+    "nowBook": "Now book a vehicle",
+    "changeDeal": "Change the deal",
+    "otherDeals": "Your other deals",
+    "status": {
+      "agreed": "Price agreed",
+      "waiting": "Waiting for reply"
+    }
   }
 }
