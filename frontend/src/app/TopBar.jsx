@@ -34,7 +34,7 @@ export const TopBar = () => {
 
   return (
     <header className="sticky top-0 z-30 border-b-2 border-ink bg-white/95 backdrop-blur-sm">
-      <div className="flex items-center gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+      <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
 
         {/* Wordmark — mobile only; the desktop rail carries it. */}
         <div className="flex min-w-0 items-center gap-2 md:hidden">

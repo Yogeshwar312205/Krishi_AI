@@ -28,7 +28,7 @@ export const SideNav = () => {
     <aside className="hidden md:flex md:w-56 lg:w-64 shrink-0 flex-col border-r-2 border-ink bg-white">
 
       {/* Wordmark */}
-      <div className="flex items-center gap-2.5 border-b-2 border-ink px-5 py-4">
+      <div className="flex h-16 items-center gap-2.5 border-b-2 border-ink px-5">
         <span className="h-8 w-1.5 shrink-0 bg-forest-700" aria-hidden="true" />
         <span className="font-display text-2xl leading-none tracking-tight text-ink">
           Krushi<span className="text-terracotta-500">Flow</span>

@@ -23,7 +23,7 @@ export const LedgerRow = ({
     <Element
       {...(onClick ? { type: 'button', onClick } : {})}
       className={`
-        w-full text-left flex items-center gap-3 py-3.5 rule-hair
+        w-full text-left flex items-center gap-3 py-3.5 px-4 -mx-4 rule-hair
         ${onClick ? 'active:bg-forest-50' : ''}
         ${emphasis ? 'bg-forest-50' : ''}
         ${className}
