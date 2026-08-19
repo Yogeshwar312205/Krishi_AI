@@ -107,25 +107,54 @@ const getAgmarknetLivePrices = async (cropType = 'Tomato', stateFilter = '', lim
   let isLiveGovtData = false;
 
   try {
-    const apiKey = process.env.AGMARKNET_API_KEY || '579b464db66ec23bdd000001cdd3946968444a7751c14041b3724128'; // Govt Open Data Key
-    
-    let apiUrl = `https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?api-key=${apiKey}&format=json&limit=${limit}&filters[commodity]=${encodeURIComponent(cropType)}`;
+    /*
+     * Three things here were wrong at once, and each one alone was enough to
+     * make this function never return a single government record:
+     *
+     *   1. Resource 9ef84268-d588-465a-a308-a864a43d0070 has been retired. It
+     *      now answers 403 "Key not authorised" to the key below and an empty
+     *      body to a valid one. The live commodity feed is 35985678-…, titled
+     *      "Variety-wise Daily Market Prices Data of Commodity", published by
+     *      the same Directorate of Marketing & Inspection.
+     *   2. The key that was hardcoded here is not authorised for any resource.
+     *      The one below is data.gov.in's published sample key. It works, it is
+     *      rate-limited, and it is meant to be replaced: set AGMARKNET_API_KEY
+     *      with your own from https://data.gov.in/user (free, instant).
+     *   3. Field names on this resource are Capitalised — Modal_Price, Market,
+     *      Arrival_Date — not snake_case. Reading r.modal_price returned
+     *      undefined for every row, so even an authorised call would have
+     *      silently produced the `|| 3800` defaults for the whole response.
+     *
+     * Filter keys are capitalised and case-sensitive too, and the resource is a
+     * multi-year archive in no useful order, so the sort is not optional: without
+     * it you get 2023 prices presented as today's rate.
+     */
+    const apiKey = process.env.AGMARKNET_API_KEY || '579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b';
+    const RESOURCE_ID = '35985678-0d79-46b4-9ed6-6f13308a1d24';
+
+    let apiUrl = `https://api.data.gov.in/resource/${RESOURCE_ID}?api-key=${apiKey}&format=json&limit=${limit}`
+      + `&filters[Commodity]=${encodeURIComponent(cropType)}`
+      + '&sort[Arrival_Date]=desc';
     if (stateFilter) {
-      apiUrl += `&filters[state]=${encodeURIComponent(stateFilter)}`;
+      apiUrl += `&filters[State]=${encodeURIComponent(stateFilter)}`;
     }
 
-    const response = await axios.get(apiUrl, { timeout: 6000 });
+    // 6s was not enough for this resource under load, and a timeout is
+    // indistinguishable from "no data" downstream — it just silently becomes
+    // the fabricated fallback list.
+    const response = await axios.get(apiUrl, { timeout: 12000 });
 
     if (response.data && response.data.records && response.data.records.length > 0) {
       records = response.data.records.map((r, idx) => {
-        const modalPriceQuintal = Number(r.modal_price) || 3800;
-        const minPriceQuintal = Number(r.min_price) || Math.round(modalPriceQuintal * 0.9);
-        const maxPriceQuintal = Number(r.max_price) || Math.round(modalPriceQuintal * 1.1);
+        // Prices arrive per quintal as strings. A quintal is 100 kg.
+        const modalPriceQuintal = Number(r.Modal_Price) || 3800;
+        const minPriceQuintal = Number(r.Min_Price) || Math.round(modalPriceQuintal * 0.9);
+        const maxPriceQuintal = Number(r.Max_Price) || Math.round(modalPriceQuintal * 1.1);
         const ratePerKg = Math.round(modalPriceQuintal / 100);
 
-        const mandiName = r.market || r.district || `APMC Market ${idx + 1}`;
-        const city = r.district || r.state || 'Maharashtra';
-        const stateName = r.state || 'Maharashtra';
+        const mandiName = r.Market || r.District || `APMC Market ${idx + 1}`;
+        const city = r.District || r.State || 'Maharashtra';
+        const stateName = r.State || 'Maharashtra';
 
         return {
           id: `gov-${idx + 1}`,
@@ -134,9 +163,9 @@ const getAgmarknetLivePrices = async (cropType = 'Tomato', stateFilter = '', lim
           city: city,
           district: city,
           state: stateName,
-          commodity: r.commodity || cropType,
-          variety: r.variety || 'Local / Hybrid',
-          arrivalDate: r.arrival_date || new Date().toISOString().split('T')[0],
+          commodity: r.Commodity || cropType,
+          variety: r.Variety || 'Local / Hybrid',
+          arrivalDate: r.Arrival_Date || new Date().toISOString().split('T')[0],
           minPricePerQuintal: minPriceQuintal,
           maxPricePerQuintal: maxPriceQuintal,
           modalPricePerQuintal: modalPriceQuintal,
@@ -144,7 +173,10 @@ const getAgmarknetLivePrices = async (cropType = 'Tomato', stateFilter = '', lim
           pricePerKg: ratePerKg,
           modalPricePerKg: ratePerKg,
           trend: ratePerKg > 35 ? '+8%' : '-2%',
-          arrivalTonnes: Math.round(Number(r.arrivals) || 120 + (idx * 15) % 300),
+          // This resource carries no arrivals column, so the figure is invented.
+          // TODO(data): e-NAM has real arrival volumes; until then do not present
+          // this as government data.
+          arrivalTonnes: Math.round(120 + (idx * 15) % 300),
           source: 'Govt Agmarknet API (data.gov.in)'
         };
       });
@@ -237,9 +269,82 @@ const getAgmarknetLivePrices = async (cropType = 'Tomato', stateFilter = '', lim
   return enrichedRecords;
 };
 
+/**
+ * 4. Fetch Recent Daily Price History for a Commodity (for trend charts)
+ *
+ * A single mandi rarely reports every day, so this aggregates the *average*
+ * modal price across all reporting markets in `stateFilter` for each of the
+ * last `days` distinct dates present in the feed — a real, government-sourced
+ * series, just aggregated rather than per-mandi.
+ */
+const getAgmarknetHistory = async (cropType = 'Tomato', stateFilter = 'Maharashtra', days = 14) => {
+  try {
+    const apiKey = process.env.AGMARKNET_API_KEY || '579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b';
+    const RESOURCE_ID = '35985678-0d79-46b4-9ed6-6f13308a1d24';
+
+    // A single national filter (like live-rates uses) is fast, but the most
+    // recent N postings nationwide are dominated by whichever states report
+    // most that day — Maharashtra can vanish entirely, collapsing 14 days of
+    // history into one. Filtering server-side by State too is the only way
+    // to get an actual multi-day series for this state, at the cost of a
+    // slower, more variable query (2s–40s+ observed) — worth the wait since
+    // this call runs off the critical path (see useLiveMarket.js).
+    let apiUrl = `https://api.data.gov.in/resource/${RESOURCE_ID}?api-key=${apiKey}&format=json&limit=150`
+      + `&filters[Commodity]=${encodeURIComponent(cropType)}`
+      + '&sort[Arrival_Date]=desc';
+    if (stateFilter) {
+      apiUrl += `&filters[State]=${encodeURIComponent(stateFilter)}`;
+    }
+
+    let response;
+    try {
+      response = await axios.get(apiUrl, { timeout: 12000 });
+    } catch (firstErr) {
+      // One retry — the timeouts above are transient congestion, not a dead
+      // endpoint, and a second, more patient attempt clears most of them.
+      response = await axios.get(apiUrl, { timeout: 20000 });
+    }
+
+    const records = (response.data && response.data.records) || [];
+    if (!records.length) return { days: [], isLiveGovtData: false };
+
+    const byDate = new Map();
+    for (const r of records) {
+      const date = r.Arrival_Date;
+      const modal = Number(r.Modal_Price);
+      if (!date || !modal) continue;
+      if (!byDate.has(date)) byDate.set(date, { sum: 0, count: 0 });
+      const bucket = byDate.get(date);
+      bucket.sum += modal;
+      bucket.count += 1;
+    }
+
+    // Arrival_Date is dd/mm/yyyy; sort chronologically, oldest first.
+    const toSortable = (d) => {
+      const [dd, mm, yyyy] = d.split('/');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const series = [...byDate.entries()]
+      .map(([date, { sum, count }]) => ({
+        date: toSortable(date),
+        avgRatePerKg: Math.round((sum / count / 100) * 100) / 100,
+        sampleCount: count
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-days);
+
+    return { days: series, isLiveGovtData: series.length > 0 };
+  } catch (err) {
+    logger.warn(`Agmarknet history Govt API error: ${err.message}.`);
+    return { days: [], isLiveGovtData: false };
+  }
+};
+
 module.exports = {
   getAgmarknetLivePrices,
   getLiveGovtWeather,
-  getLiveGovtFuelRates
+  getLiveGovtFuelRates,
+  getAgmarknetHistory
 };
 

@@ -2,120 +2,495 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * KrushiFlow — "rate board"
+ *
+ * The visual language is the painted APMC rate board and the weighbridge
+ * docket: square, ruled, numeral-first, high contrast. Two rules govern
+ * everything below:
+ *
+ *   1. Nothing floats. Blocks butt against rules and against each other.
+ *      No drop shadows, no lifted cards, no blurred blobs.
+ *   2. The numeral is the hero. Labels are small; values are large and tabular.
+ */
+
 @layer base {
+  :root {
+    --ink: #14251A;
+    --ink-faint: #5F6E63;
+    --paper: #EFECE1;
+    --rule: #C9C4B4;
+    --forest: #18532B;
+    --turmeric: #EDBF4F;
+
+    /*
+     * ---- Leading, as four variables -------------------------------------
+     *
+     * Every step in the Tailwind type scale resolves its line-height through
+     * one of these (see tailwind.config.js). Latin values first; the Devanagari
+     * block below is the only place they change.
+     */
+    --lh-slab: 0.94;    /* the rate-board numeral */
+    --lh-display: 1.05; /* headlines */
+    --lh-head: 1.2;     /* section and card heads */
+    --lh-body: 1.5;     /* running text and labels */
+
+    /* The explicit leading-* utilities, same idea. See tailwind.config.js. */
+    --lh-none: 1;
+    --lh-tight: 1.25;
+    --lh-snug: 1.375;
+    --lh-normal: 1.5;
+  }
+
+  /*
+   * Devanagari sits on a taller body — matras stack above and below the
+   * shirorekha — so Latin-tuned leading clips it. One redefinition here
+   * loosens the entire scale, headlines included. The tight display values
+   * are where clipping actually bites: at 4.5rem, 0.94 leading eats the
+   * ि and ी of a headline like "अभी बेचो" outright.
+   */
+  :root:lang(hi),
+  :root:lang(mr) {
+    --lh-slab: 1.14;
+    --lh-display: 1.3;
+    --lh-head: 1.4;
+    --lh-body: 1.65;
+
+    --lh-none: 1.22;
+    --lh-tight: 1.42;
+    --lh-snug: 1.55;
+    --lh-normal: 1.7;
+  }
+
+  html {
+    background-color: var(--paper);
+    /* Stops iOS from inflating text in landscape and breaking the type scale. */
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    background-color: #edf8ef;
-    background-image: radial-gradient(#18532B 0.65px, transparent 0.65px);
-    background-size: 24px 24px;
-    background-position: 0 0;
-    color: #1f2937;
+    background-color: var(--paper);
+    color: var(--ink);
+    /* Mukta's default is a touch loose for UI; the scale sets its own. */
+    line-height: var(--lh-body);
+  }
+
+  /*
+   * ---- The display face ---------------------------------------------------
+   *
+   * Khand is condensed signage. Two consequences, both handled once here
+   * rather than remembered at 40 call sites:
+   *
+   *   1. Its regular weight is markedly lighter than Mukta's, so an unweighted
+   *      heading came out THINNER than the bold label beneath it — hierarchy
+   *      inverted. Semibold is the floor for display text.
+   *   2. Condensed Latin wants a hair of negative tracking at size; Devanagari
+   *      must never get it, because negative tracking crowds the conjuncts and
+   *      collides the matras.
+   */
+  .font-display {
+    font-weight: 600;
+    letter-spacing: -0.012em;
+  }
+
+  :lang(hi) .font-display,
+  :lang(mr) .font-display {
+    letter-spacing: 0;
+  }
+
+  /*
+   * Headings should break at a phrase, not wherever the box ends. Cheap, and
+   * it is the difference between a two-word orphan and a headline that reads.
+   */
+  h1, h2, h3, .font-display {
+    text-wrap: balance;
+  }
+
+  /* Devanagari has no uppercase; faux-uppercasing mangles the glyphs. */
+  :lang(hi) .uppercase,
+  :lang(mr) .uppercase {
+    text-transform: none;
+    letter-spacing: 0.04em;
+  }
+
+  /*
+   * Every figure in this UI is money, weight, or distance — always compared
+   * down a column, never set in running prose. Tabular by default.
+   */
+  .font-display,
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* Visible, square, high-contrast focus — matches the geometry. */
+  :focus-visible {
+    outline: 3px solid var(--forest);
+    outline-offset: 2px;
   }
 }
 
-.krushi-card {
-  background: #ffffff;
-  border-radius: 1.5rem;
-  box-shadow: 0 10px 35px -5px rgba(24, 83, 43, 0.07), 0 0 2px rgba(24, 83, 43, 0.05);
-  border: 1px solid rgba(24, 83, 43, 0.08);
+@layer components {
+  /* ---- Rules: the structural device ------------------------------------ */
+
+  /* Heavy rule under a section head — the ledger's header line. */
+  .rule-strong {
+    border-bottom: 2px solid var(--ink);
+  }
+
+  /* Hairline between ledger rows. */
+  .rule-hair {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /*
+   * Signature motif: the furrow mark. The one recurring ornament, used to open
+   * a section — never scattered.
+   *
+   * Was a repeating-linear-gradient striped bar (literal alternating dashes),
+   * meant to read as tilled soil rows. At 3px tall it instead read as a broken
+   * dashed border — several rounds of user testing flagged it as a rendering
+   * glitch before anyone read it as a motif. A solid tapered bar keeps the
+   * "one mark before a heading" idea without needing the viewer to squint at
+   * it to tell the difference.
+   */
+  .furrow {
+    height: 4px;
+    background-image: linear-gradient(90deg, var(--forest) 0%, #329e4d 100%);
+  }
+
+  /* ---- Eyebrow label --------------------------------------------------- */
+
+  .eyebrow {
+    font-size: 0.6875rem;
+    line-height: var(--lh-body);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---- Form controls: the same slab geometry as the buttons ------------- */
+
+  /*
+   * A field is a ruled box on a docket, not a rounded pill. 2px ink border so
+   * it reads as an entry box in sunlight, and the same 56px height as .btn so
+   * a form column has one rhythm rather than two.
+   *
+   * The tone is deliberate: white ground against the paper page, because the
+   * thing a farmer must find on a form is where to write.
+   */
+  .field {
+    width: 100%;
+    min-height: 3.5rem;
+    padding: 0 0.875rem;
+    background: #ffffff;
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--ink);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .field::placeholder {
+    font-weight: 500;
+    color: var(--ink-faint);
+  }
+
+  .field:hover { background: #fcfcfa; }
+
+  .field:focus {
+    /* :focus-visible outlines this too; the border shift is the felt part. */
+    border-color: var(--forest);
+    outline: none;
+  }
+
+  /* A field carrying an icon keeps the glyph out of the text run. */
+  .field-icon { padding-left: 2.875rem; }
+
+  .field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* Inline validation and confirmation, in the ledger's own vocabulary. */
+  .notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    border: 2px solid var(--ink);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: var(--lh-body);
+  }
+
+  .notice-bad {
+    border-color: #A4501F;
+    background: #fdf4ee;
+    color: #833d1b;
+  }
+
+  .notice-good {
+    border-color: var(--forest);
+    background: #edf8ef;
+    color: #0f3a1d;
+  }
+
+  /* ---- Buttons: square slabs, full-width by default -------------------- */
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    min-height: 3.5rem; /* 56px — glove-and-thumb target */
+    padding: 0 1.25rem;
+    border-radius: 2px;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    line-height: 1.2;
+    text-align: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .btn:active {
+    /* Physical feedback instead of a hover state — this is a touch device. */
+    transform: translateY(1px);
+  }
+
+  .btn-primary {
+    background-color: var(--forest);
+    color: #ffffff;
+    border: 2px solid var(--forest);
+  }
+  .btn-primary:hover { background-color: #124021; border-color: #124021; }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+  }
+  .btn-secondary:hover { background-color: rgba(20, 37, 26, 0.06); }
+
+  .btn-accent {
+    background-color: var(--turmeric);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+  }
+  .btn-accent:hover { background-color: #e0a83a; }
+
+  /* ---- Data block ------------------------------------------------------ */
+
+  /*
+   * Replaces the old .krushi-card. White ground, single hairline border,
+   * square, no shadow. A docket lying on the desk, not a card floating above.
+   *
+   * NOT called `.block`, which is what it was until this bit me: Tailwind's
+   * display utility is also called `block`, and Tailwind generates responsive
+   * variants of component-layer classes — so `.lg\:block` and `.md\:block`
+   * inherited this white ground and hairline border. Every `md:block` and
+   * `lg:block` in the app was painting a white box, which is why the auth
+   * screen's promise list turned into white-on-white and the desktop TopBar
+   * grew a box around the user's name.
+   */
+  .docket {
+    background: #ffffff;
+    border: 1px solid var(--rule);
+  }
+
+  /* ---- Legacy aliases -------------------------------------------------- */
+
+  /*
+   * The driver and buyer dashboards are still on the previous design language,
+   * and they lean on three classes the rate-board rewrite removed:
+   * `.krushi-card`, `.btn-forest-primary`, `.btn-forest-secondary`. Nothing has
+   * defined them since — so "Accept job", "Post a rate" and every other action
+   * on those two screens has been rendering as unstyled browser text on a
+   * transparent ground.
+   *
+   * Re-pointed at the current language rather than left broken. Unlike `.btn`
+   * these deliberately set no height, padding or font-size: the legacy call
+   * sites pass their own (`px-4 py-2 text-xs`), and overriding it would wreck
+   * their layouts on the way to fixing their colour.
+   *
+   * Delete this block when the last screen using it has been rewritten.
+   */
+  .krushi-card {
+    background: #ffffff;
+    border: 1px solid var(--rule);
+  }
+
+  .krushi-card-hover {
+    transition: border-color 0.15s ease;
+  }
+  .krushi-card-hover:hover { border-color: var(--ink); }
+
+  .btn-forest-primary,
+  .btn-forest-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 2px;
+    font-weight: 700;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .btn-forest-primary {
+    background-color: var(--forest);
+    color: #ffffff;
+    border: 2px solid var(--forest);
+  }
+  .btn-forest-primary:hover { background-color: #124021; border-color: #124021; }
+
+  .btn-forest-secondary {
+    background-color: transparent;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+  }
+  .btn-forest-secondary:hover { background-color: rgba(20, 37, 26, 0.06); }
+
+  /* ---- Sample-data marker ---------------------------------------------- */
+
+  /*
+   * Every fabricated figure carries this. Deliberately plain and slightly
+   * ugly — it should read as a stamp on a document, not as a design element
+   * we are proud of, and it must never be mistaken for real Agmarknet data.
+   */
+  .stamp-demo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid var(--terracotta, #C1652D);
+    color: #C1652D;
+    background: #fdf4ee;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  :lang(hi) .stamp-demo,
+  :lang(mr) .stamp-demo { text-transform: none; letter-spacing: 0.02em; }
+
+  /* Same overprint shape as .stamp-demo — a fabricated number and a real one
+     should never look alike, so the honest label carries the same visual
+     weight as the one it replaces, just in the brand green instead of the
+     demo's terracotta warning color. */
+  .stamp-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid #18532B;
+    color: #18532B;
+    background: #edf8ef;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  :lang(hi) .stamp-live,
+  :lang(mr) .stamp-live { text-transform: none; letter-spacing: 0.02em; }
+
+  .stamp-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid var(--rule, #C9C4B4);
+    color: var(--ink-faint, #5F6E63);
+    background: transparent;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  :lang(hi) .stamp-loading,
+  :lang(mr) .stamp-loading { text-transform: none; letter-spacing: 0.02em; }
 }
 
-.krushi-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* ---- Motion ------------------------------------------------------------ */
+
+/*
+ * All motion here is CSS transform/opacity only — no animation library, and
+ * nothing that triggers layout. The budget is zero extra kilobytes and one
+ * compositor layer, because the target device is a mid-range Android phone.
+ *
+ * The premium feeling comes from timing, not from quantity: one shared easing
+ * curve, short durations, and a deliberate ORDER — the verdict lands first,
+ * the supporting detail follows it in. Everything moves once, on arrival, and
+ * then stays still.
+ */
+
+:root {
+  /* Decelerating curve — fast departure, soft landing. Used by everything. */
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.krushi-card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -10px rgba(24, 83, 43, 0.12);
-  border-color: rgba(24, 83, 43, 0.25);
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.btn-forest-primary {
-  background-color: #18532B;
-  color: #ffffff;
-  border-radius: 9999px;
-  font-weight: 700;
-  transition: all 0.2s ease-in-out;
-  box-shadow: 0 6px 20px -4px rgba(24, 83, 43, 0.3);
+@keyframes slab-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.btn-forest-primary:hover {
-  background-color: #124021;
-  transform: translateY(-1px);
-  box-shadow: 0 10px 25px -4px rgba(24, 83, 43, 0.4);
+/* Wipes the slab's colour in from the left, like paint across a board. */
+@keyframes paint-in {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
 }
 
-.btn-forest-secondary {
-  background-color: transparent;
-  color: #18532B;
-  border: 2px solid #18532B;
-  border-radius: 9999px;
-  font-weight: 700;
-  transition: all 0.2s ease-in-out;
+.slab-enter {
+  animation: slab-in 0.34s var(--ease-settle) both;
 }
 
-.btn-forest-secondary:hover {
-  background-color: rgba(24, 83, 43, 0.08);
-  transform: translateY(-1px);
+.slab-paint {
+  animation: paint-in 0.55s var(--ease-settle) both;
 }
 
 /*
-  Signature divider: a row of tilled-field furrows under section headings.
-  Used sparingly — one recurring motif rather than scattered decoration.
-*/
-.furrow-divider {
-  height: 1px;
-  background-image: repeating-linear-gradient(
-    90deg,
-    rgba(24, 83, 43, 0.35) 0,
-    rgba(24, 83, 43, 0.35) 6px,
-    transparent 6px,
-    transparent 13px
-  );
+ * Staggered arrival for a run of sections. Depth is capped at six: past that
+ * the last item waits long enough to read as lag rather than choreography.
+ */
+.stagger > * {
+  animation: rise-in 0.4s var(--ease-settle) both;
 }
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger > *:nth-child(3) { animation-delay: 0.16s; }
+.stagger > *:nth-child(4) { animation-delay: 0.22s; }
+.stagger > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger > *:nth-child(n+6) { animation-delay: 0.32s; }
 
-.badge-turmeric {
-  background-color: rgba(224, 168, 58, 0.16);
-  color: #a4701c;
-  border: 1px solid rgba(224, 168, 58, 0.4);
-}
+.detail-enter { animation: rise-in 0.4s var(--ease-settle) 0.12s both; }
 
 /*
-  Devanagari sits on a taller body with stacked matras above and below the
-  shirorekha, so the tight Latin leading/tracking clips it. Loosen both when
-  the document is in Hindi or Marathi.
-*/
-:root:lang(hi) body,
-:root:lang(mr) body {
-  line-height: 1.7;
+ * Interactive lift. Deliberately a border darkening plus a 1px rise rather
+ * than a shadow — the system has no shadows, and adding one here would break
+ * the "nothing floats" rule for the sake of a hover state.
+ */
+.lift {
+  transition: transform 0.18s var(--ease-settle), background-color 0.18s ease;
 }
-
-:lang(hi) .font-display,
-:lang(mr) .font-display {
-  line-height: 1.45;
-  letter-spacing: 0;
+@media (hover: hover) {
+  .lift:hover { transform: translateY(-1px); }
 }
-
-/* Devanagari has no uppercase; faux-uppercasing just mangles the glyphs. */
-:lang(hi) .uppercase,
-:lang(mr) .uppercase {
-  text-transform: none;
-  letter-spacing: 0.02em;
-}
-
-@keyframes section-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.section-enter {
-  animation: section-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+.lift:active { transform: translateY(1px); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -124,20 +499,16 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  /* clip-path does not animate away with duration alone — force the end state. */
+  .slab-paint { clip-path: none !important; }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #edf8ef;
-}
-::-webkit-scrollbar-thumb {
-  background: #a7d7b1;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #18532B;
-}
+/* ---- Chrome ------------------------------------------------------------ */
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+::-webkit-scrollbar-thumb { background: var(--rule); }
+::-webkit-scrollbar-thumb:hover { background: var(--forest); }

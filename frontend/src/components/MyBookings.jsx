@@ -16,7 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { useTranslation } from '../hooks/useTranslation';
+import { useT } from '../i18n/useT';
 import { WaybillModal } from './WaybillModal';
 import { NewBookingModal } from './NewBookingModal';
 
@@ -26,7 +26,7 @@ export const MyBookings = () => {
   const [selectedBookingForWaybill, setSelectedBookingForWaybill] = useState(null);
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
 
-  const { t } = useTranslation();
+  const { t } = useT();
 
   const filteredBookings = bookings.filter((b) => {
     if (activeFilter === 'active') return b.status === 'In Transit' || b.status === 'Active';
@@ -41,13 +41,13 @@ export const MyBookings = () => {
         <div>
           <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-forest-700 uppercase tracking-wider mb-1">
             <Truck className="h-4 w-4 text-emerald-600" />
-            <span>{t('myBookingsTitle')}</span>
+            <span>{t('transport.bookings.title')}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-forest-900 tracking-tight">
-            {t('myBookingsTitle')}
+            {t('transport.bookings.title')}
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-2xl mt-1">
-            {t('myBookingsSubtitle')}
+            {t('transport.route.whyExplain')}
           </p>
         </div>
 
@@ -56,7 +56,7 @@ export const MyBookings = () => {
           className="btn-forest-primary px-5 py-3 text-xs flex items-center gap-2 self-start sm:self-auto shrink-0 shadow-md"
         >
           <Plus className="h-4 w-4" />
-          <span>{t('newDispatchBtn')}</span>
+          <span>{t('transport.book.title')}</span>
         </button>
       </div>
 
@@ -65,8 +65,8 @@ export const MyBookings = () => {
         <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
           {[
             { id: 'all', label: 'All Dispatches' },
-            { id: 'active', label: t('activeDispatches') },
-            { id: 'completed', label: t('completedShipments') },
+            { id: 'active', label: t('transport.bookings.active') },
+            { id: 'completed', label: t('transport.bookings.past') },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -235,7 +235,7 @@ export const MyBookings = () => {
                     className="px-4 py-2 rounded-xl bg-forest-50 hover:bg-forest-100 text-forest-900 text-xs font-extrabold flex items-center gap-1.5 border border-forest-200 shadow-2xs transition-all"
                   >
                     <FileText className="h-3.5 w-3.5 text-forest-700" />
-                    <span>{t('waybillBtn')}</span>
+                    <span>{t('transport.bookings.receipt')}</span>
                   </button>
 
                   <button
@@ -243,7 +243,7 @@ export const MyBookings = () => {
                     className="btn-forest-primary px-4 py-2 text-xs flex items-center gap-1.5 shadow-md"
                   >
                     <Navigation className="h-3.5 w-3.5" />
-                    <span>{t('trackLiveBtn')}</span>
+                    <span>{t('transport.bookings.track')}</span>
                   </button>
                 </div>
               </div>

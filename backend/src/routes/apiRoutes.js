@@ -4,12 +4,14 @@ const router = express.Router();
 const { getNearbyVehicles, seedVehicles } = require('../controllers/vehicleController');
 const { recommendLogistics, getPriceForecast, getDemandAnalysis, MARKETS } = require('../controllers/orchestratorController');
 const { sendSMSAlert } = require('../controllers/alertController');
-const { getAgmarknetLivePrices, getLiveGovtWeather, getLiveGovtFuelRates } = require('../services/agmarknetService');
+const { getAgmarknetLivePrices, getLiveGovtWeather, getLiveGovtFuelRates, getAgmarknetHistory } = require('../services/agmarknetService');
 const { apiLimiter } = require('../middlewares/rateLimiter');
+const { protect, authorize } = require('../middlewares/auth');
 
 // Rate limited API routes
 router.get('/vehicles/nearby', apiLimiter, getNearbyVehicles);
-router.post('/vehicles/seed', seedVehicles);
+// Destructive fleet reset — operator/admin only, never client-triggerable.
+router.post('/vehicles/seed', apiLimiter, protect, authorize('Admin'), seedVehicles);
 router.post('/recommend', apiLimiter, recommendLogistics);
 
 router.get('/prices/forecast', apiLimiter, getPriceForecast);
@@ -25,6 +27,15 @@ router.get('/agmarknet/live-rates', async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 100;
   const data = await getAgmarknetLivePrices(crop, state, limit);
   res.json({ success: true, crop: crop, state: state, count: data.length, records: data });
+});
+
+// Govt Agmarknet Recent Price History (for trend charts)
+router.get('/agmarknet/history', async (req, res) => {
+  const crop = req.query.crop || 'Tomato';
+  const state = req.query.state || 'Maharashtra';
+  const days = parseInt(req.query.days, 10) || 14;
+  const history = await getAgmarknetHistory(crop, state, days);
+  res.json({ success: true, crop, state, ...history });
 });
 
 // Live Govt Weather Endpoint
