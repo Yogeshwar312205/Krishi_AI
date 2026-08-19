@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { useT } from '../i18n/useT';
 import { LanguagePicker } from '../shared/LanguagePicker';
-import { normaliseRole, defaultTabForRole, ROLES, PROFILE_TAB } from './routes';
+import { normaliseRole, ROLES, PROFILE_TAB } from './routes';
 
 /**
  * A thin band, not a navigation bar — navigation lives in the bottom bar on
@@ -16,7 +16,6 @@ import { normaliseRole, defaultTabForRole, ROLES, PROFILE_TAB } from './routes';
  * button, a profile button and a nine-item scrolling sub-nav into 112px before
  * you reached anything you came for.
  */
-const ROLE_ORDER = [ROLES.FARMER, ROLES.DRIVER, ROLES.BUYER];
 const ROLE_KEYS = {
   [ROLES.FARMER]: 'roles.farmer',
   [ROLES.DRIVER]: 'roles.driver',
@@ -25,7 +24,6 @@ const ROLE_KEYS = {
 
 export const TopBar = () => {
   const activeRole = useAppStore((state) => state.activeRole);
-  const setActiveRole = useAppStore((state) => state.setActiveRole);
   const activeTab = useAppStore((state) => state.activeTab);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const user = useAppStore((state) => state.user);
@@ -33,12 +31,6 @@ export const TopBar = () => {
 
   const role = normaliseRole(activeRole);
   const onProfile = activeTab === PROFILE_TAB;
-
-  const changeRole = (nextRole) => {
-    setActiveRole(nextRole);
-    // The previous tab belongs to the old role's nav and would render nothing.
-    setActiveTab(defaultTabForRole(nextRole));
-  };
 
   return (
     <header className="sticky top-0 z-30 border-b-2 border-ink bg-white/95 backdrop-blur-sm">
@@ -57,20 +49,18 @@ export const TopBar = () => {
             <LanguagePicker compact />
           </div>
 
-          <label className="sr-only" htmlFor="role-switch">{t('roles.label')}</label>
-          <select
-            id="role-switch"
-            value={role}
-            onChange={(event) => changeRole(event.target.value)}
+          {/* A role is who signed in, not a view to switch on a whim — this used
+              to be a <select> that rewrote the signed-in user's role client-side
+              and jumped them into another role's screens, with no permission
+              check of any kind. It's a fixed label now. */}
+          <span
             className="
-              h-[2.125rem] cursor-pointer border-2 border-ink bg-white px-2 text-sm
-              font-bold text-ink transition-colors hover:bg-forest-50
+              flex h-[2.125rem] items-center border-2 border-ink bg-white px-2.5 text-sm
+              font-bold text-ink
             "
           >
-            {ROLE_ORDER.map((option) => (
-              <option key={option} value={option}>{t(ROLE_KEYS[option])}</option>
-            ))}
-          </select>
+            {t(ROLE_KEYS[role])}
+          </span>
 
           {/*
             The identity chip, and the only way to the profile screen.

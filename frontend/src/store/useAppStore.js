@@ -54,18 +54,6 @@ export const useAppStore = create((set, get) => ({
     set({ user, token, activeRole: role });
   },
 
-  setActiveRole: (role) => {
-    localStorage.setItem('activeRole', role);
-    // Switching the dashboard view also switches the signed-in user's role, but
-    // never their identity — the name/email belong to the real account.
-    set((state) => {
-      if (!state.user) return { activeRole: role };
-      const updatedUser = { ...state.user, role };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      return { activeRole: role, user: updatedUser };
-    });
-  },
-
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
