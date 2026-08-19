@@ -41,6 +41,7 @@ export const CropScreen = () => {
   const [saved, setSaved] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [quantityError, setQuantityError] = useState('');
 
   const update = (key, value) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -59,15 +60,32 @@ export const CropScreen = () => {
 
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
+        let address = draft.address;
+
         /*
-         * No reverse geocoding: that is a paid API call and a round trip on a
-         * connection we cannot count on, to produce a string the farmer can
-         * type faster themselves. The coordinates are what routing needs; the
-         * address is only ever shown back to the person who wrote it.
+         * OpenStreetMap's Nominatim reverse endpoint is free and needs no API
+         * key, unlike Google's — worth the round trip so "Use my location"
+         * visibly fills the address box instead of only moving a coordinate
+         * the farmer can't see. If it fails (offline, rate-limited) the
+         * coordinates we already have are still good enough for routing.
          */
-        setFarmerOrigin([longitude, latitude], draft.address);
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=16`,
+            { headers: { Accept: 'application/json' } }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data?.display_name) address = data.display_name;
+          }
+        } catch {
+          // Keep the coordinates; the address text just stays whatever it was.
+        }
+
+        setFarmerOrigin([longitude, latitude], address);
+        update('address', address);
         setLocating(false);
       },
       () => {
@@ -80,10 +98,13 @@ export const CropScreen = () => {
 
   const save = (event) => {
     event.preventDefault();
+    setQuantityError('');
 
-    // A blank or nonsense quantity would silently zero out every rupee figure
-    // downstream, so it falls back to what was already stored.
-    const quantity = Math.max(0, Number(draft.quantityKg) || 0) || cropDetails.quantityKg;
+    const quantity = Number(draft.quantityKg);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setQuantityError(t('crop.quantityInvalid'));
+      return;
+    }
 
     setCropDetails({
       cropType: draft.cropType,
@@ -151,17 +172,25 @@ export const CropScreen = () => {
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label={t('crop.howMuch')}
-            icon={Scale}
-            type="number"
-            inputMode="numeric"
-            min="1"
-            step="50"
-            value={draft.quantityKg}
-            onChange={(event) => update('quantityKg', event.target.value)}
-            hint={t('crop.quantityHint')}
-          />
+          <div>
+            <Field
+              label={t('crop.howMuch')}
+              icon={Scale}
+              type="number"
+              inputMode="numeric"
+              min="1"
+              step="1"
+              value={draft.quantityKg}
+              onChange={(event) => {
+                update('quantityKg', event.target.value);
+                setQuantityError('');
+              }}
+              hint={t('crop.quantityHint')}
+            />
+            {quantityError && (
+              <p className="mt-1.5 text-sm font-semibold text-terracotta-600" role="alert">{quantityError}</p>
+            )}
+          </div>
 
           <Field
             label={t('crop.harvest')}

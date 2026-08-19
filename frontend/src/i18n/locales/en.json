@@ -251,6 +251,7 @@
     "saveCrop": "Save",
     "saved": "Your crop details are saved.",
     "quantityHint": "In kilos. 1 quintal is 100 kilos.",
+    "quantityInvalid": "Enter how many kilos — it can't be blank or zero.",
     "profile": {
       "title": "My details",
       "name": "Name",
