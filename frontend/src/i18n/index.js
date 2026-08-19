@@ -59,6 +59,19 @@ export const translate = (lang, key, vars) => {
     return interpolate(fallback, vars);
   }
 
+  /*
+   * Crop names are the one namespace with a legitimate open set.
+   *
+   * The picker offers nineteen translated crops plus every other commodity the
+   * Agmarknet feed reports — around 119 in Maharashtra, and the list changes
+   * with the season. Translating all of them is not the fix: they are real,
+   * published commodity names ("Bengal Gram(Gram)(Whole)"), and inventing
+   * Devanagari for each would guess at register the GLOSSARY exists to settle.
+   * So an untranslated crop shows the government's own name rather than the
+   * literal string "crops.Drumstick".
+   */
+  if (key.startsWith('crops.')) return key.slice('crops.'.length);
+
   if (import.meta.env.DEV) {
     console.error(`[i18n] Unknown key "${key}" in every language.`);
   }

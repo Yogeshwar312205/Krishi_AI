@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus, Truck, IndianRupee, Sprout, MapPin } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
-import { useLiveMarket } from '../../../data/useLiveMarket';
+import { useLiveMarket, mandiLabel } from '../../../data/useLiveMarket';
 import { Slab } from '../../../design/primitives/Slab';
 import { Button } from '../../../design/primitives/Button';
 import { SectionHead } from '../../../design/primitives/SectionHead';
@@ -144,8 +144,8 @@ export const TodayScreen = () => {
                     <MapPin className="h-4 w-4" strokeWidth={2.5} />
                   </span>
                 }
-                label={t(`mandis.${mandi.id}`)}
-                sub={`${number(mandi.distanceKm)} ${t('common.km')} · ${rate(mandi.ratePerKg)}/${t('common.kg')}`}
+                label={mandiLabel(t, mandi)}
+                sub={`${mandi.distanceApprox ? '~' : ''}${number(mandi.distanceKm)} ${t('common.km')} · ${rate(mandi.ratePerKg)}/${t('common.kg')}`}
                 value={money(mandi.net)}
               />
             ))}

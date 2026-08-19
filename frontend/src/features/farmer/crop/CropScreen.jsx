@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Sprout, Scale, CalendarDays, MapPin, Snowflake, Check, LocateFixed, Loader2,
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
-import { CROP_OPTIONS } from '../../../utils/constants';
+import { CROP_OPTIONS, PERISHABLE_CROPS } from '../../../utils/constants';
+import { fetchAgmarknetCommodities } from '../../../services/api';
 import { SectionHead } from '../../../design/primitives/SectionHead';
 import { Field } from '../../../design/primitives/Field';
 import { Button } from '../../../design/primitives/Button';
@@ -21,8 +22,6 @@ import { Button } from '../../../design/primitives/Button';
  * will see; anything that would not is not asked.
  */
 
-/* Crops that need a cold vehicle. Drives the suggestion, not a hidden setting. */
-const PERISHABLE = new Set(['Tomato', 'Mango', 'Banana']);
 
 export const CropScreen = () => {
   const cropDetails = useAppStore((state) => state.cropDetails);
@@ -43,12 +42,38 @@ export const CropScreen = () => {
   const [locationError, setLocationError] = useState('');
   const [quantityError, setQuantityError] = useState('');
 
+  /*
+   * Every commodity Maharashtra's mandis are actually reporting — around 119 of
+   * them, against the nineteen we have translated buttons for.
+   *
+   * The buttons stay the shortlist, because a two-column grid of 119 untranslated
+   * English strings is not a crop picker. But a farmer growing drumstick or
+   * safflower should not be told the app doesn't know about their crop when the
+   * government feed has today's rate for it, so the rest are reachable from the
+   * select below under their published Agmarknet names.
+   */
+  const [liveCommodities, setLiveCommodities] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAgmarknetCommodities('Maharashtra').then((data) => {
+      if (cancelled || !data?.commodities?.length) return;
+      // Single-market commodities are dropped: with one mandi reporting there
+      // is nothing to compare, and comparison is the only thing we offer.
+      setLiveCommodities(data.commodities.filter((c) => c.marketCount > 1));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const extraCommodities = liveCommodities.filter((c) => !CROP_OPTIONS.includes(c.name));
+  const isExtraCrop = !CROP_OPTIONS.includes(draft.cropType);
+
   const update = (key, value) => {
     setDraft((current) => ({ ...current, [key]: value }));
     setSaved(false);
   };
 
-  const isPerishable = PERISHABLE.has(draft.cropType);
+  const isPerishable = PERISHABLE_CROPS.has(draft.cropType);
 
   const useMyLocation = () => {
     setLocationError('');
@@ -110,7 +135,7 @@ export const CropScreen = () => {
       cropType: draft.cropType,
       quantityKg: quantity,
       harvestTime: draft.harvestTime,
-      temperatureSensitivity: PERISHABLE.has(draft.cropType) ? 'High' : 'Normal',
+      temperatureSensitivity: PERISHABLE_CROPS.has(draft.cropType) ? 'High' : 'Normal',
     });
     setFarmerOrigin(farmerOrigin, draft.address.trim() || farmerAddress);
     setDraft((current) => ({ ...current, quantityKg: String(quantity) }));
@@ -153,6 +178,29 @@ export const CropScreen = () => {
               );
             })}
           </div>
+
+          {(extraCommodities.length > 0 || isExtraCrop) && (
+            <div className="mt-3">
+              <label className="field-label" htmlFor="other-crop">{t('crop.otherCrops')}</label>
+              <select
+                id="other-crop"
+                className="field"
+                value={isExtraCrop ? draft.cropType : ''}
+                onChange={(event) => event.target.value && update('cropType', event.target.value)}
+              >
+                <option value="">{t('crop.pickCrop')}</option>
+                {isExtraCrop && !extraCommodities.some((c) => c.name === draft.cropType) && (
+                  <option value={draft.cropType}>{draft.cropType}</option>
+                )}
+                {extraCommodities.map((commodity) => (
+                  <option key={commodity.name} value={commodity.name}>
+                    {commodity.name} · {t('crop.mandiCount', { count: commodity.marketCount })}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-sm text-ink-faint">{t('crop.otherCropsHint')}</p>
+            </div>
+          )}
         </fieldset>
 
         {/*

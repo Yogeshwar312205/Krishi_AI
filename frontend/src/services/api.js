@@ -90,7 +90,7 @@ export const seedVehicleFleet = async () => {
 export const fetchLiveAgmarknetMarkets = async (crop = 'Tomato', state = '') => {
   try {
     const response = await apiClient.get('/agmarknet/live-rates', {
-      params: { crop, state, limit: 100 }
+      params: { crop, state }
     });
     return response.data;
   } catch (err) {
@@ -109,6 +109,41 @@ export const fetchAgmarknetHistory = async (crop = 'Tomato', state = 'Maharashtr
     console.warn('Failed to fetch Agmarknet price history:', err.message);
     return { success: false, days: [] };
   }
+};
+
+/*
+ * The commodity list is fetched at most once per session per state.
+ *
+ * It is the heaviest query we make — an unfiltered sweep of the feed rather
+ * than one crop — and the answer changes with the season, not with the minute.
+ * The Crop screen mounts every time the farmer taps that tab, so without this
+ * the same 40-second query ran on each visit.
+ */
+const commodityCache = new Map();
+
+/** Which commodities Maharashtra's mandis are actually reporting right now. */
+export const fetchAgmarknetCommodities = async (state = 'Maharashtra') => {
+  if (commodityCache.has(state)) return commodityCache.get(state);
+
+  const request = (async () => {
+    try {
+      const response = await apiClient.get('/agmarknet/commodities', {
+        params: { state },
+        // An unfiltered sweep of the feed is far heavier than one crop's rates.
+        timeout: 45000,
+      });
+      return response.data;
+    } catch (err) {
+      console.warn('Failed to fetch Agmarknet commodity list:', err.message);
+      // Not cached: a failure should be retried on the next visit, unlike a
+      // successful answer which is good for the rest of the session.
+      commodityCache.delete(state);
+      return { success: false, commodities: [] };
+    }
+  })();
+
+  commodityCache.set(state, request);
+  return request;
 };
 
 export const sendPriceAlertSms = async ({ phone, cropType, targetPrice, currentPrice, mandiName }) => {

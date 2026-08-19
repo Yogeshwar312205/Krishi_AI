@@ -4,7 +4,10 @@ const router = express.Router();
 const { getNearbyVehicles, seedVehicles } = require('../controllers/vehicleController');
 const { recommendLogistics, getPriceForecast, getDemandAnalysis, MARKETS } = require('../controllers/orchestratorController');
 const { sendSMSAlert } = require('../controllers/alertController');
-const { getAgmarknetLivePrices, getLiveGovtWeather, getLiveGovtFuelRates, getAgmarknetHistory } = require('../services/agmarknetService');
+const {
+  getAgmarknetLivePrices, getAgmarknetCommodities, getAgmarknetHistory,
+  getLiveGovtWeather, getLiveGovtFuelRates, withProfitBreakdown, CACHE_TTL_MS,
+} = require('../services/agmarknetService');
 const { apiLimiter } = require('../middlewares/rateLimiter');
 const { protect, authorize } = require('../middlewares/auth');
 
@@ -21,12 +24,39 @@ router.get('/demand/analysis', apiLimiter, getDemandAnalysis);
 router.post('/alerts/send-sms', apiLimiter, sendSMSAlert);
 
 // Govt Agmarknet Live Market & Weather Feed
+//
+// Returns every Maharashtra APMC that reported this commodity in the last few
+// days — not a fixed shortlist. The service caches for 15 minutes, so the
+// frontend calling this on every screen is cheap; see frontend/src/data/marketCache.js
+// for the matching client-side cache.
 router.get('/agmarknet/live-rates', async (req, res) => {
   const crop = req.query.crop || 'Tomato';
   const state = req.query.state || '';
-  const limit = parseInt(req.query.limit, 10) || 100;
-  const data = await getAgmarknetLivePrices(crop, state, limit);
-  res.json({ success: true, crop: crop, state: state, count: data.length, records: data });
+  // Deliberately no client-controlled `limit`: how many raw feed rows we pull
+  // is what decides how many days and markets survive de-duplication, and the
+  // response is cached under crop+state alone — one caller passing a small
+  // limit would serve everyone else a truncated market list for 15 minutes.
+  const data = await getAgmarknetLivePrices(crop, state);
+  res.json({
+    success: true,
+    crop,
+    state,
+    count: data.records.length,
+    latestArrivalDate: data.latestArrivalDate || null,
+    isLiveGovtData: data.isLiveGovtData,
+    fetchedAt: data.fetchedAt,
+    cacheTtlMs: CACHE_TTL_MS.prices,
+    records: data.records,
+  });
+});
+
+// Which commodities this state's mandis are actually reporting right now.
+// Drives the crop picker, so it can offer crops that have live rates instead
+// of a hardcoded seven of which only two ever resolved.
+router.get('/agmarknet/commodities', async (req, res) => {
+  const state = req.query.state || 'Maharashtra';
+  const data = await getAgmarknetCommodities(state);
+  res.json({ success: true, ...data });
 });
 
 // Govt Agmarknet Recent Price History (for trend charts)
@@ -52,19 +82,32 @@ router.get('/logistics/fuel-rates', async (req, res) => {
   res.json({ success: true, fuel });
 });
 
+// Same live feed as /agmarknet/live-rates, but ranked by what the farmer
+// actually takes home. Pass originLng/originLat/quantityKg to get the
+// distance, freight, commission and net for each mandi.
 router.get('/markets', async (req, res) => {
   const crop = req.query.crop || 'Tomato';
   const state = req.query.state || '';
-  const limit = parseInt(req.query.limit, 10) || 100;
-  
-  const liveAgmarknetData = await getAgmarknetLivePrices(crop, state, limit);
-  
-  if (liveAgmarknetData && liveAgmarknetData.length > 0) {
+  const quantityKg = parseFloat(req.query.quantityKg) || 1000;
+  const originLng = parseFloat(req.query.originLng);
+  const originLat = parseFloat(req.query.originLat);
+
+  const live = await getAgmarknetLivePrices(crop, state);
+
+  if (live.records.length) {
+    const hasOrigin = Number.isFinite(originLng) && Number.isFinite(originLat);
+    const markets = hasOrigin
+      ? withProfitBreakdown(live.records, { originCoords: [originLng, originLat], quantityKg })
+          .sort((a, b) => (b.net ?? -Infinity) - (a.net ?? -Infinity))
+      : live.records;
+
     return res.json({
       success: true,
       source: 'Government Agmarknet API (data.gov.in)',
-      count: liveAgmarknetData.length,
-      markets: liveAgmarknetData
+      rankedBy: hasOrigin ? 'net' : 'rate',
+      latestArrivalDate: live.latestArrivalDate,
+      count: markets.length,
+      markets,
     });
   }
 

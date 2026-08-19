@@ -1,43 +1,98 @@
 import React, { useState } from 'react';
-import { Store, LineChart, Wallet, MapPin, Truck } from 'lucide-react';
+import { Store, LineChart, Wallet, Truck, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
-import { useLiveMarket } from '../../../data/useLiveMarket';
+import { useLiveMarket, mandiLabel, COMMISSION_RATE } from '../../../data/useLiveMarket';
 import { AHEAD_DAYS } from '../../../data/demoMarket';
+import { ensure } from '../../../data/marketCache';
 import { SectionHead } from '../../../design/primitives/SectionHead';
 import { SegmentedToggle } from '../../../design/primitives/SegmentedToggle';
 import { LedgerRow } from '../../../design/primitives/LedgerRow';
 import { MarketStatusStamp } from '../../../design/primitives/MarketStatusStamp';
 import { Button } from '../../../design/primitives/Button';
 import { ForecastChart } from './ForecastChart';
+import { MandiRow } from './MandiRow';
+import { WhyFurther } from './WhyFurther';
 
 /**
  * Everything about "where and when do I sell?", in one screen.
  *
  * Absorbs four of the old tabs — Price Forecast, Mandi Comparison, Demand &
- * Trends, and Sell vs Hold. Those answered the same question from four angles,
- * and four tabs makes a research tool where the farmer needs a decision tool.
+ * Trends, and Sell vs Hold — because those answered the same question from four
+ * angles, and four tabs makes a research tool where the farmer needs a decision
+ * tool.
  *
- * Only one panel is ever on screen. The default is Mandi rates, because "which
- * mandi pays most" is the question people actually arrive with; the forecast
- * and the cost breakdown are for the farmer who wants to check our working.
+ * Two things changed when the live feed replaced the four-mandi shortlist.
+ * First, the list is now every Maharashtra APMC reporting this crop — often
+ * forty to a hundred of them — so it is capped to the top handful with an
+ * explicit "show all", rather than dumping ninety rows on a phone. Second,
+ * every row opens into its own arithmetic, and the panel above the list argues
+ * the case for the winner against the mandi down the road. Optimisation the
+ * farmer cannot check is just a number with a logo on it.
  */
+
+/** Enough rows to see the shape of the market without scrolling past the fold. */
+const COLLAPSED_ROWS = 6;
+
 export const PriceScreen = () => {
   const cropDetails = useAppStore((state) => state.cropDetails);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
-  const { t, money, rate, number } = useT();
+  const { t, money, rate, number, shortDate } = useT();
 
   const [panel, setPanel] = useState('rates');
+  const [showAll, setShowAll] = useState(false);
+  const [openMandi, setOpenMandi] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const { best, comparison, forecast, status } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
+  const {
+    best, comparison, advantage, forecast, status, fetchedAt, latestArrivalDate, liveCount,
+  } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
 
   const cropName = t(`crops.${cropDetails.cropType}`);
+  const visible = showAll ? comparison : comparison.slice(0, COLLAPSED_ROWS);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await ensure(cropDetails.cropType, { force: true });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const options = [
     { id: 'rates', label: t('price.tab.rates'), icon: Store },
     { id: 'forecast', label: t('price.tab.forecast'), icon: LineChart },
     { id: 'costs', label: t('price.tab.costs'), icon: Wallet },
   ];
+
+  /* The provenance line, shared by all three panels: what the data is, how many
+     mandis it covers, when it was last pulled, and a way to pull it again. */
+  const provenance = (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <MarketStatusStamp status={status} />
+      {status === 'live' && (
+        <span className="text-sm text-ink-faint tnum">
+          {t('price.mandis.count', { count: liveCount })}
+          {latestArrivalDate && ` · ${t('price.mandis.arrival', { date: shortDate(new Date(latestArrivalDate)) })}`}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={refresh}
+        disabled={refreshing}
+        className="ml-auto inline-flex items-center gap-1.5 text-sm font-bold text-forest-700 underline underline-offset-2 disabled:opacity-60"
+      >
+        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} strokeWidth={2.25} aria-hidden="true" />
+        {refreshing ? t('price.refreshing') : t('price.refresh')}
+      </button>
+      {fetchedAt && !refreshing && (
+        <span className="w-full text-sm text-ink-faint tnum">
+          {t('price.updated', { time: new Date(fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}
+        </span>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6 pt-4">
@@ -49,9 +104,14 @@ export const PriceScreen = () => {
 
       {/* The headline answer stays put while the panels change beneath it. */}
       <div className="detail-enter flex flex-wrap items-end justify-between gap-4 border-2 border-ink bg-white px-4 py-4">
-        <div>
+        <div className="min-w-0">
           <p className="eyebrow">{t('price.bestHere')}</p>
-          <p className="mt-1 font-display text-3xl leading-none text-ink">{t(`mandis.${best.id}`)}</p>
+          <p className="mt-1 truncate font-display text-3xl leading-none text-ink">{mandiLabel(t, best)}</p>
+          {best.distanceKm != null && (
+            <p className="mt-1.5 text-sm text-ink-faint tnum">
+              {best.distanceApprox && '~'}{number(best.distanceKm)} {t('common.km')} · {t('price.mandis.net')} {money(best.net)}
+            </p>
+          )}
         </div>
         <p className="font-display text-5xl leading-none tnum text-forest-700">
           {rate(best.ratePerKg)}
@@ -68,29 +128,39 @@ export const PriceScreen = () => {
 
         {panel === 'rates' && (
           <div className="space-y-4">
-            <div className="border-2 border-ink bg-white px-4">
-              {comparison.map((mandi, index) => (
-                <LedgerRow
+            {/* The argument comes before the evidence: a farmer who reads only
+                one thing on this screen should read the trade-off, not row 1. */}
+            <WhyFurther advantage={advantage} comparison={comparison} />
+
+            <div className="border-2 border-ink bg-white">
+              {visible.map((mandi, index) => (
+                <MandiRow
                   key={mandi.id}
-                  emphasis={index === 0}
-                  marker={
-                    <span
-                      className={`flex h-9 w-9 items-center justify-center border-2 ${
-                        index === 0 ? 'border-forest-700 bg-forest-700 text-white' : 'border-rule text-ink-faint'
-                      }`}
-                      aria-hidden="true"
-                    >
-                      <MapPin className="h-4 w-4" strokeWidth={2.5} />
-                    </span>
-                  }
-                  label={t(`mandis.${mandi.id}`)}
-                  sub={`${number(mandi.distanceKm)} ${t('common.km')} · ${rate(mandi.ratePerKg)}/${t('common.kg')}`}
-                  value={money(mandi.net)}
+                  row={mandi}
+                  rank={index}
+                  expanded={openMandi === mandi.id}
+                  onToggle={() => setOpenMandi(openMandi === mandi.id ? null : mandi.id)}
                 />
               ))}
-              <p className="py-3 text-sm leading-snug text-ink-faint">{t('price.mandis.explain')}</p>
+
+              {comparison.length > COLLAPSED_ROWS && (
+                <button
+                  type="button"
+                  onClick={() => setShowAll(!showAll)}
+                  className="w-full px-4 py-3 text-left text-sm font-bold text-forest-700 underline underline-offset-2"
+                >
+                  {showAll
+                    ? t('price.mandis.showLess')
+                    : t('price.mandis.showAll', { count: comparison.length - COLLAPSED_ROWS })}
+                </button>
+              )}
+
+              <p className="px-4 py-3 text-sm leading-snug text-ink-faint">
+                {t('price.mandis.explain')}
+              </p>
             </div>
-            <MarketStatusStamp status={status} />
+
+            {provenance}
           </div>
         )}
 
@@ -99,20 +169,43 @@ export const PriceScreen = () => {
             <div className="border-2 border-ink bg-white p-4">
               <p className="eyebrow mb-3">{t('price.forecast.nextDays', { count: AHEAD_DAYS })}</p>
               <ForecastChart points={forecast} />
+              <p className="mt-3 text-sm leading-snug text-ink-faint">{t('price.forecast.explain')}</p>
             </div>
-            <MarketStatusStamp status={status} />
+            {provenance}
           </div>
         )}
 
         {panel === 'costs' && (
           <div className="space-y-4">
             <div className="border-2 border-ink bg-white px-4">
-              <LedgerRow label={t('price.costs.gross')} value={money(best.gross)} />
-              <LedgerRow label={t('price.costs.freight')} value={`− ${money(best.freight)}`} />
-              <LedgerRow label={t('price.costs.commission')} value={`− ${money(best.commission)}`} />
+              <LedgerRow
+                label={t('price.costs.gross')}
+                sub={t('price.breakdown.rateQty', { rate: rate(best.ratePerKg), qty: number(best.quantityKg) })}
+                value={money(best.gross)}
+              />
+              <LedgerRow
+                label={t('price.costs.freight')}
+                sub={best.distanceKm != null
+                  ? t('price.breakdown.freightCalc', { km: number(best.distanceKm), perKm: number(best.ratePerKm || 0) })
+                  : undefined}
+                value={`− ${money(best.freight)}`}
+              />
+              <LedgerRow
+                label={t('price.costs.commission')}
+                sub={t('price.breakdown.commissionCalc', { percent: `${COMMISSION_RATE * 100}%` })}
+                value={`− ${money(best.commission)}`}
+              />
               <LedgerRow label={t('price.costs.net')} value={money(best.net)} emphasis />
             </div>
-            <MarketStatusStamp status={status} />
+
+            {/* Per-kg, because that is the unit a farmer negotiates in — and the
+                unit in which "the truck ate the difference" becomes obvious. */}
+            <div className="border-2 border-ink bg-white px-4">
+              <LedgerRow label={t('price.costs.netPerKg')} value={`${rate(best.net / Math.max(best.quantityKg, 1))}`} />
+              <LedgerRow label={t('price.costs.freightPerKg')} value={`${rate(best.freightPerKg || 0)}`} />
+            </div>
+
+            {provenance}
           </div>
         )}
       </div>

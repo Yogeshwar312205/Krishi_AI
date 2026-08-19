@@ -2,6 +2,8 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { AppShell } from './app/AppShell';
 import { useAppStore } from './store/useAppStore';
 import { fetchHealthStatus } from './services/api';
+import { prefetch } from './data/marketCache';
+import { BOARD_CROPS } from './utils/constants';
 
 /*
  * Split from the shell: the auth screen is the one thing a returning user with
@@ -30,6 +32,8 @@ export function App() {
   const setSystemHealth = useAppStore((state) => state.setSystemHealth);
   const user = useAppStore((state) => state.user);
 
+  const cropType = useAppStore((state) => state.cropDetails.cropType);
+
   useEffect(() => {
     // Guards against applying a response after unmount (React 18 StrictMode
     // double-invokes effects in development).
@@ -41,6 +45,18 @@ export function App() {
 
     return () => { cancelled = true; };
   }, [setSystemHealth]);
+
+  /*
+   * Warm the mandi cache at start-up, not at first render of each screen.
+   *
+   * These are the crops the first two things anyone sees are built from — the
+   * landing rate board and the farmer's own crop — so fetching them here means
+   * moving between Today, Prices and the landing board costs no network at all
+   * for the next ten minutes. See data/marketCache.js.
+   */
+  useEffect(() => {
+    prefetch([...new Set([cropType, ...BOARD_CROPS])]);
+  }, [cropType]);
 
   /*
    * The optimisation call that used to run here on mount was removed: it fired

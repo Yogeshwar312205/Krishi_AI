@@ -6,7 +6,8 @@ import { useT } from '../../i18n/useT';
 import { LanguagePicker } from '../../shared/LanguagePicker';
 import { Button } from '../../design/primitives/Button';
 import { MarketStatusStamp } from '../../design/primitives/MarketStatusStamp';
-import { useLiveMarket } from '../../data/useLiveMarket';
+import { useLiveMarket, mandiLabel } from '../../data/useLiveMarket';
+import { BOARD_CROPS } from '../../utils/constants';
 
 /**
  * The front of the front door.
@@ -22,8 +23,6 @@ import { useLiveMarket } from '../../data/useLiveMarket';
  * Agmarknet feed when it's reachable, falling back to demoMarket.js (see
  * data/demoMarket.js) with the same stamp as everywhere else when it isn't.
  */
-const BOARD_CROPS = ['Onion', 'Tomato', 'Wheat', 'Mango'];
-
 const ROLE_ITEMS = [
   { icon: Sprout, labelKey: 'roles.farmer', noteKey: 'landing.roleFarmer' },
   { icon: Truck, labelKey: 'roles.driver', noteKey: 'landing.roleDriver' },
@@ -33,19 +32,34 @@ const ROLE_ITEMS = [
 export const LandingScreen = ({ onEnter }) => {
   const { t, rate } = useT();
 
-  const onionMarket = useLiveMarket('Onion', 100);
-  const tomatoMarket = useLiveMarket('Tomato', 100);
-  const wheatMarket = useLiveMarket('Wheat', 100);
-  const mangoMarket = useLiveMarket('Mango', 100);
-
-  const marketByCrop = { Onion: onionMarket, Tomato: tomatoMarket, Wheat: wheatMarket, Mango: mangoMarket };
+  /*
+   * Four fixed hooks rather than a loop, because hooks cannot be called from
+   * one. They cost nothing extra: all four read the same module-level cache
+   * (data/marketCache.js), which App.jsx has already warmed with exactly these
+   * crops — so this board renders from memory and the same entries are still
+   * warm when the farmer reaches Today and Prices after signing in.
+   */
+  const [cropA, cropB, cropC, cropD] = BOARD_CROPS;
+  const marketA = useLiveMarket(cropA, 100);
+  const marketB = useLiveMarket(cropB, 100);
+  const marketC = useLiveMarket(cropC, 100);
+  const marketD = useLiveMarket(cropD, 100);
 
   const board = useMemo(
-    () => BOARD_CROPS.map((crop) => {
-      const state = marketByCrop[crop];
-      return { crop, ...state.best, delta: state.delta, status: state.status };
-    }),
-    [onionMarket, tomatoMarket, wheatMarket, mangoMarket]
+    () => [[cropA, marketA], [cropB, marketB], [cropC, marketC], [cropD, marketD]].map(
+      ([crop, state]) => ({
+        crop,
+        // Highest rate in the state, not highest net: a visitor has no farm on
+        // file, so there is no honest haul to subtract. The net-of-freight
+        // ranking is the whole point of the app, and it starts the moment they
+        // tell us where they are.
+        ratePerKg: state.topRate.ratePerKg,
+        mandi: mandiLabel(t, state.topRate),
+        delta: state.delta,
+        status: state.status,
+      })
+    ),
+    [t, cropA, cropB, cropC, cropD, marketA, marketB, marketC, marketD]
   );
 
   // One stamp for the whole board: still fetching beats "live" beats "demo" —
@@ -81,9 +95,10 @@ export const LandingScreen = ({ onEnter }) => {
               </span>
               <MarketStatusStamp status={boardStatus} />
             </div>
+            <p className="mt-2 text-sm text-forest-100">{t('landing.boardNote')}</p>
 
             <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
-              {board.map(({ crop, ratePerKg, name, delta }) => {
+              {board.map(({ crop, ratePerKg, mandi, delta }) => {
                 const DeltaIcon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
                 const deltaColor = delta > 0 ? 'text-forest-600' : delta < 0 ? 'text-terracotta-600' : 'text-ink-faint';
                 return (
@@ -92,7 +107,7 @@ export const LandingScreen = ({ onEnter }) => {
                     <p className="font-display text-3xl leading-none sm:text-4xl">{rate(ratePerKg)}</p>
                     <div className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-ink-faint">
                       <DeltaIcon className={`h-3.5 w-3.5 shrink-0 ${deltaColor}`} strokeWidth={2.5} aria-hidden="true" />
-                      <span className="truncate">{name}</span>
+                      <span className="truncate">{mandi}</span>
                     </div>
                   </div>
                 );

@@ -31,24 +31,33 @@
     "listen": "Listen",
     "call": "Call"
   },
-
   "crops": {
+    "Onion": "Onion",
     "Tomato": "Tomato",
     "Potato": "Potato",
-    "Onion": "Onion",
     "Wheat": "Wheat",
+    "Soyabean": "Soyabean",
+    "Jowar(Sorghum)": "Jowar",
+    "Bajra(Pearl Millet/Cumbu)": "Bajra",
+    "Maize": "Maize",
+    "Bengal Gram(Gram)(Whole)": "Gram (chana)",
+    "Red gram/Arhar/Tur(whole)": "Tur (arhar)",
+    "Groundnut": "Groundnut",
     "Rice": "Rice",
-    "Mango": "Mango",
-    "Banana": "Banana"
+    "Green Chilli": "Green chilli",
+    "Brinjal": "Brinjal",
+    "Cabbage": "Cabbage",
+    "Cauliflower": "Cauliflower",
+    "Pomegranate": "Pomegranate",
+    "Banana": "Banana",
+    "Mango": "Mango"
   },
-
   "mandis": {
     "Vashi": "Vashi",
     "Pune": "Pune",
     "Nashik": "Nashik",
     "Pimpalgaon": "Pimpalgaon"
   },
-
   "lang": {
     "label": "Language",
     "en": "English",
@@ -56,14 +65,12 @@
     "mr": "मराठी",
     "changed": "Language changed to English"
   },
-
   "roles": {
     "label": "I am a",
     "farmer": "Farmer",
     "driver": "Driver",
     "buyer": "Buyer"
   },
-
   "nav": {
     "farmer": {
       "today": "Today",
@@ -82,7 +89,6 @@
       "profile": "Profile"
     }
   },
-
   "today": {
     "greeting": "Ram Ram, {{name}}",
     "greetingAnon": "Ram Ram",
@@ -105,7 +111,6 @@
     "noCropWhy": "Once you add your crop, we will show you the best rate every day.",
     "addCrop": "Add my crop"
   },
-
   "price": {
     "title": "Crop rates",
     "subtitle": "Where to sell {{crop}} for the most money",
@@ -140,7 +145,12 @@
       "net": "You get",
       "best": "Most money",
       "nearest": "Nearest",
-      "explain": "\"You get\" is after taking off vehicle cost and mandi commission."
+      "explain": "\"You get\" is after taking off vehicle cost and mandi commission.",
+      "count": "{{count}} mandis reporting",
+      "showAll": "Show {{count}} more mandis",
+      "showLess": "Show fewer",
+      "arrival": "Rate of {{date}}",
+      "range": "Low {{min}} – high {{max}}"
     },
     "demand": {
       "title": "How much buyers want it",
@@ -154,7 +164,9 @@
       "freight": "Vehicle cost",
       "commission": "Mandi commission",
       "labour": "Loading and unloading",
-      "net": "Money in your hand"
+      "net": "Money in your hand",
+      "netPerKg": "You get, per kg",
+      "freightPerKg": "Vehicle cost, per kg"
     },
     "alert": {
       "title": "Tell me when the rate goes up",
@@ -163,9 +175,33 @@
       "target": "Tell me when the rate crosses",
       "smsTo": "SMS will come to {{phone}}",
       "saved": "We will send you an SMS"
+    },
+    "breakdown": {
+      "title": "How this is worked out",
+      "rateQty": "{{rate}} × {{qty}} kg",
+      "freightCalc": "{{km}} km × ₹{{perKm}} per km",
+      "commissionCalc": "{{percent}} of the sale"
+    },
+    "freight": {
+      "explain": "Truck cost: diesel ₹{{diesel}} a litre ÷ {{kmpl}} km a litre, plus ₹{{extra}} a km for the driver, tolls and the empty return trip."
+    },
+    "source": {
+      "market": "Exact mandi location",
+      "district": "Distance measured to the district town"
+    },
+    "updated": "Updated at {{time}}",
+    "refresh": "Refresh",
+    "refreshing": "Getting new rates…",
+    "why": {
+      "title": "Why this mandi",
+      "headline": "{{best}} is {{km}} km further than {{near}} — but it still pays you more.",
+      "extraTruck": "{{km}} km extra by truck",
+      "higherRate": "Rate is {{amount}} a kg higher",
+      "youKeepMore": "You keep this much more",
+      "youKeepLess": "You keep this much less",
+      "nearestWins": "The nearest mandi, {{mandi}}, is also the one paying the most today. No need to send the truck further."
     }
   },
-
   "transport": {
     "title": "Vehicle",
     "book": {
@@ -235,7 +271,6 @@
       "cancelled": "Cancelled"
     }
   },
-
   "crop": {
     "title": "My crop",
     "which": "Which crop?",
@@ -260,18 +295,21 @@
       "logout": "Log out",
       "email": "Email",
       "notSet": "Not given"
-    }
+    },
+    "otherCrops": "Another crop",
+    "otherCropsHint": "Every crop Maharashtra mandis reported today.",
+    "pickCrop": "Choose from the list",
+    "mandiCount": "{{count}} mandis"
   },
-
   "landing": {
     "eyebrow": "Today's board",
     "headline": "The nearest mandi isn't always the one that pays.",
     "sub": "Compare every nearby mandi's rate, the freight, and what actually lands in your hand — before the truck leaves.",
     "roleFarmer": "Check today's rate at every mandi, and what you will really take home.",
     "roleDriver": "Find loads near your route and get paid the moment you deliver.",
-    "roleBuyer": "See fresh arrivals across mandis and place your order early."
+    "roleBuyer": "See fresh arrivals across mandis and place your order early.",
+    "boardNote": "Today's government mandi rate — the highest-paying mandi in Maharashtra for each crop."
   },
-
   "auth": {
     "login": "Log in",
     "signup": "Create account",
@@ -303,7 +341,6 @@
     "offlineNote": "The server is not reachable, so you are on sample data.",
     "terms": "By continuing you agree to our terms and privacy policy."
   },
-
   "voice": {
     "open": "Ask by voice",
     "title": "Ask me",
@@ -325,7 +362,6 @@
       "opening": "Opening {{screen}}."
     }
   },
-
   "driver": {
     "jobs": {
       "title": "Job requests",
@@ -364,7 +400,6 @@
       "empty": "No vehicles added yet."
     }
   },
-
   "buyer": {
     "rates": {
       "title": "My buying rates",
@@ -387,7 +422,6 @@
       "empty": "No arrivals today"
     }
   },
-
   "demo": {
     "title": "Demo controls",
     "subtitle": "For judges — not shown to farmers",
@@ -397,7 +431,6 @@
     "resetData": "Reset demo data",
     "close": "Close"
   },
-
   "health": {
     "online": "Connected",
     "offline": "Not connected",

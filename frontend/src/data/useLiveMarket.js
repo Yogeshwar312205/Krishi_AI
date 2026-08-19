@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { fetchLiveAgmarknetMarkets, fetchAgmarknetHistory } from '../services/api';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useAppStore } from '../store/useAppStore';
+import { subscribe, peek, ensure, MARKET_TTL_MS } from './marketCache';
+import { roadDistanceKm, DISTRICT_MIN_HAUL_KM } from './geo';
 import {
   buildMandiComparison,
   buildForecast as buildDemoForecast,
@@ -9,75 +11,120 @@ import {
 } from './demoMarket';
 
 /**
- * Wires the Price/Today screens to the live data.gov.in Agmarknet feed
- * (backend/src/services/agmarknetService.js), falling back to demoMarket.js
- * wherever a live number isn't available — same "degrade instead of fail"
- * pattern as the rest of the backend.
+ * The market view every farmer-facing screen reads from.
  *
- * The government feed's market names ("Pune(Pimpri) APMC", "Mumbai APMC", …)
- * don't line up with the app's four fixed, translated mandi ids, so each
- * canonical mandi is fuzzy-matched against whatever markets reported that
- * commodity most recently in Maharashtra.
+ * What changed, and why it matters:
+ *
+ * This used to fuzzy-match the government feed against four hardcoded mandis
+ * (Vashi, Pune, Nashik, Pimpalgaon) and show only those. Two things went wrong
+ * with that. The feed's most recent hundred postings for a crop are whichever
+ * markets happened to report first that morning, so those four were usually
+ * absent and the screen silently fell back to invented numbers — in practice
+ * only Tomato and Onion ever resolved live. And even when it worked, showing
+ * four markets out of the ~290 that report in Maharashtra is not optimisation;
+ * it is a shortlist someone else picked.
+ *
+ * Now every reporting mandi comes through, ranked by what actually lands in
+ * the farmer's hand: rate × weight, minus real road freight, minus commission.
+ * That ranking is the product's whole claim — a farther mandi at a higher rate
+ * often beats the one down the road — so `advantage` below returns the
+ * arithmetic that justifies it, not just the winner.
  */
-const CANONICAL_MATCHERS = {
-  Vashi: ['vashi', 'mumbai'],
-  Pune: ['pune'],
-  Nashik: ['nashik', 'nasik'],
-  Pimpalgaon: ['pimpalgaon'],
-};
 
-const COMMISSION_RATE = 0.06;
+/** Mandi commission as a share of gross. APMC rates run 4–8% in Maharashtra. */
+export const COMMISSION_RATE = 0.06;
 
-const matchRecord = (records, matchers) => {
-  // Market name only — district/city collides two ways: several distinct
-  // APMC markets share one district (Nashik district contains both "Nasik
-  // APMC" and "Pimpalgaon Baswant APMC"), so matching on it can attribute a
-  // record to the wrong market entirely.
-  const lower = (s) => (s || '').toLowerCase();
-  return records.find((r) => matchers.some((m) => lower(r.mandi).includes(m))) || null;
-};
+/* ----------------------------------------------------------- live rows */
 
-const buildComparisonFromLive = (records, cropType, quantityKg) => {
-  const base = buildMandiComparison(cropType, quantityKg);
-  const logisticsRatePerKm = records[0]?.logisticsRatePerKm;
-  let liveCount = 0;
+const buildRows = (records, { originCoords, quantityKg }) => {
+  const qty = Math.max(Number(quantityKg) || 0, 1);
+  const [originLon, originLat] = originCoords || [];
+  const hasOrigin = Number.isFinite(originLat) && Number.isFinite(originLon);
 
-  const rows = base.map((row) => {
-    const matched = matchRecord(records, CANONICAL_MATCHERS[row.id] || []);
-    if (!matched) return { ...row, isLive: false };
+  return records
+    .filter((rec) => rec.coordinates && rec.rate > 0)
+    .map((rec) => {
+      const measured = hasOrigin
+        ? roadDistanceKm(originLat, originLon, rec.coordinates[1], rec.coordinates[0])
+        : null;
 
-    liveCount += 1;
-    const ratePerKg = matched.pricePerKg ?? matched.rate;
-    const gross = ratePerKg * quantityKg;
-    // Real distance × today's real diesel-derived rate/km, spread over this
-    // consignment's own weight — a dedicated trip, not a shared-truck estimate.
-    const freightPerKg = logisticsRatePerKm
-      ? (logisticsRatePerKm * row.distanceKm) / Math.max(quantityKg, 1)
-      : row.freightPerKg;
-    const freight = freightPerKg * quantityKg;
-    const commission = gross * COMMISSION_RATE;
+      // A district-precision market sits at its district town, so a farm in the
+      // same district measures 0 km and books itself a free truck. Floor it and
+      // say it is approximate rather than show a net profit built on that.
+      const approx = rec.geoPrecision !== 'market';
+      const distanceKm = measured === null
+        ? null
+        : (approx ? Math.max(measured, DISTRICT_MIN_HAUL_KM) : measured);
 
-    return {
-      ...row,
-      ratePerKg,
-      gross,
-      freight,
-      commission,
-      net: gross - freight - commission,
-      isLive: true,
-      arrivalDate: matched.arrivalDate,
-    };
-  });
+      const ratePerKg = rec.rate;
+      const gross = ratePerKg * qty;
+      const ratePerKm = rec.logisticsRatePerKm || 31;
+      const freight = distanceKm === null ? 0 : ratePerKm * distanceKm;
+      const commission = gross * COMMISSION_RATE;
 
-  rows.sort((a, b) => b.net - a.net);
-  return { rows, liveCount };
+      return {
+        id: rec.mandi,
+        name: rec.mandi,
+        place: rec.place || rec.district,
+        district: rec.district,
+        variety: rec.variety,
+        distanceKm,
+        distanceApprox: approx,
+        geoPrecision: rec.geoPrecision,
+        ratePerKm,
+        fuelDetails: rec.fuelDetails,
+        minPricePerQuintal: rec.minPricePerQuintal,
+        maxPricePerQuintal: rec.maxPricePerQuintal,
+        modalPricePerQuintal: rec.modalPricePerQuintal,
+        arrivalDate: rec.arrivalDate,
+        isStale: rec.isStale,
+        ratePerKg,
+        quantityKg: qty,
+        gross,
+        freight,
+        freightPerKg: freight / qty,
+        commission,
+        net: gross - freight - commission,
+        isLive: true,
+      };
+    })
+    .filter((row) => row.distanceKm !== null)
+    .sort((a, b) => b.net - a.net);
 };
 
 /**
- * Real past prices (averaged daily across reporting Maharashtra markets) plus
- * a linear-trend projection for the days ahead. The chart already draws the
- * future half dashed and inside a widening band — that visual language is the
- * honest label for "guessed", so the projection doesn't need one of its own.
+ * Why the top mandi wins, stated as the trade the farmer is being asked to make.
+ *
+ * Comparing the best row against the *nearest* row rather than the second-best
+ * is deliberate: the nearest mandi is the one the farmer would go to anyway, so
+ * it is the real alternative, and the difference against it is the real gain.
+ */
+const buildAdvantage = (rows) => {
+  if (rows.length < 2) return null;
+
+  const best = rows[0];
+  const nearest = rows.reduce((a, b) => (b.distanceKm < a.distanceKm ? b : a));
+  if (nearest.id === best.id) return null;
+
+  return {
+    best,
+    nearest,
+    extraKm: best.distanceKm - nearest.distanceKm,
+    extraFreight: best.freight - nearest.freight,
+    rateGap: best.ratePerKg - nearest.ratePerKg,
+    // What the higher rate earns on this consignment, before the extra haul.
+    grossGain: best.gross - nearest.gross,
+    extraCommission: best.commission - nearest.commission,
+    netGain: best.net - nearest.net,
+  };
+};
+
+/* ------------------------------------------------------------ forecast */
+
+/**
+ * Real past prices (daily average across reporting Maharashtra markets) plus a
+ * linear-trend projection. The chart draws the future half dashed inside a
+ * widening band — that visual language is the honest label for "guessed".
  */
 const buildForecastFromHistory = (historyDays) => {
   if (!historyDays || historyDays.length < 3) return null;
@@ -120,81 +167,104 @@ const buildForecastFromHistory = (historyDays) => {
   return [...past, ...future];
 };
 
-const demoState = (cropType, quantityKg) => {
+/* --------------------------------------------------------- demo fallback */
+
+const demoState = (cropType, quantityKg, status = 'demo') => {
   const verdict = buildDemoVerdict(cropType, quantityKg);
+  const qty = Math.max(Number(quantityKg) || 0, 1);
+  const rows = buildMandiComparison(cropType, quantityKg).map((row) => ({
+    ...row,
+    nameKey: `mandis.${row.id}`,
+    quantityKg: qty,
+    // Back-derived so the breakdown rows render the same shape as live ones —
+    // the demo baseline quotes ₹/kg freight, the live feed quotes ₹/km.
+    ratePerKm: row.distanceKm ? Math.round(row.freight / row.distanceKm) : 0,
+    geoPrecision: 'market',
+    isLive: false,
+  }));
   return {
-    status: 'demo',
-    best: verdict.best,
-    comparison: verdict.comparison,
+    status,
+    best: rows[0],
+    topRate: rows.reduce((a, b) => (b.ratePerKg > a.ratePerKg ? b : a), rows[0]),
+    comparison: rows,
+    advantage: buildAdvantage(rows),
     delta: verdict.delta,
     action: verdict.action,
     forecast: buildDemoForecast(cropType),
+    liveCount: 0,
+    total: rows.length,
+    fetchedAt: null,
+    latestArrivalDate: null,
   };
 };
 
 /**
- * status progression: 'loading' -> 'live' | 'partial' | 'demo'.
+ * A mandi's display name.
  *
- * The demo baseline is shown immediately (so nothing is ever blank) but
- * tagged 'loading' rather than 'demo' until the live fetch settles — a
- * farmer glancing at the screen mid-fetch should see "updating", not a
- * number that then silently changes underneath them.
+ * The four demo mandis are translated (`mandis.Vashi` etc.); the ~290 live ones
+ * come from the government feed as English strings like "Pune(Moshi) APMC" and
+ * cannot be — translating them would mean inventing Devanagari names for real
+ * market yards that publish under those names on their own boards.
+ */
+export const mandiLabel = (t, row) => (row?.nameKey ? t(row.nameKey) : row?.name || '');
+
+/* ------------------------------------------------------------- the hook */
+
+/**
+ * status: 'loading' while the first fetch is in flight (over a demo baseline,
+ * so nothing is ever blank), then 'live' or 'demo'.
  */
 export const useLiveMarket = (cropType, quantityKg) => {
-  const [state, setState] = useState(() => ({ ...demoState(cropType, quantityKg), status: 'loading' }));
+  const farmerOrigin = useAppStore((state) => state.farmerOrigin);
 
-  useEffect(() => {
-    let cancelled = false;
-    setState({ ...demoState(cropType, quantityKg), status: 'loading' });
+  const subscribeToCrop = useCallback((callback) => subscribe(cropType, callback), [cropType]);
+  const getSnapshot = useCallback(() => peek(cropType), [cropType]);
+  const entry = useSyncExternalStore(subscribeToCrop, getSnapshot, getSnapshot);
 
-    (async () => {
-      const [marketsRes, historyRes] = await Promise.all([
-        fetchLiveAgmarknetMarkets(cropType, 'Maharashtra'),
-        fetchAgmarknetHistory(cropType, 'Maharashtra'),
-      ]);
-      if (cancelled) return;
+  // Kick off the fetch for any crop that isn't already cached and fresh. The
+  // subscription above delivers the result, so nothing is awaited here; App.jsx
+  // has usually warmed this crop already and `ensure` then does nothing at all.
+  useEffect(() => { ensure(cropType); }, [cropType]);
 
-      const records = marketsRes?.records || [];
-      const liveRecords = records.filter((r) => r.isGovtVerified);
-      if (!liveRecords.length) {
-        setState(demoState(cropType, quantityKg)); // confirmed no live data — settle on demo
-        return;
-      }
+  return useMemo(() => {
+    if (!entry) return demoState(cropType, quantityKg, 'loading');
+    if (!entry.isLive || !entry.records.length) return demoState(cropType, quantityKg);
 
-      const { rows, liveCount } = buildComparisonFromLive(liveRecords, cropType, quantityKg);
-      if (!liveCount) {
-        setState(demoState(cropType, quantityKg));
-        return;
-      }
+    const rows = buildRows(entry.records, { originCoords: farmerOrigin, quantityKg });
+    if (!rows.length) return demoState(cropType, quantityKg);
 
-      const history = historyRes?.days || [];
-      const forecast = buildForecastFromHistory(history) || buildDemoForecast(cropType);
+    const history = entry.history || [];
+    const forecast = buildForecastFromHistory(history) || buildDemoForecast(cropType);
 
-      // Real day-over-day delta when the history call came through; otherwise
-      // keep the demo heuristic's delta rather than silently presenting "flat".
-      let delta = buildDemoVerdict(cropType, quantityKg).delta;
-      if (history.length >= 2) {
-        delta = Math.round((history[history.length - 1].avgRatePerKg - history[history.length - 2].avgRatePerKg) * 100) / 100;
-      }
+    // Real day-over-day movement in the state average when history came
+    // through; otherwise keep the demo heuristic rather than assert "flat".
+    let delta = buildDemoVerdict(cropType, quantityKg).delta;
+    if (history.length >= 2) {
+      delta = Math.round(
+        (history[history.length - 1].avgRatePerKg - history[history.length - 2].avgRatePerKg) * 100
+      ) / 100;
+    }
 
-      setState({
-        status: liveCount === rows.length ? 'live' : 'partial',
-        best: rows[0],
-        comparison: rows,
-        delta,
-        action: delta > 0 ? 'wait' : 'go',
-        forecast,
-        liveCount,
-        total: rows.length,
-      });
-    })();
-
-    return () => {
-      cancelled = true;
+    return {
+      status: 'live',
+      best: rows[0],
+      // The highest headline rate in the state, irrespective of freight. Used
+      // by the landing board, where there is no signed-in farmer and therefore
+      // no farm to measure a haul from — ranking by net there would silently
+      // rank against a default location the visitor never gave us.
+      topRate: rows.reduce((a, b) => (b.ratePerKg > a.ratePerKg ? b : a), rows[0]),
+      comparison: rows,
+      advantage: buildAdvantage(rows),
+      delta,
+      action: delta > 0 ? 'wait' : 'go',
+      forecast,
+      liveCount: rows.length,
+      total: rows.length,
+      fetchedAt: entry.fetchedAt,
+      latestArrivalDate: entry.latestArrivalDate,
+      isStaleCache: Date.now() - entry.fetchedAt > MARKET_TTL_MS,
     };
-  }, [cropType, quantityKg]);
-
-  return state;
+  }, [entry, cropType, quantityKg, farmerOrigin]);
 };
 
 export default useLiveMarket;
