@@ -5,8 +5,8 @@ import {
 import { useT } from '../../i18n/useT';
 import { LanguagePicker } from '../../shared/LanguagePicker';
 import { Button } from '../../design/primitives/Button';
-import { DemoStamp } from '../../design/primitives/DemoStamp';
-import { buildVerdict } from '../../data/demoMarket';
+import { MarketStatusStamp } from '../../design/primitives/MarketStatusStamp';
+import { useLiveMarket } from '../../data/useLiveMarket';
 
 /**
  * The front of the front door.
@@ -17,9 +17,10 @@ import { buildVerdict } from '../../data/demoMarket';
  * board — rather than an empty email box.
  *
  * The board below is real product mechanics, not decoration: it pulls the
- * same `buildVerdict` the Today screen uses, so the number a visitor sees
- * here is the number a signed-in farmer would see. It is demo data (see
- * data/demoMarket.js) and carries the same stamp as everywhere else.
+ * same `useLiveMarket` hook the Today/Price screens use, so the number a
+ * visitor sees here is the number a signed-in farmer would see — the real
+ * Agmarknet feed when it's reachable, falling back to demoMarket.js (see
+ * data/demoMarket.js) with the same stamp as everywhere else when it isn't.
  */
 const BOARD_CROPS = ['Onion', 'Tomato', 'Wheat', 'Mango'];
 
@@ -32,13 +33,29 @@ const ROLE_ITEMS = [
 export const LandingScreen = ({ onEnter }) => {
   const { t, rate } = useT();
 
+  const onionMarket = useLiveMarket('Onion', 100);
+  const tomatoMarket = useLiveMarket('Tomato', 100);
+  const wheatMarket = useLiveMarket('Wheat', 100);
+  const mangoMarket = useLiveMarket('Mango', 100);
+
+  const marketByCrop = { Onion: onionMarket, Tomato: tomatoMarket, Wheat: wheatMarket, Mango: mangoMarket };
+
   const board = useMemo(
     () => BOARD_CROPS.map((crop) => {
-      const verdict = buildVerdict(crop, 100);
-      return { crop, ...verdict.best, delta: verdict.delta };
+      const state = marketByCrop[crop];
+      return { crop, ...state.best, delta: state.delta, status: state.status };
     }),
-    []
+    [onionMarket, tomatoMarket, wheatMarket, mangoMarket]
   );
+
+  // One stamp for the whole board: still fetching beats "live" beats "demo" —
+  // a visitor should see "updating" until every crop has settled, not a stamp
+  // that flips from demo to live as each of the four calls happens to land.
+  const boardStatus = board.some((row) => row.status === 'loading')
+    ? 'loading'
+    : board.every((row) => row.status === 'live')
+      ? 'live'
+      : 'demo';
 
   return (
     <div className="min-h-full bg-forest-700 text-white">
@@ -62,7 +79,7 @@ export const LandingScreen = ({ onEnter }) => {
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-turmeric-300">
                 {t('landing.eyebrow')}
               </span>
-              <DemoStamp />
+              <MarketStatusStamp status={boardStatus} />
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
