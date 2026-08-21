@@ -68,8 +68,8 @@
   "roles": {
     "label": "I am a",
     "farmer": "Farmer",
-    "driver": "Driver",
-    "buyer": "Buyer"
+    "buyer": "Buyer",
+    "logistics": "Fleet owner"
   },
   "nav": {
     "farmer": {
@@ -78,15 +78,16 @@
       "transport": "Vehicle",
       "crop": "My Crop"
     },
-    "driver": {
-      "jobs": "Jobs",
-      "route": "Route",
-      "vehicles": "My Vehicles"
-    },
     "buyer": {
       "rates": "My Rates",
       "inbound": "Arrivals",
       "profile": "Profile"
+    },
+    "logistics": {
+      "dispatch": "Dispatch",
+      "fleet": "Fleet",
+      "routes": "Routes",
+      "jobs": "Jobs"
     }
   },
   "today": {
@@ -221,7 +222,7 @@
       "change": "Change",
       "toMandi": "To {{mandi}}",
       "needDeal": "Settle the price first",
-      "needDealWhy": "A truck costs money whether or not anyone at the mandi is waiting for your crop. Agree a rate with a trader first, then send the vehicle."
+      "needDealWhy": "A truck costs money whether or not anyone at the mandi is waiting for your crop. Agree a rate with a trader first, then ask for a pickup."
     },
     "vehicle": {
       "available": "{{count}} vehicles available",
@@ -271,6 +272,19 @@
       "arrived": "Reached mandi",
       "delivered": "Delivered",
       "cancelled": "Cancelled"
+    },
+    "ask": {
+      "tab": "Ask for a truck",
+      "send": "Ask for a pickup",
+      "note": "You are not choosing a truck. Fleet owners see your request and send the vehicle it costs least to send.",
+      "sent": "Request sent. Fleet owners can see it now.",
+      "failed": "Could not send the request. Try again."
+    },
+    "track": {
+      "comingFor": "Coming for your lot",
+      "waiting": "No fleet has taken this yet. You will see the vehicle here as soon as one does.",
+      "withdraw": "Withdraw request",
+      "offline": "Cannot reach your requests"
     }
   },
   "crop": {
@@ -308,9 +322,9 @@
     "headline": "The nearest mandi isn't always the one that pays.",
     "sub": "Compare every nearby mandi's rate, the freight, and what actually lands in your hand — before the truck leaves.",
     "roleFarmer": "Check today's rate at every mandi, and what you will really take home.",
-    "roleDriver": "Find loads near your route and get paid the moment you deliver.",
     "roleBuyer": "See fresh arrivals across mandis and place your order early.",
-    "boardNote": "Today's government mandi rate — the highest-paying mandi in Maharashtra for each crop."
+    "boardNote": "Today's government mandi rate — the highest-paying mandi in Maharashtra for each crop.",
+    "roleLogistics": "Rank your trucks against every pickup request and see what each detour really costs."
   },
   "auth": {
     "login": "Log in",
@@ -362,44 +376,6 @@
     "answer": {
       "rate": "{{crop}} is {{rate}} per kg at {{mandi}} today.",
       "opening": "Opening {{screen}}."
-    }
-  },
-  "driver": {
-    "jobs": {
-      "title": "Job requests",
-      "new": "New requests",
-      "mine": "My trips",
-      "empty": "No requests right now",
-      "from": "Farmer",
-      "pickup": "Pickup from",
-      "drop": "Drop at",
-      "load": "Load",
-      "pay": "You earn",
-      "accept": "Accept",
-      "reject": "Reject",
-      "start": "Start trip",
-      "complete": "Trip finished"
-    },
-    "route": {
-      "title": "Navigation",
-      "nextStop": "Next stop",
-      "openMaps": "Open in Maps",
-      "empty": "No trip in progress right now.",
-      "simulate": "Simulate movement",
-      "simulateJam": "Simulate a jam"
-    },
-    "vehicles": {
-      "title": "My vehicles",
-      "add": "Add a vehicle",
-      "number": "Vehicle number",
-      "type": "Type",
-      "capacity": "Capacity",
-      "ratePerKm": "Rate per km",
-      "isCold": "Has cooling",
-      "available": "Available",
-      "unavailable": "Not available",
-      "base": "Base location",
-      "empty": "No vehicles added yet."
     }
   },
   "buyer": {
@@ -482,6 +458,130 @@
     "status": {
       "agreed": "Price agreed",
       "waiting": "Waiting for reply"
+    }
+  },
+  "dispatch": {
+    "title": "Dispatch",
+    "note": "Each farmer request, priced against the routes your vehicles are already driving. You decide.",
+    "refresh": "Re-rank",
+    "empty": "No pickup requests waiting.",
+    "offline": "Dispatch engine unreachable",
+    "offlineWhy": "We will not rank your fleet from a second copy of the maths — two copies can disagree, and you would be sending a real truck on the wrong one.",
+    "retry": "Try again",
+    "optionCount": {
+      "one": "{{count}} vehicle",
+      "other": "{{count}} vehicles"
+    },
+    "showOptions": "Show vehicle options",
+    "hideOptions": "Hide vehicle options",
+    "noOptions": "No vehicle can take this one right now.",
+    "cannotRank": "Cannot be ranked",
+    "cannotRankWhy": "We will not guess a location. Assign this one by hand, or ask the farmer to set their farm on the map.",
+    "notOffered": "Not offered, and why",
+    "shortBy": "{{kg}} kg over",
+    "extraKm": "Extra distance",
+    "extraTime": "Extra time",
+    "extraCost": "Extra cost",
+    "min": "min",
+    "position": "Slots in at",
+    "positionValue": "stop {{pickup}} & {{drop}}",
+    "capacityAria": "{{load}} kg on board, {{add}} kg this lot, {{free}} kg free",
+    "onBoard": "On board",
+    "committed": "Promised",
+    "thisLot": "This lot",
+    "freeAfter": "Free after",
+    "coldOk": "Cold vehicle",
+    "coldWarn": "Not a cold vehicle",
+    "etaUnknown": "Arrival unknown",
+    "showWorking": "Show the working",
+    "routeWas": "Route now",
+    "legRemoved": "Leg dropped",
+    "legAdded": "Leg added",
+    "routeBecomes": "Route becomes",
+    "routeNow": "Driving now",
+    "routeAfter": "After this pickup",
+    "new": "new",
+    "approve": "Approve",
+    "reject": "Reject",
+    "fleetTitle": "My fleet",
+    "fleetNote": "{{free}} kg free of {{total}} kg across the fleet.",
+    "stopsCommitted": {
+      "one": "{{count}} stop committed",
+      "other": "{{count}} stops committed"
+    },
+    "routesTitle": "Routes",
+    "routesNote": "Every vehicle stop by stop, with the load it is carrying between them.",
+    "capOf": "holds {{cap}} kg",
+    "noRoute": "No route set for this vehicle.",
+    "window": {
+      "ok": "Reaches by {{eta}}",
+      "late": "Reaches {{eta}} — after the slot",
+      "early": "Reaches {{eta}} — before the slot"
+    },
+    "reason": {
+      "capacity": "load will not fit",
+      "noPosition": "no room anywhere on its route",
+      "vehicleNoCoords": "no location set for this vehicle",
+      "noPickupCoords": "the farm has no location on the map",
+      "noDropCoords": "the mandi has no location on the map"
+    },
+    "status": {
+      "idle": "Free",
+      "loading": "Loading",
+      "enRoute": "On the road",
+      "unavailable": "Off duty"
+    },
+    "stop": {
+      "depot": "Starting point",
+      "pickup": "Pick up",
+      "drop": "Drop off"
+    },
+    "ref": "REQ {{ref}}",
+    "pickup": "Pick up from",
+    "drop": "Drop at",
+    "anyTime": "any time",
+    "emptyWhy": "Farmers raise a request after they have agreed a price at a mandi. Nothing is waiting right now.",
+    "noFleet": "No vehicles yet",
+    "noFleetWhy": "Add a truck to your fleet and requests will start being ranked against it.",
+    "taken": "Another fleet took this one first.",
+    "approveFailed": "Could not take this request. Try again.",
+    "fleetOffline": "Cannot reach your fleet",
+    "fleetEmpty": "No vehicles yet",
+    "fleetEmptyWhy": "A vehicle needs a capacity, a rate and a base before it can be dispatched.",
+    "addVehicle": "Add a vehicle",
+    "addVehicleFailed": "Could not add the vehicle.",
+    "vehicleNumber": "Vehicle number",
+    "vehicleType": "Type",
+    "driverName": "Driver",
+    "driverPhone": "Driver's number",
+    "capacity": "Capacity (kg)",
+    "ratePerKm": "Rate per km",
+    "isCold": "Has cooling",
+    "base": "Where it is based",
+    "baseWhy": "Picked from a list, not typed. Every suggestion is measured from here."
+  },
+  "tracking": {
+    "jobsTitle": "My jobs",
+    "jobsNote": "Work your fleet has taken on, and how far along each one is.",
+    "open": "Running",
+    "done": "Finished",
+    "noOpen": "No jobs running.",
+    "noDone": "Nothing finished yet.",
+    "offline": "Cannot reach your jobs",
+    "costWas": "Cost {{km}} km extra · {{cost}}",
+    "status": {
+      "pending": "Waiting for a fleet",
+      "assigned": "Vehicle assigned",
+      "collected": "Picked up",
+      "in_transit": "On the way",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "action": {
+      "collect": "Mark picked up",
+      "depart": "Start the trip",
+      "deliver": "Mark delivered",
+      "cancel": "Cancel job"
     }
   }
 }

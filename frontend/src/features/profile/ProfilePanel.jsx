@@ -21,8 +21,8 @@ import { LanguagePicker } from '../../shared/LanguagePicker';
  */
 const ROLE_KEYS = {
   [ROLES.FARMER]: 'roles.farmer',
-  [ROLES.DRIVER]: 'roles.driver',
   [ROLES.BUYER]: 'roles.buyer',
+  [ROLES.LOGISTICS]: 'roles.logistics',
 };
 
 export const ProfilePanel = ({ showHead = true }) => {

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  Sprout, Truck, Store, ArrowRight, TrendingUp, TrendingDown, Minus,
+  Sprout, Truck, Store, Boxes, ArrowRight, TrendingUp, TrendingDown, Minus,
 } from 'lucide-react';
 import { useT } from '../../i18n/useT';
 import { LanguagePicker } from '../../shared/LanguagePicker';
@@ -25,8 +25,8 @@ import { BOARD_CROPS } from '../../utils/constants';
  */
 const ROLE_ITEMS = [
   { icon: Sprout, labelKey: 'roles.farmer', noteKey: 'landing.roleFarmer' },
-  { icon: Truck, labelKey: 'roles.driver', noteKey: 'landing.roleDriver' },
   { icon: Store, labelKey: 'roles.buyer', noteKey: 'landing.roleBuyer' },
+  { icon: Boxes, labelKey: 'roles.logistics', noteKey: 'landing.roleLogistics' },
 ];
 
 export const LandingScreen = ({ onEnter }) => {

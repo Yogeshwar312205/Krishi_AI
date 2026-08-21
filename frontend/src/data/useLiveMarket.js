@@ -65,6 +65,9 @@ const buildRows = (records, { originCoords, quantityKg }) => {
       return {
         id: rec.mandi,
         name: rec.mandi,
+        // Carried through, not just filtered on: the dispatcher's insertion
+        // maths needs the drop coordinate, and it can only come from here.
+        coordinates: rec.coordinates,
         place: rec.place || rec.district,
         district: rec.district,
         variety: rec.variety,

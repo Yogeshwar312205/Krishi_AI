@@ -3,7 +3,17 @@ const User = require('../models/User');
 const logger = require('../utils/logger');
 const { getJwtSecret } = require('../config/jwt');
 
-const PUBLIC_ROLES = ['Farmer', 'Driver', 'Transporter', 'Trader', 'Buyer', 'APMC Buyer'];
+/*
+ * Roles someone may register as.
+ *
+ * 'Driver' and 'Transporter' are gone: a driver is a name and a phone number on
+ * a vehicle, not an account. The person who decides where a truck goes is the
+ * fleet owner, and modelling drivers as logins turned this into a ride-hailing
+ * app — you cannot run a capacitated VRP over a fleet you do not control.
+ * Existing Driver accounts still log in and are read as fleet owners; see
+ * normaliseRole in frontend/src/app/routes.js.
+ */
+const PUBLIC_ROLES = ['Farmer', 'Logistics', 'Trader', 'Buyer', 'APMC Buyer'];
 
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, getJwtSecret(), {

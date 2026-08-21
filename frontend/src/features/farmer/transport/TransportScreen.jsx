@@ -1,258 +1,222 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Truck, CalendarDays, Sunrise, Sun, Sunset, Search, Snowflake, Phone,
-  MapPin, ClipboardList, Check, Loader2, PackageOpen, Handshake, ArrowLeft,
+  Truck, CalendarDays, Sunrise, Sun, Sunset, Send, Phone, MapPin,
+  ClipboardList, Check, Handshake, ArrowLeft, CloudOff, RefreshCw, X,
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
-import { useLiveMarket, mandiLabel as liveMandiLabel } from '../../../data/useLiveMarket';
+import { useLiveMarket } from '../../../data/useLiveMarket';
+import { createPickupRequest, cancelPickupRequest } from '../../../services/api';
+import { useMyRequests } from './useMyRequests';
 import { DealPanel } from './DealPanel';
+import { TrackingTimeline } from '../../logistics/TrackingTimeline';
 import { SectionHead } from '../../../design/primitives/SectionHead';
 import { SegmentedToggle } from '../../../design/primitives/SegmentedToggle';
 import { ChoiceGrid } from '../../../design/primitives/ChoiceGrid';
 import { LedgerRow } from '../../../design/primitives/LedgerRow';
 import { Button } from '../../../design/primitives/Button';
 import { Field } from '../../../design/primitives/Field';
-import { DemoStamp } from '../../../design/primitives/DemoStamp';
 
 /**
- * Selling the lot: agree the price, then send the truck, then watch it go.
+ * Selling the lot: agree the price, ask for a pickup, then watch it come.
  *
- * Replaces four legacy screens — CropWizard, DateVehicleBooking,
- * NewBookingModal and MyBookings — which between them asked the farmer for the
- * crop three times and the destination twice, across two modals.
+ * Two invariants live in the order of these panels.
  *
- * The order of the two first panels is the fix, not a preference. This screen
- * used to open straight onto vehicle search: a farmer could hire a truck to a
- * mandi where nobody had agreed to buy anything, at a price nobody had quoted
- * them, and the resulting booking named a destination that had never heard of
- * the consignment. A rate on the Agmarknet board is a reason to choose a mandi;
- * it is not a sale. So the deal comes first and the vehicle list is gated on
- * it — the truck exists to serve an agreement that already exists.
+ * The first is the deal. This screen used to open straight onto vehicle search,
+ * so a farmer could hire a truck to a mandi where nobody had agreed to buy
+ * anything, at a price nobody had quoted them. A rate on the Agmarknet board is
+ * a reason to choose a mandi; it is not a sale. So the deal comes first and
+ * everything after it is gated on one existing.
  *
- * The crop is already known (the Crop screen owns it) and the destination
- * comes from the deal, so booking is three taps: which day, what time, which
- * vehicle.
+ * The second is that **the farmer does not choose a truck**. They used to: the
+ * screen listed vehicles with fares and let them pick one, which made this a
+ * ride-hailing app and made the fleet-wide optimisation meaningless. A farmer
+ * cannot see the routes those trucks are already driving, so they cannot know
+ * that the nearest truck is often the most expensive way to move their lot.
+ * They state what they have and when it can be collected; the fleet owner's
+ * dispatch screen ranks their own vehicles and sends one. See VRP.md.
  */
 
 /*
- * A trip's fare is the vehicle's own per-km rate over the mandi distance, with
- * a floor: no driver takes a 15km run for ₹780, and quoting one would produce
- * a booking nobody accepts. The floor is what makes the short-haul Nashik
- * option agree with the ₹/kg freight the Price screen deducts.
+ * `startHour`/`endHour` travel on the request alongside the display label.
+ *
+ * The label is translated ("6 am to 10 am", "सुबह 6 से 10"), so anything that
+ * needs the actual hours — the fleet owner's ETA check — must not parse it back
+ * out. Two of the three languages would fail, silently.
  */
-const MIN_FARE = 1500;
-
-const fareFor = (vehicle, distanceKm) => Math.max(MIN_FARE, vehicle.ratePerKm * distanceKm);
-
 const SLOTS = [
-  { id: 'morning', labelKey: 'transport.book.morning', timeKey: 'transport.book.morningTime', icon: Sunrise },
-  { id: 'afternoon', labelKey: 'transport.book.afternoon', timeKey: 'transport.book.afternoonTime', icon: Sun },
-  { id: 'evening', labelKey: 'transport.book.evening', timeKey: 'transport.book.eveningTime', icon: Sunset },
+  { id: 'morning', labelKey: 'transport.book.morning', timeKey: 'transport.book.morningTime', icon: Sunrise, startHour: 6, endHour: 10 },
+  { id: 'afternoon', labelKey: 'transport.book.afternoon', timeKey: 'transport.book.afternoonTime', icon: Sun, startHour: 13, endHour: 17 },
+  { id: 'evening', labelKey: 'transport.book.evening', timeKey: 'transport.book.eveningTime', icon: Sunset, startHour: 17, endHour: 21 },
 ];
 
-/*
- * The store seeds bookings with English status strings, and the driver
- * dashboard writes more of them. Mapping them here keeps the farmer's view
- * translated without rewriting the driver flow's vocabulary underneath it.
- * An unrecognised status falls through as-is rather than vanishing.
- */
-const STATUS_KEYS = {
-  'Pending Driver Acceptance': 'transport.status.pending',
-  Pending: 'transport.status.pending',
-  Accepted: 'transport.status.accepted',
-  'In Transit': 'transport.status.onTheWay',
-  Arrived: 'transport.status.arrived',
-  Delivered: 'transport.status.delivered',
-  Completed: 'transport.status.delivered',
-  Cancelled: 'transport.status.cancelled',
-};
-
-const isFinished = (status) => status === 'Delivered' || status === 'Completed' || status === 'Cancelled';
+const OPEN_STATUSES = ['pending', 'assigned', 'collected', 'in_transit'];
 
 const todayISO = () => new Date().toISOString().split('T')[0];
 
 export const TransportScreen = () => {
   const cropDetails = useAppStore((state) => state.cropDetails);
   const farmerAddress = useAppStore((state) => state.farmerAddress);
-  const registeredVehicles = useAppStore((state) => state.registeredVehicles);
-  const dateBookings = useAppStore((state) => state.dateBookings);
-  const createDateBooking = useAppStore((state) => state.createDateBooking);
+  const farmerOrigin = useAppStore((state) => state.farmerOrigin);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
-  const user = useAppStore((state) => state.user);
-  const { t, money, number, rate, shortDate } = useT();
+  const { t, money, number, rate } = useT();
 
   const deals = useAppStore((state) => state.deals);
   const pendingMandi = useAppStore((state) => state.pendingMandi);
   const attachBookingToDeal = useAppStore((state) => state.attachBookingToDeal);
 
-  // Every mandi reporting this crop today, ranked by what the farmer keeps —
-  // the same live list the Prices screen shows, not a four-entry demo table.
   const { comparison } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
+  const { requests, loading, error, refresh } = useMyRequests();
 
   /*
-   * Opens on the deal panel unless there is already an agreed deal waiting for
-   * a truck. Arriving from the Prices screen ("contact this mandi") always
-   * means the deal panel, whatever else is open.
-   */
-  /*
    * Only deals for the crop currently loaded. A farmer with an agreed tomato
-   * price and a shed full of onions must not be shown the tomato rate over an
-   * onion consignment — the two were briefly reconciled into one booking here,
-   * which is exactly the kind of quiet mismatch a waybill carries all the way
-   * to the mandi gate.
+   * price and a shed full of onions must not have the tomato rate attached to
+   * an onion consignment — exactly the kind of quiet mismatch a waybill carries
+   * all the way to the mandi gate.
    */
   const agreedDeals = deals.filter(
     (deal) => deal.status === 'Agreed' && !deal.bookingId && deal.cropType === cropDetails.cropType
   );
-  const [panel, setPanel] = useState(() =>
-    (!pendingMandi && agreedDeals.length ? 'book' : 'deal')
-  );
+
+  const [panel, setPanel] = useState(() => (!pendingMandi && agreedDeals.length ? 'ask' : 'deal'));
   const [dealId, setDealId] = useState(() => agreedDeals[0]?.id || null);
   const [pickupDate, setPickupDate] = useState(todayISO());
   const [slot, setSlot] = useState('morning');
-  const [searching, setSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [bookedId, setBookedId] = useState(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const [sentId, setSentId] = useState(null);
 
-  // The deal being fulfilled. Falls back to the oldest unbooked agreement so a
-  // farmer who agreed a price yesterday is not asked to pick it again.
   const deal = agreedDeals.find((d) => d.id === dealId) || agreedDeals[0] || null;
 
-
-  /*
-   * A vehicle that cannot carry the load is shown, not filtered out — with the
-   * reason on it. Hiding it produces the worse failure: a farmer with 5,000 kg
-   * sees two vehicles instead of three and has no idea why.
-   */
-  const offers = useMemo(
-    () =>
-      registeredVehicles
-        .filter((vehicle) => vehicle.isAvailable)
-        .map((vehicle) => ({
-          ...vehicle,
-          fare: fareFor(vehicle, deal?.distanceKm || 0),
-          fits: vehicle.capacityKg >= (deal?.quantityKg || cropDetails.quantityKg),
-        }))
-        .sort((a, b) => (a.fits === b.fits ? a.fare - b.fare : a.fits ? -1 : 1)),
-    [registeredVehicles, deal, cropDetails.quantityKg]
-  );
-
-  const findVehicles = () => {
-    setBookedId(null);
-    setSearching(true);
-    // A held beat, not a fake network call: the list is local, and a result
-    // that appears in the same frame as the tap reads as "nothing happened".
-    setTimeout(() => {
-      setSearching(false);
-      setShowResults(true);
-    }, 550);
-  };
-
-  const book = (offer) => {
+  const ask = async () => {
     if (!deal) return;
     const slotOption = SLOTS.find((s) => s.id === slot) || SLOTS[0];
-    const id = `UBER-${Math.floor(Math.random() * 900 + 100)}`;
-
-    createDateBooking({
-      id,
-      dealId: deal.id,
-      farmerName: user?.name || '',
-      farmerPhone: user?.phone || '',
-      pickupDate,
-      timeSlot: `${t(slotOption.labelKey)} (${t(slotOption.timeKey)})`,
-      cropType: deal.cropType,
-      quantityKg: deal.quantityKg,
-      origin: farmerAddress,
-      // The English name is what the driver dashboard and the waybill read, so
-      // it stays canonical in the record.
-      destination: deal.mandiName,
-      destinationId: deal.mandiNameKey ? deal.mandiName : null,
-      // The agreed rate, not the board rate — this is what the consignment is
-      // actually worth, and what the buyer expects to pay on arrival.
-      agreedRatePerKg: deal.agreedRatePerKg,
-      consignmentValue: money(deal.agreedRatePerKg * deal.quantityKg),
-      traderName: deal.trader?.name || null,
-      traderPhone: deal.trader?.phone || null,
-      vehicleId: offer.id,
-      vehicleNo: offer.vehicleNo,
-      driverName: offer.driverName,
-      driverPhone: offer.driverPhone,
-      estDistanceKm: deal.distanceKm,
-      estTotalFare: money(offer.fare),
-      status: 'Pending Driver Acceptance',
-      createdAt: shortDate(new Date()),
-    });
-
-    attachBookingToDeal(deal.id, id);
-    setBookedId(id);
-    setShowResults(false);
+    setSending(true);
+    setSendError('');
+    try {
+      const created = await createPickupRequest({
+        cropType: deal.cropType,
+        quantityKg: deal.quantityKg,
+        origin: { label: farmerAddress, coordinates: farmerOrigin },
+        // The agreed mandi, with its real coordinate. Without one the request
+        // cannot be ranked, and the server refuses it rather than storing
+        // something no fleet owner can act on.
+        destination: { label: deal.mandiName, coordinates: deal.mandiCoords || null },
+        agreedRatePerKg: deal.agreedRatePerKg,
+        pickupDate,
+        window: {
+          startHour: slotOption.startHour,
+          endHour: slotOption.endHour,
+          label: `${t(slotOption.labelKey)} (${t(slotOption.timeKey)})`,
+        },
+      });
+      attachBookingToDeal(deal.id, created.id);
+      setSentId(created.id);
+      await refresh();
+    } catch (err) {
+      setSendError(err?.response?.data?.message || t('transport.ask.failed'));
+    } finally {
+      setSending(false);
+    }
   };
 
-  const active = dateBookings.filter((booking) => !isFinished(booking.status));
-  const past = dateBookings.filter((booking) => isFinished(booking.status));
+  const withdraw = async (id) => {
+    try {
+      await cancelPickupRequest(id);
+      await refresh();
+    } catch (err) {
+      setSendError(err?.response?.data?.message || t('transport.ask.failed'));
+    }
+  };
 
-  const statusLabel = (status) => (STATUS_KEYS[status] ? t(STATUS_KEYS[status]) : status);
+  const open = requests.filter((r) => OPEN_STATUSES.includes(r.status));
+  const past = requests.filter((r) => !OPEN_STATUSES.includes(r.status));
 
-  /*
-   * Bookings made before this screen existed — and the two the store seeds —
-   * carry only the English destination string, so fall back to it rather than
-   * rendering the literal key "mandis.undefined".
-   */
-  const bookingMandi = (booking) => booking.destination;
-
-  const renderBooking = (booking) => (
-    <article key={booking.id} className="border-2 border-ink bg-white">
+  const renderRequest = (request) => (
+    <article key={request.id} className="border-2 border-ink bg-white">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ink px-4 py-3">
-        <p className="font-display text-2xl leading-none tnum text-ink">{booking.id}</p>
+        <p className="font-display text-2xl leading-none tnum text-ink">
+          {t('dispatch.ref', { ref: request.id.slice(-6).toUpperCase() })}
+        </p>
         <span className="border-2 border-ink bg-turmeric-300 px-2 py-1 text-sm font-bold leading-none text-ink">
-          {statusLabel(booking.status)}
+          {t(`tracking.status.${request.status}`)}
         </span>
       </div>
 
       <div className="px-4">
         <LedgerRow
           label={t('transport.route.pickup')}
-          sub={booking.origin}
-          value={<span className="font-sans text-base">{booking.pickupDate}</span>}
+          sub={request.origin.label}
+          value={<span className="font-sans text-base">{request.pickupDate}</span>}
         />
         <LedgerRow
           label={t('transport.route.drop')}
-          sub={bookingMandi(booking)}
-          value={<span className="font-sans text-base">{booking.timeSlot?.split(' ')[0]}</span>}
+          sub={request.destination.label}
+          value={<span className="font-sans text-base">{request.window?.label?.split(' ')[0]}</span>}
         />
         <LedgerRow
-          label={t('transport.bookings.vehicleNo')}
-          sub={`${t('transport.vehicle.driver')}: ${booking.driverName}`}
-          value={<span className="font-sans text-base tnum">{booking.vehicleNo}</span>}
+          label={t('transport.book.load')}
+          value={(
+            <span className="font-sans text-base tnum">
+              {number(request.quantityKg)} {t('common.kg')}
+            </span>
+          )}
+          sub={t(`crops.${request.cropType}`)}
         />
-        {booking.agreedRatePerKg && (
+        {request.agreedRatePerKg != null && (
           <LedgerRow
             label={t('deal.agreedTitle')}
-            sub={booking.traderName || undefined}
-            value={<span className="font-sans text-base tnum">{rate(booking.agreedRatePerKg)}/{t('common.kg')}</span>}
+            value={<span className="font-sans text-base tnum">{rate(request.agreedRatePerKg)}/{t('common.kg')}</span>}
+            sub={money(request.agreedRatePerKg * request.quantityKg)}
+            emphasis
           />
         )}
-        <LedgerRow
-          label={t('transport.vehicle.total')}
-          sub={`${number(booking.estDistanceKm)} ${t('common.km')} · ${t(`crops.${booking.cropType}`)} ${number(booking.quantityKg)} ${t('common.kg')}`}
-          value={booking.estTotalFare}
-          emphasis
-        />
       </div>
 
-      <div className="grid gap-2 px-4 py-4 sm:grid-cols-2">
-        <Button
-          variant="secondary"
-          icon={Phone}
-          onClick={() => { window.location.href = `tel:${booking.driverPhone}`; }}
-        >
-          {t('transport.bookings.callDriver')}
-        </Button>
-        <Button variant="accent" icon={MapPin} onClick={() => setActiveTab('today')}>
-          {t('transport.bookings.track')}
-        </Button>
+      {/*
+       * Who is coming. A pending request has no truck attached and says so
+       * rather than showing a placeholder — nobody has agreed to collect it yet,
+       * and that is the single most important thing the farmer needs to know.
+       */}
+      {request.vehicle ? (
+        <div className="border-t-2 border-ink px-4 py-3.5">
+          <p className="eyebrow flex items-center gap-1.5">
+            <Truck className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
+            {t('transport.track.comingFor')}
+          </p>
+          <p className="mt-1.5 font-display text-2xl leading-none tnum text-ink">
+            {request.vehicle.vehicleNo}
+          </p>
+          <p className="mt-1 text-base text-ink-soft">
+            {request.vehicle.vehicleType} · {request.vehicle.driverName}
+          </p>
+          <div className="mt-3">
+            <Button
+              variant="secondary"
+              icon={Phone}
+              onClick={() => { window.location.href = `tel:${request.vehicle.driverPhone}`; }}
+            >
+              {t('transport.bookings.callDriver')}
+            </Button>
+          </div>
+        </div>
+      ) : request.status === 'pending' && (
+        <div className="border-t-2 border-ink bg-turmeric-50 px-4 py-3.5">
+          <p className="text-base text-ink-soft">{t('transport.track.waiting')}</p>
+        </div>
+      )}
+
+      <div className="border-t-2 border-ink px-4 py-3.5">
+        <TrackingTimeline request={request} />
       </div>
+
+      {request.status === 'pending' && (
+        <div className="border-t-2 border-ink px-4 py-3.5">
+          <Button variant="secondary" icon={X} onClick={() => withdraw(request.id)}>
+            {t('transport.track.withdraw')}
+          </Button>
+        </div>
+      )}
     </article>
   );
 
@@ -263,7 +227,7 @@ export const TransportScreen = () => {
       <SegmentedToggle
         options={[
           { id: 'deal', label: t('deal.tab'), icon: Handshake },
-          { id: 'book', label: t('transport.book.title'), icon: Truck },
+          { id: 'ask', label: t('transport.ask.tab'), icon: Send },
           { id: 'mine', label: t('transport.bookings.title'), icon: ClipboardList },
         ]}
         value={panel}
@@ -275,29 +239,26 @@ export const TransportScreen = () => {
         {panel === 'deal' && (
           <DealPanel
             comparison={comparison}
-            onDealAgreed={(id) => { setDealId(id); setPanel('book'); setShowResults(false); }}
+            onDealAgreed={(id) => { setDealId(id); setPanel('ask'); setSentId(null); }}
           />
         )}
 
         {/* The gate. Not a disabled button — a farmer who lands here without a
-            deal needs to know what is missing and where to go, and a greyed-out
-            "Find vehicles" says neither. */}
-        {panel === 'book' && !deal && (
+            deal needs to know what is missing and where to go. */}
+        {panel === 'ask' && !deal && (
           <div className="border-2 border-ink bg-white px-4 py-8 text-center">
             <Handshake className="mx-auto h-10 w-10 text-ink-faint" strokeWidth={2} aria-hidden="true" />
             <p className="mt-3 font-display text-3xl leading-none text-ink">{t('transport.book.needDeal')}</p>
             <p className="mx-auto mt-2 max-w-sm leading-snug text-ink-soft">{t('transport.book.needDealWhy')}</p>
             <div className="mx-auto mt-5 max-w-xs">
-              <Button icon={Handshake} onClick={() => setPanel('deal')}>
-                {t('deal.tab')}
-              </Button>
+              <Button icon={Handshake} onClick={() => setPanel('deal')}>{t('deal.tab')}</Button>
             </div>
           </div>
         )}
 
-        {panel === 'book' && deal && (
+        {panel === 'ask' && deal && (
           <>
-            {/* ---- The agreement this truck is serving. ---- */}
+            {/* ---- The agreement this pickup is serving. ---- */}
             <div className="border-2 border-forest-700 bg-forest-50 px-4 py-3.5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -338,6 +299,7 @@ export const TransportScreen = () => {
                 <p className="mt-1 font-display text-2xl leading-none text-ink">
                   {t(`crops.${deal.cropType}`)} · <span className="tnum">{number(deal.quantityKg)} {t('common.kg')}</span>
                 </p>
+                <p className="mt-1 text-sm text-ink-soft">{farmerAddress}</p>
               </div>
               <button
                 type="button"
@@ -355,14 +317,14 @@ export const TransportScreen = () => {
                 type="date"
                 min={todayISO()}
                 value={pickupDate}
-                onChange={(event) => { setPickupDate(event.target.value); setShowResults(false); }}
+                onChange={(event) => setPickupDate(event.target.value)}
               />
             </div>
 
             <ChoiceGrid
               label={t('transport.book.slot')}
               value={slot}
-              onChange={(next) => { setSlot(next); setShowResults(false); }}
+              onChange={setSlot}
               options={SLOTS.map((option) => ({
                 id: option.id,
                 label: t(option.labelKey),
@@ -371,79 +333,25 @@ export const TransportScreen = () => {
               }))}
             />
 
-            <Button icon={searching ? Loader2 : Search} busy={searching} onClick={findVehicles}>
-              {searching ? t('transport.book.searching') : t('transport.book.find')}
-            </Button>
+            {sendError && <p className="notice notice-bad" role="alert">{sendError}</p>}
 
-            {/* ---- Offers ---- */}
-            {showResults && (
-              <section className="detail-enter space-y-3">
-                <SectionHead
-                  title={t('transport.vehicle.available', { count: offers.length })}
-                  note={t('transport.book.toMandi', { mandi: deal.mandiName })}
-                />
-
-                {offers.length === 0 && (
-                  <p className="notice notice-bad">
-                    <PackageOpen className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
-                    <span>{t('transport.vehicle.empty')}</span>
-                  </p>
-                )}
-
-                <div className="stagger space-y-3">
-                  {offers.map((offer) => (
-                    <article key={offer.id} className="border-2 border-ink bg-white">
-                      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3.5">
-                        <div className="min-w-0">
-                          <p className="font-display text-2xl leading-none text-ink">{offer.vehicleType}</p>
-                          <p className="mt-1 text-base text-ink-soft">
-                            {offer.driverName} · <span className="tnum">{offer.vehicleNo}</span>
-                          </p>
-                          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                            <span className="inline-flex items-center gap-1.5 font-semibold text-forest-700">
-                              {offer.isRefrigerated
-                                ? <Snowflake className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-                                : <Truck className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />}
-                              {offer.isRefrigerated ? t('transport.vehicle.cold') : t('transport.vehicle.normal')}
-                            </span>
-                            <span className="tnum text-ink-faint">
-                              {t('transport.vehicle.capacity')}: {number(offer.capacityKg)} {t('common.kg')}
-                            </span>
-                          </p>
-                        </div>
-
-                        <div className="shrink-0 text-right">
-                          <p className="eyebrow">{t('transport.vehicle.total')}</p>
-                          <p className="font-display text-4xl leading-none tnum text-forest-700">
-                            {money(offer.fare)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {!offer.fits && (
-                        <p className="border-t-2 border-terracotta-500 bg-terracotta-50 px-4 py-2 text-sm font-bold text-terracotta-700">
-                          {t('transport.vehicle.tooSmall')}
-                        </p>
-                      )}
-
-                      <div className="border-t-2 border-ink px-4 py-3.5">
-                        <Button icon={Check} onClick={() => book(offer)} disabled={!offer.fits}>
-                          {t('transport.vehicle.book')}
-                        </Button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-
-                <DemoStamp />
-              </section>
+            {!sentId && (
+              <>
+                <Button icon={Send} busy={sending} onClick={ask}>
+                  {t('transport.ask.send')}
+                </Button>
+                {/* Says plainly that no truck is being chosen here, so the
+                    absence of a vehicle list does not read as something
+                    missing. */}
+                <p className="text-center text-sm text-ink-soft">{t('transport.ask.note')}</p>
+              </>
             )}
 
-            {bookedId && (
+            {sentId && (
               <div className="detail-enter space-y-3">
                 <p className="notice notice-good" role="status">
                   <Check className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden="true" />
-                  <span>{t('transport.vehicle.booked')}</span>
+                  <span>{t('transport.ask.sent')}</span>
                 </p>
                 <Button variant="secondary" icon={ClipboardList} onClick={() => setPanel('mine')}>
                   {t('transport.bookings.title')}
@@ -455,32 +363,48 @@ export const TransportScreen = () => {
 
         {panel === 'mine' && (
           <div className="space-y-6">
-            {dateBookings.length === 0 && (
+            {error && (
+              <div className="border-2 border-terracotta-500 bg-terracotta-50 px-4 py-6 text-center">
+                <CloudOff className="mx-auto h-8 w-8 text-terracotta-600" strokeWidth={2} aria-hidden="true" />
+                <p className="mt-3 font-display text-2xl text-ink">{t('transport.track.offline')}</p>
+                <div className="mx-auto mt-4 max-w-xs">
+                  <Button icon={RefreshCw} onClick={refresh}>{t('dispatch.retry')}</Button>
+                </div>
+              </div>
+            )}
+
+            {!error && !loading && requests.length === 0 && (
               <div className="border-2 border-ink bg-white px-4 py-10 text-center">
                 <p className="font-display text-3xl text-ink-faint">{t('transport.bookings.empty')}</p>
                 <div className="mx-auto mt-5 max-w-xs">
-                  <Button icon={Truck} onClick={() => setPanel('book')}>
-                    {t('transport.bookings.emptyCta')}
+                  <Button icon={Send} onClick={() => setPanel('ask')}>
+                    {t('transport.ask.tab')}
                   </Button>
                 </div>
               </div>
             )}
 
-            {active.length > 0 && (
+            {open.length > 0 && (
               <section className="space-y-3">
-                <SectionHead level="group" title={t('transport.bookings.active')} />
-                {active.map(renderBooking)}
+                <SectionHead
+                  level="group"
+                  title={t('transport.bookings.active')}
+                  action={
+                    <Button full={false} variant="secondary" icon={RefreshCw} onClick={refresh} busy={loading}>
+                      {t('dispatch.refresh')}
+                    </Button>
+                  }
+                />
+                {open.map(renderRequest)}
               </section>
             )}
 
             {past.length > 0 && (
               <section className="space-y-3">
                 <SectionHead level="group" title={t('transport.bookings.past')} />
-                {past.map(renderBooking)}
+                {past.map(renderRequest)}
               </section>
             )}
-
-            {dateBookings.length > 0 && <DemoStamp />}
           </div>
         )}
       </div>

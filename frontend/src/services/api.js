@@ -256,3 +256,68 @@ export const registerUser = async (userData) => {
     };
   }
 };
+
+/*
+ * Pickup requests and dispatch.
+ *
+ * All of it is authenticated and server-side. None of these have an offline
+ * fallback, unlike login above, and that is deliberate: a fabricated dispatch
+ * queue would have a fleet owner sending a real truck to a farmer who never
+ * asked, and a fabricated ranking could disagree with the one the server would
+ * have given. When the backend is down these screens say so.
+ */
+
+/* ----------------------------------------------------------------- farmer */
+
+export const createPickupRequest = async (payload) => {
+  const { data } = await apiClient.post('/requests', payload);
+  return data.request;
+};
+
+export const fetchMyRequests = async () => {
+  const { data } = await apiClient.get('/requests/mine');
+  return data.requests;
+};
+
+export const cancelPickupRequest = async (id) => {
+  const { data } = await apiClient.post(`/requests/${id}/cancel`);
+  return data.request;
+};
+
+/* ----------------------------------------------------------- fleet owner */
+
+/**
+ * The ranked queue. Takes no fleet payload — the server reads the caller's own
+ * vehicles and the open requests, so nobody can rank a fleet they do not own.
+ */
+export const fetchDispatchSuggestions = async (topN = 3) => {
+  const { data } = await apiClient.get('/dispatch/suggestions', { params: { topN } });
+  return data;
+};
+
+export const approveSuggestion = async (requestId, { vehicleId, proposedRoute, dispatch }) => {
+  const { data } = await apiClient.post(`/requests/${requestId}/assign`, {
+    vehicleId, proposedRoute, dispatch,
+  });
+  return data.request;
+};
+
+export const fetchDispatchQueue = async () => {
+  const { data } = await apiClient.get('/requests/queue');
+  return data;
+};
+
+export const updateRequestStatus = async (requestId, status, note) => {
+  const { data } = await apiClient.post(`/requests/${requestId}/status`, { status, note });
+  return data.request;
+};
+
+export const fetchFleet = async () => {
+  const { data } = await apiClient.get('/fleet');
+  return data.vehicles;
+};
+
+export const addFleetVehicle = async (vehicle) => {
+  const { data } = await apiClient.post('/fleet', vehicle);
+  return data.vehicle;
+};

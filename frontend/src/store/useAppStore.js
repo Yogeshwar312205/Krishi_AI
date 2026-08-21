@@ -37,6 +37,16 @@ if (!hasValidSession) {
   localStorage.removeItem('token');
 }
 
+/**
+ * Today at a given hour, ISO. Fleet routes are seeded relative to the current
+ * day so the dispatcher's ETAs stay believable instead of rotting to last year.
+ */
+const todayAt = (hour, minute = 0) => {
+  const d = new Date();
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
+};
+
 const initialLanguage = readStoredLanguage();
 applyDocumentLanguage(initialLanguage);
 
@@ -111,7 +121,8 @@ export const useAppStore = create((set, get) => ({
   })),
 
   // Active Navigation Tab
-  activeTab: 'home', // 'home' | 'forecasting' | 'mandi-comparison' | 'demand-analysis' | 'profitability' | 'price-alerts' | 'logistics' | 'bookings' | 'auth' | 'driver-jobs' | 'driver-vehicles' | 'buyer-postings' | 'inbound-shipments' | 'book-truck'
+  // Valid ids live in app/routes.js — that file is the only source of them.
+  activeTab: 'home',
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // Multilingual Support
@@ -133,173 +144,35 @@ export const useAppStore = create((set, get) => ({
    * used to be ₹12–28/km, so the same journey was quoted at a third of what
    * the rate comparison had already subtracted from it.
    */
-  registeredVehicles: [
-    {
-      id: 'VEH-101',
-      driverName: 'Suresh Shinde',
-      driverPhone: '+91 98230 11223',
-      vehicleNo: 'MH 15 GH 4921',
-      vehicleType: 'Refrigerated Van',
-      capacityKg: 3500,
-      ratePerKm: 52,
-      isRefrigerated: true,
-      baseLocation: 'Nashik APMC Hub',
-      availableFrom: new Date().toISOString().split('T')[0],
-      availableTo: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
-      isAvailable: true,
-      tempSensor: '11°C Active Cooling'
-    },
-    {
-      id: 'VEH-102',
-      driverName: 'Sunita Patil',
-      driverPhone: '+91 94221 88990',
-      vehicleNo: 'MH 31 CB 7810',
-      vehicleType: 'Heavy Freighter',
-      capacityKg: 10000,
-      ratePerKm: 78,
-      isRefrigerated: true,
-      baseLocation: 'Nagpur & Vashi APMC',
-      availableFrom: new Date().toISOString().split('T')[0],
-      availableTo: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
-      isAvailable: true,
-      tempSensor: 'Ventilated Cargo Container'
-    },
-    {
-      id: 'VEH-103',
-      driverName: 'Aniket Deshmukh',
-      driverPhone: '+91 98901 44556',
-      vehicleNo: 'MH 12 AB 9910',
-      vehicleType: 'E-Pickup Express',
-      capacityKg: 1500,
-      ratePerKm: 34,
-      isRefrigerated: false,
-      baseLocation: 'Pune & Satara Circle',
-      availableFrom: new Date().toISOString().split('T')[0],
-      availableTo: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
-      isAvailable: true,
-      tempSensor: 'Insulated Fast Deck'
-    }
-  ],
-
-  addRegisteredVehicle: (vehicleData) => set((state) => ({
-    registeredVehicles: [vehicleData, ...state.registeredVehicles]
-  })),
-
-  // Date-Based Uber-Like Vehicle Booking Requests (Farmer -> Driver)
-  dateBookings: [
-    {
-      id: 'UBER-501',
-      farmerName: 'Ramesh Singh',
-      farmerPhone: '+91 98765 43210',
-      pickupDate: new Date(Date.now() + 2*24*60*60*1000).toISOString().split('T')[0], // 2 days from now
-      timeSlot: 'Morning (06:00 AM - 10:00 AM)',
-      cropType: 'Tomato',
-      quantityKg: 2500,
-      origin: 'Nashik Farm HQ, Maharashtra',
-      destination: 'Vashi Wholesale APMC, Navi Mumbai',
-      vehicleId: 'VEH-101',
-      vehicleNo: 'MH 15 GH 4921',
-      driverName: 'Suresh Shinde',
-      driverPhone: '+91 98230 11223',
-      estDistanceKm: 165,
-      estTotalFare: '₹8,500',
-      status: 'Accepted',
-      createdAt: 'Today, 09:30 AM'
-    },
-    {
-      id: 'UBER-502',
-      farmerName: 'Kiran Thorat',
-      farmerPhone: '+91 94211 77665',
-      pickupDate: new Date(Date.now() + 4*24*60*60*1000).toISOString().split('T')[0],
-      timeSlot: 'Afternoon (01:00 PM - 05:00 PM)',
-      cropType: 'Onion',
-      quantityKg: 5000,
-      origin: 'Pimpalgaon Grape Farm',
-      destination: 'Gultekdi APMC, Pune',
-      vehicleId: 'VEH-101',
-      vehicleNo: 'MH 15 GH 4921',
-      driverName: 'Suresh Shinde',
-      driverPhone: '+91 98230 11223',
-      estDistanceKm: 210,
-      estTotalFare: '₹12,000',
-      status: 'Pending Driver Acceptance',
-      createdAt: 'Today, 10:15 AM'
-    }
-  ],
-
-  createDateBooking: (booking) => set((state) => {
-    const newBookingList = [booking, ...state.dateBookings];
-    // Also create a booking entry in main bookings for seamless tracking
-    const newMainBooking = {
-      id: booking.id,
-      cropType: booking.cropType,
-      quantityKg: booking.quantityKg,
-      driverName: booking.driverName,
-      driverPhone: booking.driverPhone,
-      vehicleType: 'Refrigerated Vehicle',
-      vehicleNo: booking.vehicleNo,
-      origin: booking.origin,
-      destination: booking.destination,
-      status: 'Scheduled for ' + booking.pickupDate,
-      dispatchTime: booking.pickupDate + ' (' + booking.timeSlot.split(' ')[0] + ')',
-      estArrival: 'Target Mandi Delivery',
-      temperature: 'Active Cold Chain',
-      expectedRevenue: '₹1,20,000',
-      transportCost: booking.estTotalFare,
-      netProfit: '₹1,11,500'
-    };
-    return {
-      dateBookings: newBookingList,
-      bookings: [newMainBooking, ...state.bookings]
-    };
-  }),
-
-  respondToDateBooking: (bookingId, newStatus) => set((state) => ({
-    dateBookings: state.dateBookings.map((b) => b.id === bookingId ? { ...b, status: newStatus } : b)
-  })),
+  /*
+   * The fleet and the pickup queue used to be seeded here. They are not any
+   * more: vehicles belong to a fleet owner and pickup requests are raised by a
+   * farmer, both persisted in MongoDB and read through services/api.js.
+   *
+   * Nothing about dispatch is seeded on the client. A fleet owner looking at an
+   * empty queue has to be looking at an empty queue — sample rows on that
+   * screen are rows somebody might send a real truck against.
+   */
 
   /*
    * Mandi deals — the step that used to be missing entirely.
    *
    * A farmer does not hire a truck and then find out what the mandi will pay;
    * they agree a price with a commission agent or trader first, and the truck
-   * is what happens after. The old Transport screen let a farmer book a vehicle
-   * straight off the rate board, which produced a booking with a destination
-   * nobody at that destination had agreed to receive.
+   * is what happens after. Without this gate a farmer could ask for a pickup to
+   * a mandi nobody there had agreed to receive.
    *
    * A deal carries the agreed rate, which is what the farmer actually gets —
    * the Agmarknet modal price is the market's midpoint, not a quote made to
-   * this farmer for this lot. Everything downstream (booking value, waybill,
-   * the buyer's inbound list) reads the agreed rate, not the board rate.
+   * this farmer for this lot. Everything downstream (the pickup request, the
+   * waybill, the buyer's inbound list) reads the agreed rate, not the board
+   * rate.
+   *
+   * Deals live in the store rather than Mongo because they are a conversation
+   * between a farmer and a trader, not fleet state. The pickup request they
+   * produce IS persisted — that is the thing a fleet owner acts on.
    */
-  deals: [
-    {
-      id: 'DEAL-4402',
-      mandiName: 'Mumbai APMC',
-      district: 'Mumbai',
-      distanceKm: 171,
-      cropType: 'Tomato',
-      quantityKg: 2500,
-      boardRatePerKg: 18,
-      agreedRatePerKg: 19.5,
-      farmerName: 'Ramesh Singh',
-      farmerPhone: '+91 98765 43210',
-      trader: {
-        name: 'Rajesh Mehta',
-        company: 'Mehta Produce Corp',
-        phone: '+91 98200 55443',
-        onPlatform: true,
-        postingId: 'BID-901',
-      },
-      status: 'Agreed',
-      messages: [
-        { from: 'farmer', text: 'Namaskar. 2,500 kg tomato, ready tomorrow. What rate can you give?', at: 'Yesterday, 04:10 PM' },
-        { from: 'trader', text: 'Send it. ₹19.50 a kg for Grade-A. Reach before 8 AM.', at: 'Yesterday, 05:22 PM' },
-      ],
-      bookingId: null,
-      createdAt: 'Yesterday, 04:10 PM',
-    },
-  ],
+  deals: [],
 
   /**
    * The mandi the farmer tapped on the Prices screen, handed to the Transport
@@ -319,16 +192,11 @@ export const useAppStore = create((set, get) => ({
     ),
   })),
 
-  /** Records the price the two sides settled on. This is what unlocks booking. */
+  /** Records the price the two sides settled on. This is what unlocks a pickup. */
   agreeDeal: (dealId, { agreedRatePerKg, quantityKg }) => set((state) => ({
     deals: state.deals.map((deal) =>
       deal.id === dealId
-        ? {
-            ...deal,
-            agreedRatePerKg,
-            quantityKg: quantityKg ?? deal.quantityKg,
-            status: 'Agreed',
-          }
+        ? { ...deal, agreedRatePerKg, quantityKg: quantityKg ?? deal.quantityKg, status: 'Agreed' }
         : deal
     ),
   })),
@@ -337,91 +205,16 @@ export const useAppStore = create((set, get) => ({
     deals: state.deals.map((deal) => (deal.id === dealId ? { ...deal, status } : deal)),
   })),
 
-  /** Links a booking back to the deal it was made against, so neither can drift. */
+  /** Links a deal to the pickup request raised against it, so neither drifts. */
   attachBookingToDeal: (dealId, bookingId) => set((state) => ({
     deals: state.deals.map((deal) => (deal.id === dealId ? { ...deal, bookingId } : deal)),
   })),
 
-  // Farmer Bookings & Consignments
-  bookings: [
-    {
-      id: 'DISP-8921',
-      cropType: 'Tomato',
-      quantityKg: 2500,
-      driverName: 'Suresh Shinde',
-      driverPhone: '+91 98230 11223',
-      vehicleType: 'Refrigerated Van',
-      vehicleNo: 'MH 15 GH 4921',
-      origin: 'Nashik Farm HQ',
-      destination: 'Vashi Wholesale APMC',
-      status: 'In Transit',
-      dispatchTime: 'Today, 06:30 AM',
-      estArrival: 'Today, 11:45 AM',
-      temperature: '11°C (Optimal)',
-      expectedRevenue: '₹1,20,000',
-      transportCost: '₹8,500',
-      netProfit: '₹1,11,500'
-    },
-    {
-      id: 'DISP-7710',
-      cropType: 'Onion',
-      quantityKg: 5000,
-      driverName: 'Sunita Patil',
-      driverPhone: '+91 94221 88990',
-      vehicleType: 'Heavy Freighter',
-      vehicleNo: 'MH 31 CB 7810',
-      origin: 'Nagpur APMC Hub',
-      destination: 'Mumbai APMC Market',
-      status: 'Completed',
-      dispatchTime: 'Yesterday, 04:00 PM',
-      estArrival: 'Today, 02:00 AM',
-      temperature: 'Ventilated 22°C',
-      expectedRevenue: '₹1,75,000',
-      transportCost: '₹14,000',
-      netProfit: '₹1,61,000'
-    }
-  ],
-  addBooking: (newBooking) => set((state) => ({
-    bookings: [newBooking, ...state.bookings]
-  })),
-
-  // Driver Jobs (Driver Dashboard State)
-  driverJobs: [
-    {
-      id: 'JOB-301',
-      farmerName: 'Ramesh Singh',
-      farmerPhone: '+91 98765 43210',
-      origin: 'Nashik Farm HQ, Sector 4',
-      destination: 'Vashi Wholesale APMC, Navi Mumbai',
-      cropType: 'Tomato',
-      quantityKg: 2500,
-      requiredVehicle: 'Refrigerated Van',
-      offeredFreight: '₹8,500',
-      distanceKm: 165,
-      estTime: '3.5 Hours',
-      status: 'In Transit',
-      createdAt: 'Today, 06:15 AM'
-    },
-    {
-      id: 'JOB-302',
-      farmerName: 'Anand Kulkarni',
-      farmerPhone: '+91 94220 99881',
-      origin: 'Pimpalgaon Grape Orchards',
-      destination: 'Gultekdi APMC, Pune',
-      cropType: 'Onion',
-      quantityKg: 4000,
-      requiredVehicle: 'Heavy Freighter',
-      offeredFreight: '₹12,000',
-      distanceKm: 210,
-      estTime: '4.5 Hours',
-      status: 'Pending',
-      createdAt: 'Today, 07:45 AM'
-    }
-  ],
-
-  updateDriverJobStatus: (jobId, newStatus) => set((state) => ({
-    driverJobs: state.driverJobs.map((j) => j.id === jobId ? { ...j, status: newStatus } : j)
-  })),
+  /*
+   * `bookings` used to sit here: a seeded pair of consignments that no screen
+   * reads any more. The farmer's consignments are PickupRequest documents now,
+   * fetched in features/farmer/transport/useMyRequests.js.
+   */
 
   // APMC Buyer Rate Postings & Procurement Bids (Buyer Dashboard State)
   buyerPostings: [

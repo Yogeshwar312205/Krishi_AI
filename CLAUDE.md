@@ -47,9 +47,9 @@ Note `ai-engine/app/core/config.py` contains a syntax error (`from pydantic_sett
 
 `App.jsx` gates on `useAppStore().user` — no user means the auth screen and nothing else. `AppShell` renders one screen at a time from `screenFor(activeTab)`.
 
-- `src/app/routes.js` is the **single source of tab ids**, per-role tab lists, and role normalisation (`Transporter`→`Driver`, `Trader`→`APMC Buyer`). Nav lists and render branches both derive from it; adding a destination means editing this file, not the nav components. Roles get at most four tabs — that is a hard constraint from the 56px mobile bottom bar with Devanagari labels.
-- `src/store/useAppStore.js` — one zustand store, no context providers. Auth is rehydrated from localStorage (`user` + `token` must both be present or both are cleared). Most domain state (bookings, driver jobs, buyer postings, registered vehicles) is seeded in-store and never hits the backend.
-- `src/features/**` is the current architecture; `src/components/**` is legacy, lazy-loaded, and still backs the driver and buyer screens.
+- `src/app/routes.js` is the **single source of tab ids**, per-role tab lists, and role normalisation. Three roles: Farmer, **Logistics** (the fleet owner) and APMC Buyer. There is deliberately **no Driver role** — a driver is a name and a phone number on a vehicle; `Driver`/`Transporter` normalise to Logistics so legacy accounts still work. Nav lists and render branches both derive from this file. Roles get at most four tabs — a hard constraint from the 56px mobile bottom bar with Devanagari labels.
+- `src/store/useAppStore.js` — one zustand store, no context providers. Auth is rehydrated from localStorage (`user` + `token` must both be present or both are cleared). Buyer postings and mandi deals are still store-only; **vehicles and pickup requests are not** — they are persisted, owner-scoped and fetched through `services/api.js`.
+- `src/features/**` is the current architecture; `src/components/**` is legacy, lazy-loaded, and still backs the buyer screens and the map.
 
 ### Design system — read the comments before changing tokens
 
@@ -89,3 +89,20 @@ The farmer screens run on the real data.gov.in Agmarknet feed. `demoMarket.js` i
 `backend/src/sockets/trackingSocket.js` + `frontend/src/hooks/useSocket.js`. Three events: `driver_location_update` (rebroadcast as `vehicle:location_changed`), `simulation:start_tracking` (server-side 2s interpolation Nashik→Vashi), and `dev_simulate_traffic` → `dev:traffic_reroute_event`, a scripted demo reroute with hardcoded metrics.
 
 Coordinates are `[longitude, latitude]` throughout the API, store, and Mongo — except `trackingSocket.js`'s `newPolylineWaypoints`, which are `[lat, lng]`.
+
+### Dispatch — the capacitated VRP, and the one place nothing falls back
+
+`backend/src/services/insertionService.js` ranks every (vehicle, pending request) pair by the extra road km it would cost to insert that farmer into the route a vehicle is already driving, and `GET /api/dispatch/suggestions` serves it to the Logistics role. **Read `VRP.md` before changing any of it.**
+
+- **No driver role, and the farmer does not pick a truck.** They raise a `PickupRequest`; the fleet owner's Dispatch screen ranks their *own* vehicles and approves one. The old flow — a farmer choosing from a vehicle list with fares — made this ride-hailing and made the fleet-wide optimisation meaningless, since a farmer cannot see the routes those trucks are already driving.
+- **Nothing in this flow is seeded on the client.** `Vehicle` and `PickupRequest` are Mongo documents, every query scoped to `req.user._id`. An empty queue is an empty queue. The only seeded thing is a set of logins — `backend/scripts/seedAccounts.js`, documented in `SAMPLE_USERS.md`; `backend/scripts/clearRequests.js` empties the queue between demos.
+- Every pending request is visible to **every** fleet owner; the claim is a conditional update on `status: 'pending'`, so the second owner to approve gets a 409 instead of a double booking.
+
+- A farmer request is **two stops**, a pickup and a drop, inserted as an ordered pair `(i, j)`, `i < j`. Inserting only the pickup would offer a Pune-bound truck a lot sold in Vashi.
+- Capacity is the **peak load across the sequence**, not `capacity − currentLoad`. `loadProfile()` is the gate; `remainingCapacityAfterKg` is derived from the peak so the card shows the number that was tested.
+- `currentRoute[0]` is where the vehicle is now and is never displaced. Routes are **open** — no return-to-depot leg. `currentLoadKg` is what is on the deck *before* the route runs; a pickup inside `currentRoute` must not also be added to it (that double-count pushed the Routes screen past capacity once already).
+- **Time windows are shown, never enforced.** ETA hours resolve in `Asia/Kolkata` explicitly, and `slotHours` travels on the booking because the slot label is translated — parsing it back out only works in English.
+- `infeasible` and `unrankable` are returned and rendered with their reason. A request missing a coordinate is never given a guessed one; the server refuses to store one at all. Same rule as `mandiGeo.js` — and it is why a vehicle's base is picked from `features/logistics/baseLocations.js` rather than typed.
+- Tracking is one record read by both sides: the server appends to `PickupRequest.timeline` on every status change and `TrackingTimeline.jsx` renders it for the farmer and the fleet owner alike, so the two can never see different accounts of the same lot.
+- **This endpoint deliberately has no client-side fallback**, unlike every other boundary here. Two copies of a ranking algorithm can drift apart, and a dispatcher acting on the wrong one commits a real truck; the screen says it is unreachable instead.
+- `ai-engine/app/services/vrp_service.py` still calls itself an OR-Tools VRP and is not one — it round-robins vehicles with `idx % len(...)`. It is out of scope and unused by this path; `VRP.md` §2 records the overstatement rather than patching the string.

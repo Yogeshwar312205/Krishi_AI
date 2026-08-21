@@ -19,12 +19,13 @@ const TransportScreen = lazy(() => import('../features/farmer/transport/Transpor
 const CropScreen = lazy(() => import('../features/farmer/crop/CropScreen').then((m) => ({ default: m.CropScreen })));
 
 /*
- * Driver and buyer screens are lazy-loaded, so a farmer who never opens those
- * views never downloads them.
+ * Fleet-owner and buyer screens are lazy-loaded, so a farmer who never opens
+ * those views never downloads them.
  */
-const DriverJobsScreen = lazy(() => import('../features/driver/DriverJobsScreen').then((m) => ({ default: m.DriverJobsScreen })));
-const DriverVehiclesScreen = lazy(() => import('../features/driver/DriverVehiclesScreen').then((m) => ({ default: m.DriverVehiclesScreen })));
-const DriverRouteScreen = lazy(() => import('../features/driver/DriverRouteScreen').then((m) => ({ default: m.DriverRouteScreen })));
+const DispatchScreen = lazy(() => import('../features/logistics/DispatchScreen').then((m) => ({ default: m.DispatchScreen })));
+const FleetScreen = lazy(() => import('../features/logistics/FleetScreen').then((m) => ({ default: m.FleetScreen })));
+const LogisticsRoutesScreen = lazy(() => import('../features/logistics/LogisticsRoutesScreen').then((m) => ({ default: m.LogisticsRoutesScreen })));
+const LogisticsJobsScreen = lazy(() => import('../features/logistics/LogisticsJobsScreen').then((m) => ({ default: m.LogisticsJobsScreen })));
 const BuyerRatesScreen = lazy(() => import('../features/buyer/BuyerRatesScreen').then((m) => ({ default: m.BuyerRatesScreen })));
 const BuyerInboundScreen = lazy(() => import('../features/buyer/BuyerInboundScreen').then((m) => ({ default: m.BuyerInboundScreen })));
 const ProfilePanel = lazy(() => import('../features/profile/ProfilePanel').then((m) => ({ default: m.ProfilePanel })));
@@ -52,12 +53,14 @@ const screenFor = (tabId) => {
     case PROFILE_TAB:
       return <div className="pt-4"><ProfilePanel /></div>;
 
-    case 'driver-jobs':
-      return <DriverJobsScreen />;
-    case 'driver-vehicles':
-      return <DriverVehiclesScreen />;
-    case 'driver-route':
-      return <DriverRouteScreen />;
+    case 'logistics-dispatch':
+      return <DispatchScreen />;
+    case 'logistics-jobs':
+      return <LogisticsJobsScreen />;
+    case 'logistics-fleet':
+      return <FleetScreen />;
+    case 'logistics-routes':
+      return <LogisticsRoutesScreen />;
 
     case 'buyer-rates':
       return <BuyerRatesScreen />;

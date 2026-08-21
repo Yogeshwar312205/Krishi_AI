@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Mail, Lock, User, Phone, MapPin, Sprout, Truck, Store,
+  Mail, Lock, User, Phone, MapPin, Sprout, Truck, Store, Boxes,
   ArrowRight, ArrowLeft, Loader2, AlertTriangle, CloudOff, IndianRupee, Route, BellRing, ChevronDown,
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
@@ -36,15 +36,19 @@ import { SegmentedToggle } from '../../design/primitives/SegmentedToggle';
  *      what the product does.
  */
 
-/* Sample logins. The password is the same for all three and is not a secret —
- * these are seeded demo rows, and the backend falls back to an offline profile
- * when it is unreachable (see services/api.js). */
+/*
+ * Sample logins — real accounts in MongoDB, not demo rows.
+ *
+ * They are created by backend/scripts/seedAccounts.js and documented in
+ * SAMPLE_USERS.md. Keep the two in step: if you change an address here it must
+ * exist there, or this button signs nobody in.
+ */
 const SAMPLE_ACCOUNTS = [
-  { role: ROLES.FARMER, email: 'ramesh.farmer@krishiflow.ai', icon: Sprout, labelKey: 'roles.farmer' },
-  { role: ROLES.DRIVER, email: 'suresh.driver@krishiflow.ai', icon: Truck, labelKey: 'roles.driver' },
+  { role: ROLES.FARMER, email: 'kiran.farmer@krishiflow.ai', icon: Sprout, labelKey: 'roles.farmer' },
+  { role: ROLES.LOGISTICS, email: 'vikram.fleet@krishiflow.ai', icon: Boxes, labelKey: 'roles.logistics' },
   { role: ROLES.BUYER, email: 'rajesh.buyer@krishiflow.ai', icon: Store, labelKey: 'roles.buyer' },
 ];
-const SAMPLE_PASSWORD = 'password123';
+const SAMPLE_PASSWORD = 'krishi@2026';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Indian mobile numbers: 10 digits starting 6-9, an optional +91/91 country
@@ -288,9 +292,10 @@ export const AuthScreen = ({ initialMode = 'login', onBack }) => {
                   label={t('auth.chooseRole')}
                   value={role}
                   onChange={setRole}
+                  columns={3}
                   options={[
                     { id: ROLES.FARMER, label: t('roles.farmer'), icon: Sprout },
-                    { id: ROLES.DRIVER, label: t('roles.driver'), icon: Truck },
+                    { id: ROLES.LOGISTICS, label: t('roles.logistics'), icon: Boxes },
                     { id: ROLES.BUYER, label: t('roles.buyer'), icon: Store },
                   ]}
                 />

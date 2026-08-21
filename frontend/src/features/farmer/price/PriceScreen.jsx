@@ -64,6 +64,7 @@ export const PriceScreen = () => {
       name: row.name,
       nameKey: row.nameKey,
       district: row.district,
+      coordinates: row.coordinates,
       distanceKm: row.distanceKm,
       distanceApprox: row.distanceApprox,
       ratePerKg: row.ratePerKg,

@@ -79,6 +79,9 @@ export const DealPanel = ({ comparison, onDealAgreed }) => {
         mandiName: mandi.name,
         mandiNameKey: mandi.nameKey || null,
         district: mandi.district || null,
+        // The mandi's real position, so the truck the dispatcher assigns is
+        // routed to where the lot was actually sold.
+        mandiCoords: mandi.coordinates || null,
         distanceKm: mandi.distanceKm,
         cropType: cropDetails.cropType,
         quantityKg: cropDetails.quantityKg,
@@ -111,6 +114,9 @@ export const DealPanel = ({ comparison, onDealAgreed }) => {
         mandiName: mandi.name,
         mandiNameKey: mandi.nameKey || null,
         district: mandi.district || null,
+        // The mandi's real position, so the truck the dispatcher assigns is
+        // routed to where the lot was actually sold.
+        mandiCoords: mandi.coordinates || null,
         distanceKm: mandi.distanceKm,
         cropType: cropDetails.cropType,
         quantityKg: cropDetails.quantityKg,

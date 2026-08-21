@@ -18,8 +18,8 @@ import { normaliseRole, ROLES, PROFILE_TAB } from './routes';
  */
 const ROLE_KEYS = {
   [ROLES.FARMER]: 'roles.farmer',
-  [ROLES.DRIVER]: 'roles.driver',
   [ROLES.BUYER]: 'roles.buyer',
+  [ROLES.LOGISTICS]: 'roles.logistics',
 };
 
 export const TopBar = () => {

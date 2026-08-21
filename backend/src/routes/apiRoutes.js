@@ -4,6 +4,11 @@ const router = express.Router();
 const { getNearbyVehicles, seedVehicles } = require('../controllers/vehicleController');
 const { recommendLogistics, getPriceForecast, getDemandAnalysis, MARKETS } = require('../controllers/orchestratorController');
 const { sendSMSAlert } = require('../controllers/alertController');
+const { getDispatchSuggestions } = require('../controllers/dispatchController');
+const { listFleet, addVehicle, reportLocation } = require('../controllers/fleetController');
+const {
+  createRequest, myRequests, dispatchQueue, assignRequest, updateStatus, cancelRequest,
+} = require('../controllers/requestController');
 const {
   getAgmarknetLivePrices, getAgmarknetCommodities, getAgmarknetHistory,
   getLiveGovtWeather, getLiveGovtFuelRates, withProfitBreakdown, CACHE_TTL_MS,
@@ -11,11 +16,43 @@ const {
 const { apiLimiter } = require('../middlewares/rateLimiter');
 const { protect, authorize } = require('../middlewares/auth');
 
+/*
+ * Accounts created before the fleet-owner model carry role 'Driver' or
+ * 'Transporter'. They own vehicles like anyone else, so they authorise as fleet
+ * owners here — the same mapping normaliseRole() applies on the client.
+ */
+const FLEET = ['Logistics', 'Driver', 'Transporter'];
+
 // Rate limited API routes
 router.get('/vehicles/nearby', apiLimiter, getNearbyVehicles);
 // Destructive fleet reset — operator/admin only, never client-triggerable.
 router.post('/vehicles/seed', apiLimiter, protect, authorize('Admin'), seedVehicles);
 router.post('/recommend', apiLimiter, recommendLogistics);
+
+/*
+ * Pickup requests and dispatch — the capacitated VRP. See VRP.md.
+ *
+ * Every route below is authenticated and scoped to the caller. A farmer only
+ * ever sees their own requests; a fleet owner only ever ranks and moves their
+ * own vehicles. Nothing here has a seeded fallback: an empty queue means an
+ * empty queue, not sample rows somebody might send a real truck against.
+ */
+router.post('/requests', apiLimiter, protect, authorize('Farmer'), createRequest);
+router.get('/requests/mine', apiLimiter, protect, authorize('Farmer'), myRequests);
+router.post('/requests/:id/cancel', apiLimiter, protect, authorize('Farmer'), cancelRequest);
+
+router.get('/requests/queue', apiLimiter, protect, authorize(...FLEET), dispatchQueue);
+router.post('/requests/:id/assign', apiLimiter, protect, authorize(...FLEET), assignRequest);
+router.post('/requests/:id/status', apiLimiter, protect, authorize(...FLEET), updateStatus);
+
+router.get('/fleet', apiLimiter, protect, authorize(...FLEET), listFleet);
+router.post('/fleet', apiLimiter, protect, authorize(...FLEET), addVehicle);
+router.post('/fleet/:id/location', apiLimiter, protect, authorize(...FLEET), reportLocation);
+
+// Ranks every feasible (vehicle, pending request) pair by the extra road km it
+// would cost to slot that farmer into the route the vehicle is already driving.
+// It suggests; the fleet owner approves. Nothing here auto-assigns.
+router.get('/dispatch/suggestions', apiLimiter, protect, authorize(...FLEET), getDispatchSuggestions);
 
 router.get('/prices/forecast', apiLimiter, getPriceForecast);
 router.get('/demand/analysis', apiLimiter, getDemandAnalysis);

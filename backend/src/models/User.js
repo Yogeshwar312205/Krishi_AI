@@ -26,7 +26,9 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['Farmer', 'Driver', 'Transporter', 'Trader', 'Buyer', 'APMC Buyer', 'Admin'],
+    // 'Driver'/'Transporter' are legacy: no longer offered at registration, but
+    // kept here so accounts created before the fleet-owner model still load.
+    enum: ['Farmer', 'Logistics', 'Driver', 'Transporter', 'Trader', 'Buyer', 'APMC Buyer', 'Admin'],
     default: 'Farmer',
   },
   location: {
