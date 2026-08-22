@@ -36,6 +36,21 @@ class Router {
       };
     }
 
+    // Path A2: User Personal Fleet Data Query (MongoDB)
+    if (intent === 'USER_VEHICLES') {
+      logger.info(`[Router] Routing to User Personal Fleet Database Tool`);
+      const userVehicleTool = toolRegistry.getTool('getUserVehicles');
+      const toolResult = await userVehicleTool.execute({ user });
+
+      return {
+        mode: 'TOOL_ONLY',
+        toolResult,
+        ragChunks: [],
+        toolUsed: 'getUserVehicles',
+        dataSource: 'KrishiFlow Personal Fleet Database'
+      };
+    }
+
     // Path B: Combined Query (Live Data + RAG Rules)
     if (intent === 'COMBINED' || (intent === 'PROFIT_CALCULATION' && entities.commodity)) {
       logger.info(`[Router] Routing to COMBINED execution (Live Tool + RAG Retrieval)`);

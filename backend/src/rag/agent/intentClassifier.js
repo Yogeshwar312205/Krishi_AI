@@ -28,6 +28,23 @@ class IntentClassifier {
       return 'LOGISTICS_WORKFLOW';
     }
 
+    // 1b. User Personal Registered Vehicles Query (DB query)
+    const isUserVehiclesQuery =
+      lower.includes('i own') ||
+      lower.includes('my vehicle') ||
+      lower.includes('my vehicles') ||
+      lower.includes('my truck') ||
+      lower.includes('my trucks') ||
+      lower.includes('my fleet') ||
+      lower.includes('vehicles i have') ||
+      (lower.includes('how many vehicle') || lower.includes('how many vehicles')) ||
+      (lower.includes('show my') && lower.includes('vehicle')) ||
+      (lower.includes('list my') && lower.includes('vehicle'));
+
+    if (isUserVehiclesQuery) {
+      return 'USER_VEHICLES';
+    }
+
     // 2. Vehicle Registration Specific Intent
     const isVehicleRegistrationQuery =
       lower.includes('register') ||

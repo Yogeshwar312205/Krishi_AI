@@ -120,6 +120,29 @@ class GeminiService {
       }
     }
 
+    // Handle User Registered Vehicles Data JSON
+    if (formattedContext.includes('<user_vehicles_data>')) {
+      const vehicleMatch = formattedContext.match(/<user_vehicles_data>([\s\S]*?)<\/user_vehicles_data>/);
+      if (vehicleMatch) {
+        try {
+          const data = JSON.parse(vehicleMatch[1].trim());
+          if (!data.success) {
+            return data.message || "User authentication is required to view your registered vehicles.";
+          }
+          if (data.count === 0) {
+            return "You currently have **0 registered vehicles** linked to your KrishiFlow account. You can register a new vehicle anytime from the Fleet Management tab.";
+          }
+          let vList = `You currently own **${data.count} registered vehicle(s)** in KrishiFlow:\n\n`;
+          data.vehicles.forEach((v, idx) => {
+            vList += `${idx + 1}. **${v.vehicleNo}** (${v.vehicleType}, Capacity: ${v.capacityKg} kg, Driver: ${v.driverName || 'Unassigned'}, Status: ${v.status})\n`;
+          });
+          return vList;
+        } catch (e) {
+          logger.warn(`Failed to parse user vehicles JSON in fallback: ${e.message}`);
+        }
+      }
+    }
+
     // Handle RAG Document XML
     const docMatches = formattedContext.match(/<document[^>]*>([\s\S]*?)<\/document>/g) || [];
     if (docMatches.length > 0) {

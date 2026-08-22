@@ -1,9 +1,11 @@
 const marketTool = require('./marketTool');
+const userVehicleTool = require('./userVehicleTool');
 
 class ToolRegistry {
   constructor() {
     this.tools = new Map();
     this.registerTool(marketTool);
+    this.registerTool(userVehicleTool);
   }
 
   registerTool(toolInstance) {

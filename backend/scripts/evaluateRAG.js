@@ -126,6 +126,15 @@ async function runEvaluation() {
       forbidKeywords: ['Lasalgaon', 'Deola', 'Devala', 'Pimpalgaon'],
       expectTool: 'getLiveMandiPrices',
       expectRefusal: false
+    },
+    {
+      id: 'TC-O',
+      name: 'O. User Registered Vehicles Query (DB Fleet Retrieval)',
+      user: logisticsUser,
+      query: 'How many Vehicles Currently i OWN',
+      expectedIntent: 'USER_VEHICLES',
+      expectTool: 'getUserVehicles',
+      expectRefusal: false
     }
   ];
 

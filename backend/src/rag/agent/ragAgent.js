@@ -89,35 +89,45 @@ class RAGAgent {
 
     let rawAnswer = '';
 
-    // Path A: Pure Live Data Tool
+    // Path A: Pure Live Data Tool / DB Tool
     if (mode === 'TOOL_ONLY') {
-      if (!toolResult.success || !toolResult.records || toolResult.records.length === 0) {
-        let emptyMsg = toolResult.message;
-        if (!emptyMsg) {
-          emptyMsg = `I couldn't find verified ${entities.commodity || 'crop'} price data for ${entities.market || 'this region'} APMC.`;
-          if (language === 'hi') emptyMsg = `मुझे ${entities.market || 'इस क्षेत्र'} APMC मंडी में ${entities.commodity || 'इस फसल'} का सत्यापित मूल्य डेटा नहीं मिला।`;
-          if (language === 'mr') emptyMsg = `मला ${entities.market || 'या बाजारात'} APMC ${entities.commodity || 'या पिकाचा'} पडताळलेला भाव डेटा मिळाला नाही.`;
+      if (toolUsed === 'getUserVehicles') {
+        const toolContext = `<user_vehicles_data>\n${JSON.stringify(toolResult, null, 2)}\n</user_vehicles_data>`;
+        rawAnswer = await geminiService.generateAnswer(
+          SYSTEM_PROMPT,
+          cleanQuery,
+          toolContext,
+          language
+        );
+      } else {
+        if (!toolResult.success || !toolResult.records || toolResult.records.length === 0) {
+          let emptyMsg = toolResult.message;
+          if (!emptyMsg) {
+            emptyMsg = `I couldn't find verified ${entities.commodity || 'crop'} price data for ${entities.market || 'this region'} APMC.`;
+            if (language === 'hi') emptyMsg = `मुझे ${entities.market || 'इस क्षेत्र'} APMC मंडी में ${entities.commodity || 'इस फसल'} का सत्यापित मूल्य डेटा नहीं मिला।`;
+            if (language === 'mr') emptyMsg = `मला ${entities.market || 'या बाजारात'} APMC ${entities.commodity || 'या पिकाचा'} पडताळलेला भाव डेटा मिळाला नाही.`;
+          }
+          
+          return {
+            answer: emptyMsg,
+            language,
+            intent,
+            dataSource,
+            grounded: true,
+            sources: [],
+            toolUsed
+          };
         }
-        
-        return {
-          answer: emptyMsg,
-          language,
-          intent,
-          dataSource,
-          grounded: true,
-          sources: [],
-          toolUsed
-        };
-      }
 
-      // Format Tool XML context for Gemini
-      const toolContext = `<live_market_data>\n${JSON.stringify(toolResult, null, 2)}\n</live_market_data>`;
-      rawAnswer = await geminiService.generateAnswer(
-        SYSTEM_PROMPT,
-        cleanQuery,
-        toolContext,
-        language
-      );
+        // Format Tool XML context for Gemini
+        const toolContext = `<live_market_data>\n${JSON.stringify(toolResult, null, 2)}\n</live_market_data>`;
+        rawAnswer = await geminiService.generateAnswer(
+          SYSTEM_PROMPT,
+          cleanQuery,
+          toolContext,
+          language
+        );
+      }
     } 
     // Path B: Combined (Live Data + RAG Knowledge Rules)
     else if (mode === 'COMBINED') {
