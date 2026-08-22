@@ -6,6 +6,7 @@ class EmbeddingService {
     this.apiKey = process.env.GEMINI_API_KEY || '';
     this.embeddingModel = process.env.EMBEDDING_MODEL || 'embedding-001';
     this.vectorDim = 128; // Local fallback dimension
+    this.hasWarnedFallback = false;
   }
 
   /**
@@ -23,27 +24,31 @@ class EmbeddingService {
     const isRealKey = this.apiKey && this.apiKey !== 'your_gemini_api_key_here' && !this.apiKey.includes('your_');
 
     if (isRealKey) {
-      try {
-        let modelName = (this.embeddingModel || 'text-embedding-004').replace(/^models\//, '');
-        if (modelName === 'gemini-embedding-2' || modelName === 'embedding-001' || !modelName) {
-          modelName = 'text-embedding-004';
-        }
+      const primaryModel = (this.embeddingModel || 'text-embedding-004').replace(/^models\//, '');
+      const modelsToTry = Array.from(new Set([primaryModel, 'text-embedding-004', 'embedding-001']));
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:embedContent?key=${this.apiKey}`;
-        const response = await axios.post(url, {
-          model: `models/${modelName}`,
-          content: { parts: [{ text: cleanText.substring(0, 2048) }] }
-        }, { timeout: 6000 });
+      for (const mName of modelsToTry) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${mName}:embedContent?key=${this.apiKey}`;
+          const response = await axios.post(url, {
+            model: `models/${mName}`,
+            content: { parts: [{ text: cleanText.substring(0, 2048) }] }
+          }, { timeout: 6000 });
 
-        if (response.data?.embedding?.values) {
-          return {
-            vector: response.data.embedding.values,
-            source: 'gemini'
-          };
+          if (response.data?.embedding?.values) {
+            return {
+              vector: response.data.embedding.values,
+              source: `gemini-${mName}`
+            };
+          }
+        } catch (err) {
+          // Silent retry for fallback models
         }
-      } catch (err) {
-        const errorDetails = err.response?.data?.error?.message || err.message;
-        logger.warn(`[EmbeddingService] Gemini Embedding API call failed: ${errorDetails}. Falling back to local TF-IDF vectorizer.`);
+      }
+      
+      if (!this.hasWarnedFallback) {
+        logger.warn(`[EmbeddingService] Gemini Embedding API call failed or unavailable. Falling back to local TF-IDF vectorizer.`);
+        this.hasWarnedFallback = true;
       }
     }
 

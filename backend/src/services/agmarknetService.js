@@ -61,6 +61,15 @@ const CACHE_TTL_MS = {
 const store = new Map();
 const inFlight = new Map();
 
+const warnedKeys = new Set();
+const logAgmarknetWarn = (msgKey, message) => {
+  if (!warnedKeys.has(msgKey)) {
+    logger.warn(message);
+    warnedKeys.add(msgKey);
+    setTimeout(() => warnedKeys.delete(msgKey), 5 * 60 * 1000);
+  }
+};
+
 const cached = async (key, ttlMs, producer) => {
   const hit = store.get(key);
   if (hit && hit.expires > Date.now()) return hit.value;
@@ -275,7 +284,7 @@ const getAgmarknetLivePrices = async (cropType = 'Tomato', stateFilter = '', lim
       };
     });
   } catch (err) {
-    logger.warn(`Agmarknet live Govt API failed for ${cropType}: ${err.message}. Serving fallback Mandi intelligence.`);
+    logAgmarknetWarn(`live:${cropType}`, `Agmarknet live Govt API failed for ${cropType}: ${err.message}. Serving fallback Mandi intelligence.`);
     const fallbackRecords = getOfflineFallbackRecords(cropType, stateFilter);
     return {
       records: fallbackRecords,
@@ -400,7 +409,7 @@ const getAgmarknetCommodities = async (stateFilter = 'Maharashtra') => {
       };
     });
   } catch (err) {
-    logger.warn(`Agmarknet commodity list failed: ${err.message}.`);
+    logAgmarknetWarn('commodities', `Agmarknet commodity list failed: ${err.message}.`);
     return { commodities: [], isLiveGovtData: false, error: err.message };
   }
 };
@@ -452,7 +461,7 @@ const getAgmarknetHistory = async (cropType = 'Tomato', stateFilter = 'Maharasht
       return { days: series, isLiveGovtData: series.length > 0, fetchedAt: new Date().toISOString() };
     });
   } catch (err) {
-    logger.warn(`Agmarknet history Govt API error: ${err.message}. Serving fallback history series.`);
+    logAgmarknetWarn(`history:${cropType}`, `Agmarknet history Govt API error: ${err.message}. Serving fallback history series.`);
     const fallbackHistory = getOfflineFallbackHistory(cropType, days);
     return { days: fallbackHistory, isLiveGovtData: false, error: err.message };
   }
