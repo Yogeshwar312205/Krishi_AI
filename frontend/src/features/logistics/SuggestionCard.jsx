@@ -4,6 +4,7 @@ import { useT } from '../../i18n/useT';
 import { Button } from '../../design/primitives/Button';
 import { CapacityBar } from './CapacityBar';
 import { RouteDiagram } from './RouteDiagram';
+import { MapPanel } from '../../shared/map/MapPanel';
 
 /**
  * One (vehicle, request) pair, priced.
@@ -174,6 +175,25 @@ export const SuggestionCard = ({ suggestion, rank, currentRoute, busy, onApprove
                 before={currentRoute}
                 after={suggestion.proposedRoute}
                 requestId={suggestion.requestId}
+              />
+
+              {/*
+               * The same insertion, as geography.
+               *
+               * The strip above answers "where in the sequence"; this answers
+               * "and how far off the road it already drives". Both are needed:
+               * a two-stop detour that reads as a small hop in the sequence can
+               * be an hour down a different valley, and no ordering diagram
+               * will ever show that. The old route stays on the map underneath,
+               * dashed, so the detour is a shape rather than a subtraction.
+               */}
+              <MapPanel
+                stops={suggestion.proposedRoute.map((stop) => ({
+                  ...stop,
+                  highlight: stop.requestId === suggestion.requestId,
+                }))}
+                ghostStops={currentRoute}
+                estimateKm={suggestion.newRouteKm}
               />
             </div>
           )}

@@ -84,9 +84,20 @@ The farmer screens run on the real data.gov.in Agmarknet feed. `demoMarket.js` i
 - Deals filter by crop (`deal.cropType === cropDetails.cropType`). An agreed tomato price must never be attached to an onion consignment.
 - `BuyerInboundScreen` is the other half: enquiries above shipments, with reply and a quote action that writes `agreedRatePerKg` back.
 
+### Maps — one component, one theme, and a line that admits what drew it
+
+`frontend/src/shared/map/` is the whole map layer: `mapTheme.js`, `RouteMap.jsx`, `MapPanel.jsx`, `useRouteGeometry.js`. Nothing else constructs a map.
+
+- **Themed, not stock.** `mapTheme.js` fetches CARTO's Positron style once per session and retints it to the rate-board palette *before* the map is constructed — paper ground, ink roads, POIs hidden — so a map never flashes somebody else's grey. It matches on layer **role** (`is this a road line / a water fill / a POI label`), never on a hardcoded list of CARTO layer ids, which get renamed between releases. Basemap unreachable → `PAPER_ONLY_STYLE`: paper, and our own marks still correctly positioned.
+- **Lazy.** MapLibre is ~970 kB and lives in its own chunk. `MapPanel` is a disclosure that `React.lazy`-loads `RouteMap` and fetches geometry only once opened. A farmer who never opens a map never downloads one. **`vite.config.js` must keep `optimizeDeps.exclude: ['maplibre-gl']`** — pre-bundling breaks its tile worker's `import.meta.url`, and the failure mode is a silent blank rectangle with `load` never firing.
+- **The map draws roads; the VRP still ranks on haversine × 1.3.** `backend/src/services/routingService.js` proxies OSRM (keyless demo server, `OSRM_URL` to override), TTL-cached with in-flight de-duplication, and falls back to straight legs measured exactly the way the ranking measures. `source` is `'osrm' | 'straight-line'`, the straight case is drawn **dashed** as well as captioned, and where both numbers exist the caption prints them side by side. Never let a road-shaped line imply the ranking was road-measured.
+- Stops with no coordinate are **dropped and counted** on the caption, never nudged onto a nearby town — the `mandiGeo.js` rule, applied to drawing.
+
 ### Real-time
 
-`backend/src/sockets/trackingSocket.js` + `frontend/src/hooks/useSocket.js`. Three events: `driver_location_update` (rebroadcast as `vehicle:location_changed`), `simulation:start_tracking` (server-side 2s interpolation Nashik→Vashi), and `dev_simulate_traffic` → `dev:traffic_reroute_event`, a scripted demo reroute with hardcoded metrics.
+`backend/src/sockets/trackingSocket.js` + `frontend/src/services/socket.js` (one shared connection) + `frontend/src/hooks/useVehicleTracking.js`. Events: `driver_location_update` (rebroadcast as `vehicle:location_changed`), `simulation:start_tracking` (server-side 2s interpolation Nashik→Vashi), and `dev_simulate_traffic` → `dev:traffic_reroute_event`, a scripted demo reroute with hardcoded metrics.
+
+**A position enters the system only through an authenticated REST call.** `POST /api/fleet/:id/location` proves ownership, writes it, and only then broadcasts via `sockets/bus.js` — the socket layer has no auth, so anything a client could emit could move another owner's truck across a farmer's map. Fixes carry `source`: `'report'` is real, anything else (the simulator sends `'simulation'`) is stamped by the map. `TrackingMap` always prints the age of the fix; a stale position shown as live is how a farmer ends up waiting at a gate. `useSocket.js` is the older per-component connection and is unused.
 
 Coordinates are `[longitude, latitude]` throughout the API, store, and Mongo — except `trackingSocket.js`'s `newPolylineWaypoints`, which are `[lat, lng]`.
 
@@ -103,6 +114,7 @@ Coordinates are `[longitude, latitude]` throughout the API, store, and Mongo —
 - `currentRoute[0]` is where the vehicle is now and is never displaced. Routes are **open** — no return-to-depot leg. `currentLoadKg` is what is on the deck *before* the route runs; a pickup inside `currentRoute` must not also be added to it (that double-count pushed the Routes screen past capacity once already).
 - **Time windows are shown, never enforced.** ETA hours resolve in `Asia/Kolkata` explicitly, and `slotHours` travels on the booking because the slot label is translated — parsing it back out only works in English.
 - `infeasible` and `unrankable` are returned and rendered with their reason. A request missing a coordinate is never given a guessed one; the server refuses to store one at all. Same rule as `mandiGeo.js` — and it is why a vehicle's base is picked from `features/logistics/baseLocations.js` rather than typed.
-- Tracking is one record read by both sides: the server appends to `PickupRequest.timeline` on every status change and `TrackingTimeline.jsx` renders it for the farmer and the fleet owner alike, so the two can never see different accounts of the same lot.
+- Tracking is one record read by both sides: the server appends to `PickupRequest.timeline` on every status change, and `TrackingTimeline.jsx` + `TrackingMap.jsx` render it for the farmer and the fleet owner alike, so the two can never see different accounts of the same lot.
+- `RouteDiagram` (sequence) and `MapPanel` (geography) both sit under "show the working" and neither replaces the other: the strip answers *where in the sequence* the farmer slots in, the map answers *how far off the route it already drives*.
 - **This endpoint deliberately has no client-side fallback**, unlike every other boundary here. Two copies of a ranking algorithm can drift apart, and a dispatcher acting on the wrong one commits a real truck; the screen says it is unreachable instead.
 - `ai-engine/app/services/vrp_service.py` still calls itself an OR-Tools VRP and is not one — it round-robins vehicles with `idx % len(...)`. It is out of scope and unused by this path; `VRP.md` §2 records the overstatement rather than patching the string.

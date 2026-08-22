@@ -416,7 +416,25 @@ vehicle suggestions, and each suggestion card carries:
 - **requested window vs computed ETA**, amber when they clash
 - **route diagram** — the stop sequence before and after, with the two inserted stops marked
 - **show the working** — the removed leg and the added legs, in kilometres
+- **the map** — the proposed route drawn on the road network, the old route dashed
+  underneath, and the two inserted stops ringed
 - **Approve** / **Reject**, one tap each
+
+The diagram and the map answer different questions and neither replaces the
+other. The diagram answers *where in the sequence* — third stop or fifth — which
+is the ordering decision. The map answers *how far off the road it already
+drives*, which a sequence strip cannot show: a detour that reads as one extra
+box in the strip can be an hour down a different valley.
+
+**The map draws roads; the ranking still measures haversine × 1.3.** Routing
+every (vehicle, request) pair over a road network would be hundreds of calls to
+answer one screen, so the geometry is fetched once per stop sequence, only when
+a dispatcher opens a map, and only to draw. Because the two numbers differ, the
+map caption prints both — "Drawn on the road network · 181 km" above "Ranked on
+an estimate of 190 km" — so nobody reads a road-shaped line as proof the
+ranking was road-measured. When the router is unreachable the legs are drawn
+straight, dashed, and captioned as straight. See
+`backend/src/services/routingService.js`.
 
 Below the ranked list sit the two honest tails: requests that **cannot be
 ranked** (no coordinate) and pairs where **no vehicle fits** (from `infeasible`),
@@ -438,7 +456,11 @@ It optimises one insertion at a time, not the fleet.
 
 It also ignores driver hours, road classes, tolls, real traffic, and mandi gate
 timings. Distances are haversine × 1.3, not routed — good to roughly ±15% on
-Maharashtra highways, and wrong in the hills.
+Maharashtra highways, and wrong in the hills. The map is now the cheapest
+available check on that: opening one prints the routed length beside the
+estimate the ranking used, and Nashik → Vashi comes out 160.5 km routed against
+170.9 km estimated. Routing every pair instead of drawing one line is the
+upgrade; it belongs with the solver below, not on its own.
 
 **Where OR-Tools would replace this:** a `RoutingModel` with
 `AddDimensionWithVehicleCapacity` for load, `AddPickupAndDelivery` for the
@@ -448,11 +470,23 @@ insertion at a time. That is the correct upgrade and it is not built here, on
 purpose: a greedy heuristic whose every number can be justified to a dispatcher
 beats a solver nobody in the room can explain.
 
-Vehicle positions are reported, not streamed: `POST /api/fleet/:id/location`
-updates a vehicle's last known point, and the tracking screens read the request
-timeline rather than a live feed. Wiring `trackingSocket.js` into this would
-give both sides a moving dot; the status timeline is what carries the demo
-today.
+Vehicle positions are **reported, then broadcast**. `POST /api/fleet/:id/location`
+proves ownership, writes the vehicle's last known point, and only then pushes
+`vehicle:location_changed` to every watcher through `sockets/bus.js`. The
+position never travels *into* the system over the socket, because the socket
+layer has no authentication at all and a client that could emit its own fix
+could move somebody else's truck across a farmer's map.
+
+What that gives both sides is a marker with a timestamp beside it, never
+without: `TrackingMap` prints the age of the fix, and a position from four hours
+ago that looked live is how a farmer ends up waiting at a gate. The fleet owner
+starts and stops sharing from the Jobs screen, per job, off by default.
+
+The scripted Nashik → Vashi simulator in `trackingSocket.js` still exists and
+still emits against a hardcoded vehicle id. It now says `source: 'simulation'`
+on the wire, and anything not marked `source: 'report'` is stamped on the map —
+same rule as `DemoStamp`. An invented lorry must never slide onto a farmer's
+tracking screen looking like their own.
 
 Mandi deals still live in the zustand store, on purpose — they are a
 conversation between a farmer and a trader, not fleet state. The pickup request

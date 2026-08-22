@@ -1,5 +1,6 @@
 const Vehicle = require('../models/Vehicle');
 const logger = require('../utils/logger');
+const { broadcast } = require('../sockets/bus');
 
 /**
  * A fleet owner's own vehicles. Every query is scoped to `req.user._id`, so one
@@ -106,6 +107,23 @@ const reportLocation = async (req, res) => {
       { new: true }
     );
     if (!vehicle) return res.status(404).json({ success: false, message: 'Not one of your vehicles.' });
+
+    /*
+     * Written first, then broadcast. The farmer watching this lot gets the fix
+     * within a second instead of on their next refresh, and the record and the
+     * moving marker can never disagree — the map is showing what was stored.
+     *
+     * `source: 'report'` is what separates this from the demo simulator's
+     * stream, which the tracking map stamps rather than trusts.
+     */
+    broadcast('vehicle:location_changed', {
+      vehicleId: String(vehicle._id),
+      vehicleNo: vehicle.vehicleNo,
+      coordinates: vehicle.location.coordinates,
+      at: vehicle.locationUpdatedAt,
+      source: 'report',
+    });
+
     return res.json({ success: true, vehicle: publicVehicle(vehicle) });
   } catch (error) {
     logger.error(`Report location failed: ${error.message}`);

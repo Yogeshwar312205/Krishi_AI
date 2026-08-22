@@ -593,5 +593,35 @@
       "deliver": "Mark delivered",
       "cancel": "Cancel job"
     }
+  },
+  "map": {
+    "show": "Show on map",
+    "hide": "Hide map",
+    "onRoads": "Drawn on the road network",
+    "straight": "Straight lines between the stops.",
+    "straightWhy": "The road network could not be reached. The distances are unchanged.",
+    "rankedOn": "Ranked on an estimate of {{km}} km",
+    "hoursMinutes": "{{h}} h {{m}} min",
+    "minutes": "{{m}} min",
+    "legend": {
+      "start": "Truck now",
+      "pickup": "Pick up",
+      "drop": "Drop",
+      "stop": "Stop",
+      "vehicle": "Last position"
+    },
+    "missingStops": {
+      "one": "{{count}} stop is not on the map — we have no location for it.",
+      "other": "{{count}} stops are not on the map — we have no location for them."
+    },
+    "simulatedFix": "This position is from the demo, not from the vehicle.",
+    "lastFix": "Last position: {{at}}",
+    "noPosition": "The vehicle has not sent its position yet.",
+    "shareStart": "Send my position",
+    "shareStop": "Stop sending {{no}}'s position",
+    "sharingNote": "The farmer can see this vehicle moving.",
+    "shareDenied": "Location permission was refused. Turn it on in your phone settings.",
+    "shareFailed": "Could not get your location.",
+    "shareUnsupported": "This phone cannot share its location."
   }
 }

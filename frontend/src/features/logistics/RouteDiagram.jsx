@@ -4,11 +4,13 @@ import { useT } from '../../i18n/useT';
 /**
  * The stop sequence before and after, as two ruled strips.
  *
- * Deliberately not a map. The decision in front of the dispatcher is *where in
- * the sequence* the farmer slots in — third stop or fifth — and a map answers a
- * different question entirely, burying the ordering under geography. Two strips
- * put the old order above the new one so the two inserted stops are the only
- * thing that moved.
+ * Not a replacement for the map below it, and not replaced by it. The strips
+ * answer *where in the sequence* the farmer slots in — third stop or fifth —
+ * which is the ordering decision, and a map buries that under geography. The
+ * map answers the question the strips cannot: how far off the road the truck
+ * already drives this detour actually is. Two strips, so the old order sits
+ * directly above the new one and the two inserted stops are the only thing
+ * that moved.
  */
 const Stop = ({ stop, inserted, t }) => (
   <li

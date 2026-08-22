@@ -8,6 +8,8 @@ import { SectionHead } from '../../design/primitives/SectionHead';
 import { SegmentedToggle } from '../../design/primitives/SegmentedToggle';
 import { Button } from '../../design/primitives/Button';
 import { TrackingTimeline } from './TrackingTimeline';
+import { TrackingMap } from './TrackingMap';
+import { ShareLocationButton } from './ShareLocationButton';
 
 /**
  * The work this fleet has taken on, and how far along each job is.
@@ -161,6 +163,24 @@ export const LogisticsJobsScreen = () => {
               <div className="border-t-2 border-ink px-4 py-3.5">
                 <TrackingTimeline request={request} />
               </div>
+
+              <div className="border-t-2 border-ink px-4 py-2">
+                <TrackingMap request={request} />
+              </div>
+
+              {/*
+               * Only while the job is live. Sharing a position for a lot that
+               * was delivered yesterday collects somebody's location for
+               * nothing, and the farmer's map has nothing left to show.
+               */}
+              {OPEN.includes(request.status) && request.vehicle?.id && (
+                <div className="border-t-2 border-ink px-4 py-3.5">
+                  <ShareLocationButton
+                    vehicleId={request.vehicle.id}
+                    vehicleNo={request.vehicle.vehicleNo}
+                  />
+                </div>
+              )}
 
               {action && (
                 <div className="grid gap-2 border-t-2 border-ink px-4 py-3.5 sm:grid-cols-2">

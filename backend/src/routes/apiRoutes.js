@@ -13,6 +13,9 @@ const {
   getAgmarknetLivePrices, getAgmarknetCommodities, getAgmarknetHistory,
   getLiveGovtWeather, getLiveGovtFuelRates, withProfitBreakdown, CACHE_TTL_MS,
 } = require('../services/agmarknetService');
+const {
+  getRoute, parsePath, MAX_WAYPOINTS, CACHE_TTL_MS: ROUTING_CACHE_TTL_MS,
+} = require('../services/routingService');
 const { apiLimiter } = require('../middlewares/rateLimiter');
 const { protect, authorize } = require('../middlewares/auth');
 
@@ -53,6 +56,42 @@ router.post('/fleet/:id/location', apiLimiter, protect, authorize(...FLEET), rep
 // would cost to slot that farmer into the route the vehicle is already driving.
 // It suggests; the fleet owner approves. Nothing here auto-assigns.
 router.get('/dispatch/suggestions', apiLimiter, protect, authorize(...FLEET), getDispatchSuggestions);
+
+/*
+ * Road geometry for the map layer. Drawing only — see routingService.js.
+ *
+ * Authenticated because every screen that draws a map is behind the login, and
+ * the path in the query is a farmer's gate and a mandi they are shipping to.
+ *
+ * `source` names what produced the line ('osrm' or 'straight-line'), following
+ * the same rule as aiEngineSource and the market feed: the screen has to be
+ * able to tell the user what they are looking at. The ranking's own distance
+ * is unaffected by anything here.
+ */
+router.get('/routing/route', apiLimiter, protect, async (req, res) => {
+  const points = parsePath(req.query.path);
+
+  if (!points) {
+    return res.status(400).json({
+      success: false,
+      message: 'path must be at least two "lng,lat" pairs separated by ";".',
+    });
+  }
+  if (points.length > MAX_WAYPOINTS) {
+    return res.status(400).json({
+      success: false,
+      message: `A route may have at most ${MAX_WAYPOINTS} stops.`,
+    });
+  }
+
+  const route = await getRoute(points);
+  return res.json({
+    success: true,
+    waypointCount: points.length,
+    cacheTtlMs: ROUTING_CACHE_TTL_MS,
+    ...route,
+  });
+});
 
 router.get('/prices/forecast', apiLimiter, getPriceForecast);
 router.get('/demand/analysis', apiLimiter, getDemandAnalysis);

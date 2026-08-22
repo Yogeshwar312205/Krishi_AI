@@ -1,8 +1,12 @@
 const logger = require('../utils/logger');
+const { setIo } = require('./bus');
 
 let vehicleSimulationTimer = null;
 
 const initSockets = (io) => {
+  // Lets the authenticated REST routes broadcast; see sockets/bus.js.
+  setIo(io);
+
   io.on('connection', (socket) => {
     logger.info(`🔌 WebSocket Client Connected: ${socket.id}`);
 
@@ -62,7 +66,16 @@ const initSockets = (io) => {
           driverName: 'Ramesh Kumar',
           currentCoordinates: [curLng, curLat],
           speedKmH: Math.round(55 + Math.random() * 10),
-          progressPercent: Math.round(progress * 100)
+          progressPercent: Math.round(progress * 100),
+          /*
+           * Says so, out loud, on the wire.
+           *
+           * This stream is a scripted Nashik->Vashi interpolation against a
+           * hardcoded vehicle id. The map stamps any fix that is not a real
+           * report, so an invented lorry can never slide onto a farmer's
+           * tracking screen looking like their own. Same rule as DemoStamp.
+           */
+          source: 'simulation'
         });
       }, 2000);
     });

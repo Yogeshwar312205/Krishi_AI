@@ -10,6 +10,7 @@ import { createPickupRequest, cancelPickupRequest } from '../../../services/api'
 import { useMyRequests } from './useMyRequests';
 import { DealPanel } from './DealPanel';
 import { TrackingTimeline } from '../../logistics/TrackingTimeline';
+import { TrackingMap } from '../../logistics/TrackingMap';
 import { SectionHead } from '../../../design/primitives/SectionHead';
 import { SegmentedToggle } from '../../../design/primitives/SegmentedToggle';
 import { ChoiceGrid } from '../../../design/primitives/ChoiceGrid';
@@ -208,6 +209,19 @@ export const TransportScreen = () => {
 
       <div className="border-t-2 border-ink px-4 py-3.5">
         <TrackingTimeline request={request} />
+      </div>
+
+      {/*
+       * The haul, and the truck on it.
+       *
+       * Closed by default: the timeline above already answers "has it been
+       * collected", which is the question most opens are about, and a map is
+       * the expensive answer to a question nobody asked yet. Open, it shows the
+       * pickup, the mandi the lot was actually sold to, and the last position
+       * the driver reported — with the time of that fix, never without.
+       */}
+      <div className="border-t-2 border-ink px-4 py-2">
+        <TrackingMap request={request} />
       </div>
 
       {request.status === 'pending' && (

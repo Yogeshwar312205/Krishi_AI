@@ -512,3 +512,60 @@
 ::-webkit-scrollbar-track { background: var(--paper); }
 ::-webkit-scrollbar-thumb { background: var(--rule); }
 ::-webkit-scrollbar-thumb:hover { background: var(--forest); }
+
+/* ---- The map's own chrome ----------------------------------------------
+ *
+ * MapLibre ships rounded white controls with drop shadows — the one visual
+ * language this system does not have. These rules square them off and put them
+ * in ink, so a map reads as another ruled block on the page rather than as an
+ * embedded widget from somewhere else.
+ *
+ * Unlayered on purpose: maplibre-gl.css is imported from JS, and bundle order
+ * between it and this file is not guaranteed. Unlayered rules beat @layer ones
+ * whatever the order, which is exactly the guarantee an override needs.
+ */
+.maplibregl-ctrl-group {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  box-shadow: none;
+  background: #fff;
+}
+.maplibregl-ctrl-group button {
+  border-radius: 0;
+  width: 32px;
+  height: 32px;
+}
+.maplibregl-ctrl-group button + button {
+  border-top: 2px solid var(--ink);
+}
+.maplibregl-ctrl-group button:hover {
+  background: var(--turmeric);
+}
+
+.maplibregl-popup-content {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  box-shadow: none;
+  background: #fff;
+  color: var(--ink);
+  font-family: 'Mukta', 'Noto Sans Devanagari', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: var(--lh-body);
+  padding: 0.4rem 0.6rem;
+}
+.maplibregl-popup-tip { display: none; } /* a triangle is the one shape a docket has no use for */
+
+.maplibregl-ctrl-attrib.maplibregl-compact,
+.maplibregl-ctrl-attrib {
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: 'Mukta', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.6875rem;
+}
+.maplibregl-ctrl-attrib a { color: var(--ink-faint); }
+
+/* The canvas itself must not paint a white rectangle before the style loads —
+   paper is the page ground, and a flash of white reads as a broken tile. */
+.maplibregl-map,
+.maplibregl-canvas-container { background: var(--paper); }

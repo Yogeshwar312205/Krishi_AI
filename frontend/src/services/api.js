@@ -257,6 +257,42 @@ export const registerUser = async (userData) => {
   }
 };
 
+/* ---------------------------------------------------------- map geometry */
+
+/*
+ * Road geometry for the map layer. Drawing only — the dispatch ranking still
+ * measures haversine x 1.3 server-side, and the map caption says so.
+ *
+ * Cached per path for the session: a dispatcher opens the same suggestion card
+ * repeatedly while deciding, and the shape of a fixed stop sequence does not
+ * change between two taps.
+ */
+const routeCache = new Map();
+
+export const fetchRouteGeometry = async (points) => {
+  const path = points.map(([lng, lat]) => `${lng},${lat}`).join(';');
+  if (routeCache.has(path)) return routeCache.get(path);
+
+  const request = (async () => {
+    try {
+      const { data } = await apiClient.get('/routing/route', { params: { path } });
+      return data;
+    } catch (err) {
+      /*
+       * No throw. The map already holds the stops, so it can draw the legs
+       * straight and stamp them — a route with an honest approximate shape
+       * beats an empty panel. Not cached, so the next open tries again.
+       */
+      console.warn('Could not fetch road geometry:', err.message);
+      routeCache.delete(path);
+      return { success: false, source: 'offline', geometry: null };
+    }
+  })();
+
+  routeCache.set(path, request);
+  return request;
+};
+
 /* ------------------------------------------------------------- the account
 
  * Reading and editing the signed-in user. Every one of these acts on the
@@ -375,6 +411,19 @@ export const updateRequestStatus = async (requestId, status, note) => {
 export const fetchFleet = async () => {
   const { data } = await apiClient.get('/fleet');
   return data.vehicles;
+};
+
+/**
+ * A position report from the cab. Authenticated and owner-scoped server-side,
+ * which is what lets the server broadcast it to the watching farmer as trusted.
+ */
+export const reportVehicleLocation = async (vehicleId, coordinates) => {
+  try {
+    const { data } = await apiClient.post(`/fleet/${vehicleId}/location`, { coordinates });
+    return data.vehicle;
+  } catch (err) {
+    throw toApiError(err, 'Could not send the vehicle position.');
+  }
 };
 
 export const addFleetVehicle = async (vehicle) => {
