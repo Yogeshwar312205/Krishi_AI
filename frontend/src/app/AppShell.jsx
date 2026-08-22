@@ -79,12 +79,21 @@ const screenFor = (tabId) => {
   }
 };
 
+const RAGAssistantModal = lazy(() => import('../features/rag/RAGAssistantModal'));
+
 export const AppShell = () => {
   const activeTab = useAppStore((state) => state.activeTab);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const activeRole = useAppStore((state) => state.activeRole);
+  const [isRagOpen, setIsRagOpen] = React.useState(false);
 
   useTabHistory();
+
+  useEffect(() => {
+    const handleOpenRag = () => setIsRagOpen(true);
+    window.addEventListener('open-rag-assistant', handleOpenRag);
+    return () => window.removeEventListener('open-rag-assistant', handleOpenRag);
+  }, []);
 
   /*
    * A stored tab can belong to a role the user is no longer in — after a role
@@ -100,16 +109,6 @@ export const AppShell = () => {
   }, [activeTab, role, setActiveTab]);
 
   return (
-    /*
-     * Two layouts from one tree.
-     *
-     * Phone: a single column with the bar top and nav bottom, both inside
-     * thumb reach.
-     * Desktop (md+): a fixed left rail beside a scrolling content column. The
-     * content is capped at 72rem rather than filling a 1440px window — past
-     * that, a ledger row's label and value drift so far apart that the eye
-     * loses the line, which is the specific thing ruled rows exist to prevent.
-     */
     <div className="flex min-h-full bg-paper">
       <SideNav />
 
@@ -128,6 +127,7 @@ export const AppShell = () => {
 
       <Suspense fallback={null}>
         <VoiceAssistant />
+        <RAGAssistantModal isOpen={isRagOpen} onClose={() => setIsRagOpen(false)} />
       </Suspense>
     </div>
   );

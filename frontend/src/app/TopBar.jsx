@@ -53,6 +53,16 @@ export const TopBar = () => {
               to be a <select> that rewrote the signed-in user's role client-side
               and jumped them into another role's screens, with no permission
               check of any kind. It's a fixed label now. */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-rag-assistant'))}
+            className="flex h-[2.125rem] items-center gap-1.5 border-2 border-emerald-900 bg-emerald-700 px-2.5 text-xs font-bold text-white hover:bg-emerald-800 transition"
+            title="Open KrishiFlow AI Sahayak RAG Assistant"
+          >
+            <span className="text-sm">🌾</span>
+            <span className="hidden xs:inline sm:inline">AI Sahayak</span>
+          </button>
+
           <span
             className="
               flex h-[2.125rem] items-center border-2 border-ink bg-white px-2.5 text-sm

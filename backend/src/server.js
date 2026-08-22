@@ -47,7 +47,15 @@ const io = new Server(server, {
 });
 initSockets(io);
 
+const indexer = require('./rag/ingestion/indexer');
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   logger.info(`🚀 KrishiFlow Production Backend Core running on http://localhost:${PORT}`);
+  // Index RAG Knowledge Base on startup
+  try {
+    await indexer.indexKnowledgeBase();
+  } catch (err) {
+    logger.warn(`Startup Knowledge Base indexing notice: ${err.message}`);
+  }
 });

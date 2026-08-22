@@ -430,3 +430,15 @@ export const addFleetVehicle = async (vehicle) => {
   const { data } = await apiClient.post('/fleet', vehicle);
   return data.vehicle;
 };
+
+/* ------------------------------------------------------------- RAG Agent */
+
+export const sendRagQuestion = async (message, conversationId = null) => {
+  try {
+    const { data } = await apiClient.post('/rag/chat', { message, conversationId });
+    return data.data;
+  } catch (err) {
+    throw toApiError(err, 'Could not process question with KrishiFlow AI Sahayak.');
+  }
+};
+

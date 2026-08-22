@@ -32,7 +32,7 @@ const callOptimizeRoute = async (payload) => {
 
 const checkAiEngineHealth = async () => {
   try {
-    const res = await pythonClient.get('/health');
+    const res = await pythonClient.get('/health', { 'axios-retry': { retries: 0 } });
     return res.data;
   } catch (err) {
     return { status: 'offline', error: err.message };

@@ -18,6 +18,7 @@ const {
 } = require('../services/routingService');
 const { apiLimiter } = require('../middlewares/rateLimiter');
 const { protect, authorize } = require('../middlewares/auth');
+const ragRoutes = require('./ragRoutes');
 
 /*
  * Accounts created before the fleet-owner model carry role 'Driver' or
@@ -27,6 +28,7 @@ const { protect, authorize } = require('../middlewares/auth');
 const FLEET = ['Logistics', 'Driver', 'Transporter'];
 
 // Rate limited API routes
+router.use('/rag', ragRoutes);
 router.get('/vehicles/nearby', apiLimiter, getNearbyVehicles);
 // Destructive fleet reset — operator/admin only, never client-triggerable.
 router.post('/vehicles/seed', apiLimiter, protect, authorize('Admin'), seedVehicles);
