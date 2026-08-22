@@ -257,6 +257,66 @@ export const registerUser = async (userData) => {
   }
 };
 
+/* ------------------------------------------------------------- the account
+
+ * Reading and editing the signed-in user. Every one of these acts on the
+ * caller's own account — there is no id in any path — so nothing here can be
+ * pointed at somebody else's profile.
+ */
+
+/**
+ * Re-reads the account from the server.
+ *
+ * Sessions stored in localStorage before the server started returning phone and
+ * village carry neither, so the profile screen refreshes itself on mount rather
+ * than showing "Not given" for details the account filled in at signup. A
+ * failure is not something the user needs told: the stored session still
+ * renders, it is just older.
+ */
+export const fetchProfile = async () => {
+  try {
+    const { data } = await apiClient.get('/auth/me');
+    return data.user;
+  } catch (err) {
+    console.warn('Could not refresh the profile:', err.message);
+    return null;
+  }
+};
+
+/**
+ * Saves edited details, and says which of the two things happened.
+ *
+ * Offline it keeps the bargain login already makes: a demo session has no
+ * server behind it, so the edit is applied to this device and `offline` comes
+ * back true for the screen to say so. A refused edit — a taken email, a bad
+ * mobile number — is a real answer from a real server and stays an error.
+ */
+export const updateProfile = async (patch) => {
+  try {
+    const { data } = await apiClient.patch('/auth/me', patch);
+    return { user: data.user, offline: false };
+  } catch (err) {
+    if (!isOffline(err)) {
+      throw toApiError(err, 'Could not save your details.');
+    }
+    const current = useAppStore.getState().user || {};
+    return { user: { ...current, ...patch }, offline: true };
+  }
+};
+
+/**
+ * No offline fallback here, deliberately. A password change that only happened
+ * on this handset is a password the account cannot log in with tomorrow.
+ */
+export const changePassword = async ({ currentPassword, newPassword }) => {
+  try {
+    const { data } = await apiClient.post('/auth/me/password', { currentPassword, newPassword });
+    return data;
+  } catch (err) {
+    throw toApiError(err, 'Could not change your password.');
+  }
+};
+
 /*
  * Pickup requests and dispatch.
  *

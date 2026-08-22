@@ -64,6 +64,25 @@ export const useAppStore = create((set, get) => ({
     set({ user, token, activeRole: role });
   },
 
+  /**
+   * Merges edited (or freshly fetched) account details into the session.
+   *
+   * Written straight back to localStorage, because that is what a refresh
+   * rehydrates from — leaving the store and the stored copy disagreeing would
+   * make an edit last exactly until the next reload.
+   *
+   * Role is not merged: it decides which tabs exist and which endpoints
+   * authorise, the server will not change it on a profile edit, and letting a
+   * client-side merge move it would put a farmer in a fleet owner's nav.
+   */
+  updateUser: (patch) => set((state) => {
+    if (!state.user || !patch) return {};
+    const { role, ...safe } = patch;
+    const user = { ...state.user, ...safe };
+    localStorage.setItem('user', JSON.stringify(user));
+    return { user };
+  }),
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

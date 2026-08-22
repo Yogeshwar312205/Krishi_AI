@@ -37,6 +37,19 @@ const UserSchema = new mongoose.Schema({
       type: [Number], // [longitude, latitude]
     },
   },
+  /*
+   * The crop this account mainly grows. Asked for at signup and editable from
+   * the profile screen; it is the ACCOUNT's crop, not the consignment being
+   * worked on right now (that lives in the client's cropDetails and is what
+   * deals and pickup requests are filtered by). Empty for buyers and fleets.
+   *
+   * Until this field existed, signup collected the answer and dropped it.
+   */
+  primaryCrop: {
+    type: String,
+    trim: true,
+    default: '',
+  },
 }, { timestamps: true });
 
 // Hash password before save
