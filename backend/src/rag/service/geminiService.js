@@ -28,12 +28,19 @@ class GeminiService {
 
         const url = `${endpoint}?key=${this.apiKey}`;
         
+        const langDirective = language === 'mr'
+          ? "CRITICAL MANDATORY LANGUAGE DIRECTIVE: The user asked in MARATHI (मराठी). You MUST write your ENTIRE response strictly in MARATHI (मराठी in Devanagari script). Do NOT reply in English or Hindi!"
+          : language === 'hi'
+          ? "CRITICAL MANDATORY LANGUAGE DIRECTIVE: The user asked in HINDI (हिंदी). You MUST write your ENTIRE response strictly in HINDI (हिंदी in Devanagari script). Do NOT reply in English or Marathi!"
+          : "Respond in English.";
+
         const payload = {
           contents: [
             {
               role: 'user',
               parts: [
                 { text: systemPrompt },
+                { text: `\n${langDirective}` },
                 { text: `\nUSER QUESTION (${language}): ${userQuestion}` },
                 { text: `\nRETRIEVED CONTEXT:\n${formattedContext}` }
               ]
@@ -96,19 +103,24 @@ class GeminiService {
             const isLive = data.isLiveGovtData !== false;
             const dateLabel = date || new Date().toISOString().split('T')[0];
 
+            const commodityMrMap = { 'Onion': 'कांदा', 'Tomato': 'टोमॅटो', 'Potato': 'बटाटा', 'Wheat': 'गहू', 'Pomegranate': 'डाळिंब', 'Grapes': 'द्राक्ष', 'Maize': 'मका', 'Chilly Capsicum': 'मिरची' };
+            const commodityHiMap = { 'Onion': 'प्याज', 'Tomato': 'टमाटर', 'Potato': 'आलू', 'Wheat': 'गेहूं', 'Pomegranate': 'अनार', 'Grapes': 'अंगूर', 'Maize': 'मक्का', 'Chilly Capsicum': 'मिर्च' };
+            const commodityHi = commodityHiMap[commodity] || commodity;
+            const commodityMr = commodityMrMap[commodity] || commodity;
+
             if (isLive) {
               if (language === 'hi') {
-                extractedText += `आज ${market} मंडी में ${commodity} का सत्यापित लाइव भाव: ₹${price}/किग्रा (Modal Price: ₹${topRecord.modalPricePerQuintal}/क्विंटल, तारीख: ${dateLabel})। स्रोत: Agmarknet (data.gov.in)\n\n`;
+                extractedText += `आज ${market} मंडी में ${commodityHi} का सत्यापित लाइव भाव: ₹${price}/किग्रा (Modal Price: ₹${topRecord.modalPricePerQuintal}/क्विंटल, तारीख: ${dateLabel})। स्रोत: Agmarknet (data.gov.in)\n\n`;
               } else if (language === 'mr') {
-                extractedText += `आज ${market} बाजारात ${commodity} चा पडताळलेला थेट भाव: ₹${price}/किग्रॅ (Modal Price: ₹${topRecord.modalPricePerQuintal}/क्विंटल, दिनांक: ${dateLabel}). स्रोत: Agmarknet (data.gov.in)\n\n`;
+                extractedText += `आज ${market} बाजारात ${commodityMr} चा पडताळलेला थेट भाव: ₹${price}/किग्रॅ (Modal Price: ₹${topRecord.modalPricePerQuintal}/क्विंटल, दिनांक: ${dateLabel}). स्रोत: Agmarknet (data.gov.in)\n\n`;
               } else {
                 extractedText += `Today's live market rate for ${commodity} at ${market} Mandi is ₹${price}/kg (Modal Price: ₹${topRecord.modalPricePerQuintal}/quintal, Arrival Date: ${dateLabel}). Source: Government Agmarknet API (data.gov.in).\n\n`;
               }
             } else {
               if (language === 'hi') {
-                extractedText += `कैश्ड / फ़ॉलबैक डेटा (तारीख: ${dateLabel}): ${market} मंडी में ${commodity} का दर: ₹${price}/किग्रा (Modal Price: ₹${topRecord.modalPricePerQuintal}/क्विंटल)।\n\n`;
+                extractedText += `कैश्ड / फ़ॉलबैक डेटा (तारीख: ${dateLabel}): ${market} मंडी में ${commodityHi} का दर: ₹${price}/किग्रा (Modal Price: ₹${topRecord.modalPricePerQuintal}/क्विंटal)।\n\n`;
               } else if (language === 'mr') {
-                extractedText += `कॅश केलेला / फ़ॉलबॅक डेटा (दिनांक: ${dateLabel}): ${market} बाजारात ${commodity} चा दर: ₹${price}/किग्रॅ (Modal Price: ₹${topRecord.modalPricePerQuintal}/क्विंटल).\n\n`;
+                extractedText += `कॅश केलेला / फ़ॉलबॅक डेटा (दिनांक: ${dateLabel}): ${market} बाजारात ${commodityMr} चा दर: ₹${price}/किग्रॅ (Modal Price: ₹${topRecord.modalPricePerQuintal}/क्विंटल).\n\n`;
               } else {
                 extractedText += `Cached / Fallback Data as of ${dateLabel}: Market rate for ${commodity} at ${market} Mandi is ₹${price}/kg (Modal Price: ₹${topRecord.modalPricePerQuintal}/quintal, Date: ${dateLabel}).\n\n`;
               }
@@ -127,16 +139,35 @@ class GeminiService {
         try {
           const data = JSON.parse(vehicleMatch[1].trim());
           if (!data.success) {
-            return data.message || "User authentication is required to view your registered vehicles.";
+            return language === 'mr' ? "तुमची वाहने पाहण्यासाठी वापरकर्ता प्रमाणीकरण आवश्यक आहे." : language === 'hi' ? "अपने पंजीकृत वाहन देखने के लिए लॉगिन आवश्यक है।" : "User authentication is required to view your registered vehicles.";
           }
           if (data.count === 0) {
-            return "You currently have **0 registered vehicles** linked to your KrishiFlow account. You can register a new vehicle anytime from the Fleet Management tab.";
+            return language === 'mr'
+              ? "तुमच्या कृषीप्रवाह खात्याशी **0 नोंदणीकृत वाहने** जोडलेली आहेत. तुम्ही फ्लीट व्यवस्थापन विभागातून नवीन वाहन जोडण्याची नोंदणी करू शकता."
+              : language === 'hi'
+              ? "आपके कृषिफ्लो खाते से **0 पंजीकृत वाहन** जुड़े हैं। आप फ्लीट प्रबंधन से नया वाहन जोड़ सकते हैं।"
+              : "You currently have **0 registered vehicles** linked to your KrishiFlow account. You can register a new vehicle anytime from the Fleet Management tab.";
           }
-          let vList = `You currently own **${data.count} registered vehicle(s)** in KrishiFlow:\n\n`;
-          data.vehicles.forEach((v, idx) => {
-            vList += `${idx + 1}. **${v.vehicleNo}** (${v.vehicleType}, Capacity: ${v.capacityKg} kg, Driver: ${v.driverName || 'Unassigned'}, Status: ${v.status})\n`;
-          });
-          return vList;
+
+          if (language === 'mr') {
+            let vList = `तुमच्या मालकीची सध्या **${data.count} नोंदणीकृत वाहने** कृषीप्रवाह मध्ये उपलब्ध आहेत:\n\n`;
+            data.vehicles.forEach((v, idx) => {
+              vList += `${idx + 1}. **${v.vehicleNo}** (${v.vehicleType}, क्षमता: ${v.capacityKg} किग्रॅ, ड्रायव्हर: ${v.driverName || 'अपरिभाषित'}, स्थिती: ${v.status})\n`;
+            });
+            return vList;
+          } else if (language === 'hi') {
+            let vList = `आपके स्वामित्व वाले **${data.count} पंजीकृत वाहन** कृषिफ्लो में उपलब्ध हैं:\n\n`;
+            data.vehicles.forEach((v, idx) => {
+              vList += `${idx + 1}. **${v.vehicleNo}** (${v.vehicleType}, क्षमता: ${v.capacityKg} किग्रा, चालक: ${v.driverName || 'अपरिभाषित'}, स्थिति: ${v.status})\n`;
+            });
+            return vList;
+          } else {
+            let vList = `You currently own **${data.count} registered vehicle(s)** in KrishiFlow:\n\n`;
+            data.vehicles.forEach((v, idx) => {
+              vList += `${idx + 1}. **${v.vehicleNo}** (${v.vehicleType}, Capacity: ${v.capacityKg} kg, Driver: ${v.driverName || 'Unassigned'}, Status: ${v.status})\n`;
+            });
+            return vList;
+          }
         } catch (e) {
           logger.warn(`Failed to parse user vehicles JSON in fallback: ${e.message}`);
         }
@@ -150,20 +181,47 @@ class GeminiService {
         try {
           const data = JSON.parse(tripMatch[1].trim());
           if (!data.success) {
-            return data.message || "User authentication is required to view your trip history.";
+            return language === 'mr' ? "तुमच्या ट्रिप्स पाहण्यासाठी प्रमाणीकरण आवश्यक आहे." : language === 'hi' ? "आपकी ट्रिप देखने के लिए लॉगिन आवश्यक है।" : "User authentication is required to view your trip history.";
           }
           if (!data.trips || data.trips.length === 0) {
-            return "You currently have **0 completed or recorded trips** in your KrishiFlow trip history.";
+            return language === 'mr'
+              ? "तुमच्या कृषीप्रवाह खात्यात सध्या **0 जुन्या ट्रिप्स** नोंदवलेल्या आहेत."
+              : language === 'hi'
+              ? "आपके कृषिफ्लो खाते में वर्तमान में **0 पुरानी ट्रिप** दर्ज हैं।"
+              : "You currently have **0 completed or recorded trips** in your KrishiFlow trip history.";
           }
-          let tList = `Here are your recorded trip details and earnings in KrishiFlow:\n\n`;
-          tList += `* **Total Trips:** ${data.totalTrips}\n`;
-          tList += `* **Completed Trips:** ${data.completedTripsCount}\n`;
-          tList += `* **Total Revenue / Freight Earnings:** ₹${data.totalEarnings.toLocaleString('en-IN')}\n\n`;
-          tList += `**Trip Breakdown:**\n`;
-          data.trips.forEach((t, idx) => {
-            tList += `${idx + 1}. **${t.cropType} Cargo (${t.quantityKg} kg)** | Route: ${t.origin} ➔ ${t.destination} | Vehicle: ${t.vehicleNo} (Driver: ${t.driverName}, Ph: ${t.driverPhone}) | Earnings: ₹${t.tripEarnings} | Status: **${t.status}** (Date: ${t.pickupDate})\n`;
-          });
-          return tList;
+
+          if (language === 'mr') {
+            let tList = `कृषीप्रवाह मधील तुमच्या जुन्या सहली (Trips) आणि उत्पन्नाचा तपशील:\n\n`;
+            tList += `* **एकूण ट्रिप्स:** ${data.totalTrips}\n`;
+            tList += `* **पूर्ण झालेल्या ट्रिप्स:** ${data.completedTripsCount}\n`;
+            tList += `* **एकूण उत्पन्न / कमाई:** ₹${data.totalEarnings.toLocaleString('en-IN')}\n\n`;
+            tList += `**सहलींचा तपशील:**\n`;
+            data.trips.forEach((t, idx) => {
+              tList += `${idx + 1}. **${t.cropType} माल (${t.quantityKg} किग्रॅ)** | मार्ग: ${t.origin} ➔ ${t.destination} | वाहन: ${t.vehicleNo} (ड्रायव्हर: ${t.driverName}, फोन: ${t.driverPhone}) | उत्पन्न: ₹${t.tripEarnings} | स्थिती: **${t.status}** (तारीख: ${t.pickupDate})\n`;
+            });
+            return tList;
+          } else if (language === 'hi') {
+            let tList = `कृषिफ्लो में आपकी पिछली यात्राओं (Trips) और कमाई का विवरण:\n\n`;
+            tList += `* **कुल ट्रिप:** ${data.totalTrips}\n`;
+            tList += `* **पूर्ण ट्रिप:** ${data.completedTripsCount}\n`;
+            tList += `* **कुल कमाई:** ₹${data.totalEarnings.toLocaleString('en-IN')}\n\n`;
+            tList += `**ट्रिप विवरण:**\n`;
+            data.trips.forEach((t, idx) => {
+              tList += `${idx + 1}. **${t.cropType} फसल (${t.quantityKg} किग्रा)** | रूट: ${t.origin} ➔ ${t.destination} | वाहन: ${t.vehicleNo} (चालक: ${t.driverName}, फोन: ${t.driverPhone}) | कमाई: ₹${t.tripEarnings} | स्थिति: **${t.status}** (तारीख: ${t.pickupDate})\n`;
+            });
+            return tList;
+          } else {
+            let tList = `Here are your recorded trip details and earnings in KrishiFlow:\n\n`;
+            tList += `* **Total Trips:** ${data.totalTrips}\n`;
+            tList += `* **Completed Trips:** ${data.completedTripsCount}\n`;
+            tList += `* **Total Revenue / Freight Earnings:** ₹${data.totalEarnings.toLocaleString('en-IN')}\n\n`;
+            tList += `**Trip Breakdown:**\n`;
+            data.trips.forEach((t, idx) => {
+              tList += `${idx + 1}. **${t.cropType} Cargo (${t.quantityKg} kg)** | Route: ${t.origin} ➔ ${t.destination} | Vehicle: ${t.vehicleNo} (Driver: ${t.driverName}, Ph: ${t.driverPhone}) | Earnings: ₹${t.tripEarnings} | Status: **${t.status}** (Date: ${t.pickupDate})\n`;
+            });
+            return tList;
+          }
         } catch (e) {
           logger.warn(`Failed to parse user trips JSON in fallback: ${e.message}`);
         }
@@ -177,13 +235,28 @@ class GeminiService {
         try {
           const data = JSON.parse(availMatch[1].trim());
           if (!data.availableVehicles || data.availableVehicles.length === 0) {
-            return "There are currently no active transport vehicles available in the KrishiFlow logistics network.";
+            return language === 'mr' ? "कृषीप्रवाह नेटवर्कवर सध्या कोणतीही वाहने उपलब्ध नाहीत." : language === 'hi' ? "नेटवर्क पर वर्तमान में कोई वाहन उपलब्ध नहीं हैं।" : "There are currently no active transport vehicles available in the KrishiFlow logistics network.";
           }
-          let vList = `Here are the active logistics vehicles available for farm pickup and transport:\n\n`;
-          data.availableVehicles.forEach((v, idx) => {
-            vList += `${idx + 1}. **${v.vehicleType}** (${v.vehicleNo}) | Capacity: ${v.capacityKg} kg | **Freight Rate:** ₹${v.ratePerKm}/km | Base Hub: ${v.baseLocation} | Status: ${v.status} | Driver: ${v.driverName} (${v.driverPhone})\n`;
-          });
-          return vList;
+
+          if (language === 'mr') {
+            let vList = `कृषीप्रवाह नेटवर्कवर उपलब्ध असलेली वाहतूक वाहने आणि त्यांचे दर:\n\n`;
+            data.availableVehicles.forEach((v, idx) => {
+              vList += `${idx + 1}. **${v.vehicleType}** (${v.vehicleNo}) | क्षमता: ${v.capacityKg} किग्रॅ | **भाडे दर:** ₹${v.ratePerKm}/किमी | बेस हब: ${v.baseLocation} | स्थिती: ${v.status} | ड्रायव्हर: ${v.driverName} (${v.driverPhone})\n`;
+            });
+            return vList;
+          } else if (language === 'hi') {
+            let vList = `कृषिफ्लो नेटवर्क पर उपलब्ध परिवहन वाहन और उनके दर:\n\n`;
+            data.availableVehicles.forEach((v, idx) => {
+              vList += `${idx + 1}. **${v.vehicleType}** (${v.vehicleNo}) | क्षमता: ${v.capacityKg} किग्रा | **भाड़ा दर:** ₹${v.ratePerKm}/किमी | बेस हब: ${v.baseLocation} | स्थिति: ${v.status} | चालक: ${v.driverName} (${v.driverPhone})\n`;
+            });
+            return vList;
+          } else {
+            let vList = `Here are the active logistics vehicles available for farm pickup and transport:\n\n`;
+            data.availableVehicles.forEach((v, idx) => {
+              vList += `${idx + 1}. **${v.vehicleType}** (${v.vehicleNo}) | Capacity: ${v.capacityKg} kg | **Freight Rate:** ₹${v.ratePerKm}/km | Base Hub: ${v.baseLocation} | Status: ${v.status} | Driver: ${v.driverName} (${v.driverPhone})\n`;
+            });
+            return vList;
+          }
         } catch (e) {
           logger.warn(`Failed to parse available vehicles JSON in fallback: ${e.message}`);
         }

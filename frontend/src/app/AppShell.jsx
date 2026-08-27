@@ -30,8 +30,6 @@ const BuyerRatesScreen = lazy(() => import('../features/buyer/BuyerRatesScreen')
 const BuyerInboundScreen = lazy(() => import('../features/buyer/BuyerInboundScreen').then((m) => ({ default: m.BuyerInboundScreen })));
 const ProfilePanel = lazy(() => import('../features/profile/ProfilePanel').then((m) => ({ default: m.ProfilePanel })));
 
-/* The assistant is deferred but always mounted — see VoiceAssistant for why. */
-const VoiceAssistant = lazy(() => import('../shared/voice/VoiceAssistant').then((m) => ({ default: m.VoiceAssistant })));
 
 const Loading = () => {
   const { t } = useT();
@@ -121,7 +119,6 @@ export const AppShell = () => {
       </div>
 
       <Suspense fallback={null}>
-        <VoiceAssistant />
         <KisanVoiceBot />
         <RAGAssistantModal isOpen={isRagOpen} onClose={() => setIsRagOpen(false)} />
       </Suspense>

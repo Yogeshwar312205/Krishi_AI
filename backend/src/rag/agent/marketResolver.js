@@ -24,11 +24,54 @@ function stringSimilarity(a, b) {
 }
 
 /**
- * Verified Market Aliases Map.
- * Maps common variations (English, Devanagari, spelling variants) to official Agmarknet feed names.
  * DO NOT add unverified guesses. All entries mapped to actual Agmarknet market names.
  */
 const VERIFIED_MARKET_MAP = {
+  // Kopargaon / Kopergaon / कोपरगाव
+  'kopargaon': { canonical: 'Kopargaon', searchTerms: ['kopargaon', 'kopergaon', 'rahata', 'कोपरगाव', 'कोपरगांव'] },
+  'kopergaon': { canonical: 'Kopargaon', searchTerms: ['kopargaon', 'kopergaon', 'rahata', 'कोपरगाव', 'कोपरगांव'] },
+  'koppergaon': { canonical: 'Kopargaon', searchTerms: ['kopargaon', 'kopergaon', 'rahata', 'कोपरगाव', 'कोपरगांव'] },
+  'कोपरगाव': { canonical: 'Kopargaon', searchTerms: ['kopargaon', 'kopergaon', 'rahata', 'कोपरगाव', 'कोपरगांव'] },
+  'कोपरगांव': { canonical: 'Kopargaon', searchTerms: ['kopargaon', 'kopergaon', 'rahata', 'कोपरगाव', 'कोपरगांव'] },
+
+  // Rahata / राहाता
+  'rahata': { canonical: 'Rahata', searchTerms: ['rahata', 'kopargaon', 'राहाता'] },
+  'राहाता': { canonical: 'Rahata', searchTerms: ['rahata', 'kopargaon', 'राहाता'] },
+
+  // Ahmednagar / Ahilyanagar / अहमदनगर
+  'ahmednagar': { canonical: 'Ahmednagar', searchTerms: ['ahmednagar', 'ahilyanagar', 'nagar', 'अहमदनगर', 'अहिल्यानगर'] },
+  'ahilyanagar': { canonical: 'Ahmednagar', searchTerms: ['ahmednagar', 'ahilyanagar', 'nagar', 'अहमदनगर', 'अहिल्यानगर'] },
+  'अहमदनगर': { canonical: 'Ahmednagar', searchTerms: ['ahmednagar', 'ahilyanagar', 'nagar', 'अहमदनगर', 'अहिल्यानगर'] },
+
+  // Rahuri / राहुरी
+  'rahuri': { canonical: 'Rahuri', searchTerms: ['rahuri', 'राहुरी'] },
+  'राहुरी': { canonical: 'Rahuri', searchTerms: ['rahuri', 'राहुरी'] },
+
+  // Shrirampur / श्रीरामपूर
+  'shrirampur': { canonical: 'Shrirampur', searchTerms: ['shrirampur', 'श्रीरामपूर'] },
+  'श्रीरामपूर': { canonical: 'Shrirampur', searchTerms: ['shrirampur', 'श्रीरामपूर'] },
+
+  // Sinnar / सिन्नर
+  'sinnar': { canonical: 'Sinnar', searchTerms: ['sinnar', 'sinner', 'सिन्नर'] },
+  'sinner': { canonical: 'Sinnar', searchTerms: ['sinnar', 'sinner', 'सिन्नर'] },
+  'सिन्नर': { canonical: 'Sinnar', searchTerms: ['sinnar', 'sinner', 'सिन्नर'] },
+
+  // Satana / सटाणा
+  'satana': { canonical: 'Satana', searchTerms: ['satana', 'सटाणा'] },
+  'सटाणा': { canonical: 'Satana', searchTerms: ['satana', 'सटाणा'] },
+
+  // Malegaon / मालेगाव
+  'malegaon': { canonical: 'Malegaon', searchTerms: ['malegaon', 'मालेगाव'] },
+  'मालेगाव': { canonical: 'Malegaon', searchTerms: ['malegaon', 'मालेगाव'] },
+
+  // Chandwad / चांदवड
+  'chandwad': { canonical: 'Chandwad', searchTerms: ['chandwad', 'चांदवड'] },
+  'चांदवड': { canonical: 'Chandwad', searchTerms: ['chandwad', 'चांदवड'] },
+
+  // Niphad / निफाड
+  'niphad': { canonical: 'Niphad', searchTerms: ['niphad', 'निफाड'] },
+  'निफाड': { canonical: 'Niphad', searchTerms: ['niphad', 'निफाड'] },
+
   // Deola / Devala / Devla
   'deola': { canonical: 'Devala', searchTerms: ['devala', 'deola', 'devla', 'देवळा', 'देवला'] },
   'devala': { canonical: 'Devala', searchTerms: ['devala', 'deola', 'devla', 'देवळा', 'देवला'] },
@@ -197,12 +240,15 @@ class MarketResolver {
       const match = clean.match(pattern);
       if (match && match[1]) {
         const extracted = match[1].toLowerCase();
-        // Ignore generic words and common question words
+        // Ignore generic words, pronouns, and question words in English, Hindi, and Marathi
         const stopwords = [
           'today', 'price', 'rate', 'onion', 'tomato', 'potato', 'wheat', 'crop', 'mandi', 'market',
           'apmc', 'kaanda', 'bhava', 'what', 'where', 'when', 'which', 'who', 'how', 'why', 'are', 'is',
           'was', 'were', 'have', 'has', 'had', 'the', 'can', 'will', 'show', 'list', 'rules', 'for', 'all',
-          'some', 'any', 'tell', 'give', 'get'
+          'some', 'any', 'tell', 'give', 'get', 'details', 'vehicle', 'vehicles', 'truck', 'trucks', 'trips',
+          'कोणत्या', 'कोणते', 'कोणता', 'काय', 'कसा', 'कशी', 'कसे', 'मला', 'माझ्या', 'माझ्याकडे', 'आमच्याकडे',
+          'गाड्या', 'ट्रिप्स', 'उपलब्ध', 'दर', 'भाव', 'माहिती', 'आहेत', 'आहे', 'द्या', 'दाखवा', 'सांगा',
+          'किती', 'पाहिजे', 'कोणसी', 'कौनसे', 'कितने', 'गाड़ियां', 'मुझे', 'मेरी'
         ];
         if (!stopwords.includes(extracted)) {
           const canonical = extracted.charAt(0).toUpperCase() + extracted.slice(1);

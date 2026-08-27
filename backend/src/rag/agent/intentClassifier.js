@@ -39,7 +39,14 @@ class IntentClassifier {
       lower.includes('vehicles i have') ||
       (lower.includes('how many vehicle') || lower.includes('how many vehicles')) ||
       (lower.includes('show my') && lower.includes('vehicle')) ||
-      (lower.includes('list my') && lower.includes('vehicle'));
+      (lower.includes('list my') && lower.includes('vehicle')) ||
+      lower.includes('माझ्याकडे') ||
+      lower.includes('माझ्या मालकीच्या') ||
+      lower.includes('माझ्या गाड्या') ||
+      lower.includes('किती गाड्या') ||
+      lower.includes('माझं वाहन') ||
+      lower.includes('majhyakade') ||
+      lower.includes('majhya gadhya');
 
     if (isUserVehiclesQuery) {
       return 'USER_VEHICLES';
@@ -60,7 +67,15 @@ class IntentClassifier {
       lower.includes('earnings from trip') ||
       lower.includes('orders completed') ||
       lower.includes('history of trips') ||
-      lower.includes('deliveries');
+      lower.includes('deliveries') ||
+      lower.includes('सहली') ||
+      lower.includes('ट्रिप्स') ||
+      lower.includes('जुन्या ट्रिप्स') ||
+      lower.includes('आधीच्या सहली') ||
+      lower.includes('माझ्या ट्रिप्स') ||
+      lower.includes('ट्रिपची माहिती') ||
+      lower.includes('junya trips') ||
+      lower.includes('sahali');
 
     if (isUserTripsQuery) {
       return 'USER_TRIPS';
@@ -83,7 +98,14 @@ class IntentClassifier {
       lower.includes('vehicle rates') ||
       lower.includes('rate per km') ||
       lower.includes('freight rate') ||
-      lower.includes('trucks for hire');
+      lower.includes('trucks for hire') ||
+      lower.includes('उपलब्ध गाड्या') ||
+      lower.includes('गाड्या उपलब्ध') ||
+      lower.includes('उपलब्ध ट्रक') ||
+      lower.includes('वाहतूक दर') ||
+      lower.includes('भाडे दर') ||
+      lower.includes('uplabdh gadhya') ||
+      lower.includes('vahatuk dar');
 
     if (isAvailableFleetQuery) {
       return 'AVAILABLE_FLEET';

@@ -101,12 +101,32 @@ export const useSpeech = (lang) => {
     utterance.rate = 0.95;
 
     const voices = window.speechSynthesis.getVoices();
-    const exact = voices.find((v) => v.lang === targetLocale || v.lang.startsWith(targetLang));
-    const fallback = targetLang === 'mr' || targetLocale.startsWith('mr')
-      ? voices.find((v) => v.lang === 'hi-IN' || v.lang.startsWith('hi'))
-      : null;
 
-    if (exact || fallback) utterance.voice = exact || fallback;
+    let selectedVoice = null;
+    if (targetLang === 'en' || targetLocale === 'en-IN') {
+      // Prioritize Indian English Accent voices (en-IN)
+      selectedVoice =
+        voices.find((v) => v.lang === 'en-IN') ||
+        voices.find((v) => v.lang.startsWith('en') && (v.name.toLowerCase().includes('india') || v.name.includes('Heera') || v.name.includes('Ravi') || v.name.includes('Rishi') || v.name.includes('Neerja'))) ||
+        voices.find((v) => v.lang.startsWith('en'));
+    } else if (targetLang === 'hi' || targetLocale === 'hi-IN') {
+      selectedVoice =
+        voices.find((v) => v.lang === 'hi-IN') ||
+        voices.find((v) => v.lang.startsWith('hi')) ||
+        voices.find((v) => v.lang === 'en-IN');
+    } else if (targetLang === 'mr' || targetLocale === 'mr-IN') {
+      selectedVoice =
+        voices.find((v) => v.lang === 'mr-IN' || v.lang.startsWith('mr')) ||
+        voices.find((v) => v.lang === 'hi-IN' || v.lang.startsWith('hi')) ||
+        voices.find((v) => v.lang === 'en-IN');
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang || targetLocale;
+    } else {
+      utterance.lang = targetLocale;
+    }
 
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
