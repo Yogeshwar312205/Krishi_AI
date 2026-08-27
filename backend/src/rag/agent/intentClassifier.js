@@ -31,10 +31,10 @@ class IntentClassifier {
     // 1b. User Personal Registered Vehicles Query (DB query)
     const isUserVehiclesQuery =
       lower.includes('i own') ||
-      lower.includes('my vehicle') ||
-      lower.includes('my vehicles') ||
-      lower.includes('my truck') ||
-      lower.includes('my trucks') ||
+      (lower.includes('my vehicle') && !lower.includes('trip')) ||
+      (lower.includes('my vehicles') && !lower.includes('trip')) ||
+      (lower.includes('my truck') && !lower.includes('trip')) ||
+      (lower.includes('my trucks') && !lower.includes('trip')) ||
       lower.includes('my fleet') ||
       lower.includes('vehicles i have') ||
       (lower.includes('how many vehicle') || lower.includes('how many vehicles')) ||
@@ -43,6 +43,50 @@ class IntentClassifier {
 
     if (isUserVehiclesQuery) {
       return 'USER_VEHICLES';
+    }
+
+    // 1c. User Past Trips & Driver History Query (DB query)
+    const isUserTripsQuery =
+      lower.includes('trip') ||
+      lower.includes('trips') ||
+      lower.includes('previous trip') ||
+      lower.includes('completed trip') ||
+      lower.includes('past trip') ||
+      lower.includes('past trips') ||
+      lower.includes('amount generated') ||
+      lower.includes('trip revenue') ||
+      lower.includes('trip details') ||
+      lower.includes('driver details') ||
+      lower.includes('earnings from trip') ||
+      lower.includes('orders completed') ||
+      lower.includes('history of trips') ||
+      lower.includes('deliveries');
+
+    if (isUserTripsQuery) {
+      return 'USER_TRIPS';
+    }
+
+    // 1d. Available Platform Vehicles & Transport Rates Query (DB query)
+    const isAvailableFleetQuery =
+      lower.includes('available vehicle') ||
+      lower.includes('available vehicles') ||
+      lower.includes('available truck') ||
+      lower.includes('available trucks') ||
+      lower.includes('vehicles available') ||
+      lower.includes('vehicles are available') ||
+      lower.includes('vehicle is available') ||
+      lower.includes('trucks available') ||
+      lower.includes('trucks are available') ||
+      lower.includes('transport rate') ||
+      lower.includes('transport rates') ||
+      lower.includes('vehicle rate') ||
+      lower.includes('vehicle rates') ||
+      lower.includes('rate per km') ||
+      lower.includes('freight rate') ||
+      lower.includes('trucks for hire');
+
+    if (isAvailableFleetQuery) {
+      return 'AVAILABLE_FLEET';
     }
 
     // 2. Vehicle Registration Specific Intent

@@ -119,8 +119,18 @@ class RAGAgent {
           };
         }
 
-        // Format Tool XML context for Gemini
-        const toolContext = `<live_market_data>\n${JSON.stringify(toolResult, null, 2)}\n</live_market_data>`;
+        // Format Tool XML context for Gemini depending on tool type
+        let toolContext = '';
+        if (toolUsed === 'getUserVehicles') {
+          toolContext = `<user_vehicles_data>\n${JSON.stringify(toolResult, null, 2)}\n</user_vehicles_data>`;
+        } else if (toolUsed === 'getUserTrips') {
+          toolContext = `<user_trips_data>\n${JSON.stringify(toolResult, null, 2)}\n</user_trips_data>`;
+        } else if (toolUsed === 'getAvailableVehicles') {
+          toolContext = `<available_vehicles_data>\n${JSON.stringify(toolResult, null, 2)}\n</available_vehicles_data>`;
+        } else {
+          toolContext = `<live_market_data>\n${JSON.stringify(toolResult, null, 2)}\n</live_market_data>`;
+        }
+
         rawAnswer = await geminiService.generateAnswer(
           SYSTEM_PROMPT,
           cleanQuery,

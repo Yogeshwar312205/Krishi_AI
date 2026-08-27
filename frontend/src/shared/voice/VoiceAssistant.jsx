@@ -24,15 +24,20 @@ import { DemoStamp } from '../../design/primitives/DemoStamp';
  *     that contradicts what is on screen — which is exactly what the previous
  *     version did, with "₹48" and "₹25,000" hardcoded into its replies.
  */
+import { sendRagQuestion } from '../../services/api';
+
 export const VoiceAssistant = () => {
   const cropDetails = useAppStore((state) => state.cropDetails);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const selectedLang = useAppStore((state) => state.language);
   const { t, lang, rate } = useT();
-  const { isSupported, isListening, isSpeaking, listen, speak, stopSpeaking } = useSpeech(lang);
+  const activeLang = selectedLang || lang || 'en';
+  const { isSupported, isListening, isSpeaking, listen, speak, stopSpeaking } = useSpeech(activeLang);
 
   const [isOpen, setIsOpen] = useState(false);
   const [typed, setTyped] = useState('');
   const [turns, setTurns] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const logRef = useRef(null);
   const panelRef = useRef(null);
 
@@ -50,53 +55,64 @@ export const VoiceAssistant = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isOpen]);
 
-  /** Resolves a transcript to a spoken answer, and performs any navigation. */
-  const respond = (transcript) => {
-    const intent = matchIntent(transcript);
-    const { best, action } = buildVerdict(cropDetails.cropType, cropDetails.quantityKg);
-    const cropName = t(`crops.${cropDetails.cropType}`);
+  /** Resolves a transcript to a spoken answer from RAG Agent or fallback offline intent. */
+  const respond = async (transcript) => {
+    if (!transcript || !transcript.trim()) return;
 
-    let reply;
+    setTurns((prev) => [...prev, { from: 'user', text: transcript }]);
+    setIsLoading(true);
 
-    switch (intent) {
-      case 'rate':
-        reply = t('voice.answer.rate', {
-          crop: cropName,
-          rate: rate(best.ratePerKg),
-          mandi: best.name,
-        });
-        setActiveTab('price');
-        break;
+    try {
+      const ragRes = await sendRagQuestion(transcript);
+      const reply = ragRes.answer || t('voice.notUnderstood');
+      const detectedLang = ragRes.language || activeLang;
 
-      case 'verdict':
-        // Speak the decision and the reason, the same pairing the slab shows.
-        reply = action === 'wait'
-          ? `${t('today.hold')}. ${t('today.holdWhy')}`
-          : `${t('today.sell')}. ${t('today.sellWhy')}`;
-        setActiveTab('today');
-        break;
+      setTurns((prev) => [...prev, { from: 'bot', text: reply }]);
+      speak(reply, detectedLang);
+    } catch (err) {
+      // Fallback to local intent matcher if server is unreachable
+      const intent = matchIntent(transcript);
+      const { best, action } = buildVerdict(cropDetails.cropType, cropDetails.quantityKg);
+      const cropName = t(`crops.${cropDetails.cropType}`);
 
-      case 'book':
-        reply = t('voice.answer.opening', { screen: t('nav.farmer.transport') });
-        setActiveTab('transport');
-        break;
+      let reply;
+      switch (intent) {
+        case 'rate':
+          reply = t('voice.answer.rate', {
+            crop: cropName,
+            rate: rate(best.ratePerKg),
+            mandi: best.name,
+          });
+          setActiveTab('price');
+          break;
 
-      case 'bookings':
-        reply = t('voice.answer.opening', { screen: t('transport.bookings.title') });
-        setActiveTab('transport');
-        break;
+        case 'verdict':
+          reply = action === 'wait'
+            ? `${t('today.hold')}. ${t('today.holdWhy')}`
+            : `${t('today.sell')}. ${t('today.sellWhy')}`;
+          setActiveTab('today');
+          break;
 
-      case 'crop':
-        reply = t('voice.answer.opening', { screen: t('nav.farmer.crop') });
-        setActiveTab('crop');
-        break;
+        case 'book':
+        case 'bookings':
+          reply = t('voice.answer.opening', { screen: t('nav.farmer.transport') });
+          setActiveTab('transport');
+          break;
 
-      default:
-        reply = t('voice.notUnderstood');
+        case 'crop':
+          reply = t('voice.answer.opening', { screen: t('nav.farmer.crop') });
+          setActiveTab('crop');
+          break;
+
+        default:
+          reply = t('voice.notUnderstood');
+      }
+
+      setTurns((prev) => [...prev, { from: 'bot', text: reply }]);
+      speak(reply, activeLang);
+    } finally {
+      setIsLoading(false);
     }
-
-    setTurns((prev) => [...prev, { from: 'user', text: transcript }, { from: 'bot', text: reply }]);
-    speak(reply);
   };
 
   const submitTyped = () => {

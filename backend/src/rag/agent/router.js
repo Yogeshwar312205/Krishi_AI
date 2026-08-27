@@ -51,6 +51,36 @@ class Router {
       };
     }
 
+    // Path A3: User Past Trips & Driver History Query (MongoDB)
+    if (intent === 'USER_TRIPS') {
+      logger.info(`[Router] Routing to User Past Trips Database Tool`);
+      const userTripsTool = toolRegistry.getTool('getUserTrips');
+      const toolResult = await userTripsTool.execute({ user });
+
+      return {
+        mode: 'TOOL_ONLY',
+        toolResult,
+        ragChunks: [],
+        toolUsed: 'getUserTrips',
+        dataSource: 'KrishiFlow Trip & Dispatch Database'
+      };
+    }
+
+    // Path A4: Available Platform Vehicles & Rates Query (MongoDB)
+    if (intent === 'AVAILABLE_FLEET') {
+      logger.info(`[Router] Routing to Available Platform Fleet Database Tool`);
+      const availableVehiclesTool = toolRegistry.getTool('getAvailableVehicles');
+      const toolResult = await availableVehiclesTool.execute({ user });
+
+      return {
+        mode: 'TOOL_ONLY',
+        toolResult,
+        ragChunks: [],
+        toolUsed: 'getAvailableVehicles',
+        dataSource: 'KrishiFlow Platform Fleet Database'
+      };
+    }
+
     // Path B: Combined Query (Live Data + RAG Rules)
     if (intent === 'COMBINED' || (intent === 'PROFIT_CALCULATION' && entities.commodity)) {
       logger.info(`[Router] Routing to COMBINED execution (Live Tool + RAG Retrieval)`);

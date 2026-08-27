@@ -76,23 +76,36 @@ export const useSpeech = (lang) => {
     }
   }, [isListening]);
 
-  const speak = useCallback((text) => {
+  const speak = useCallback((text, langOverride) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text) return;
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = locale;   // the fix that makes Hindi and Marathi audible
-    utterance.rate = 0.95;     // a touch slower than default — this is advice, not chatter
+    const targetLang = langOverride || lang || 'en';
+    const targetLocale = SPEECH_LOCALES[targetLang] || targetLang || 'en-IN';
 
-    /*
-     * Marathi TTS voices are not installed on many devices. Falling back to a
-     * Hindi voice is the right failure: the two share Devanagari and enough
-     * phonology to stay understandable, whereas an English voice reading
-     * Devanagari is noise.
-     */
+    window.speechSynthesis.cancel();
+
+    // Clean markdown characters before sending to SpeechSynthesisUtterance
+    const cleanText = text
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/###?\s*/g, '')
+      .replace(/[-•]\s*/g, '')
+      .replace(/`{1,3}[^`]*`{1,3}/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Clean links
+      .trim();
+
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = targetLocale;
+    utterance.rate = 0.95;
+
     const voices = window.speechSynthesis.getVoices();
-    const exact = voices.find((v) => v.lang === locale);
-    const fallback = locale === 'mr-IN' ? voices.find((v) => v.lang === 'hi-IN') : null;
+    const exact = voices.find((v) => v.lang === targetLocale || v.lang.startsWith(targetLang));
+    const fallback = targetLang === 'mr' || targetLocale.startsWith('mr')
+      ? voices.find((v) => v.lang === 'hi-IN' || v.lang.startsWith('hi'))
+      : null;
+
     if (exact || fallback) utterance.voice = exact || fallback;
 
     utterance.onstart = () => setIsSpeaking(true);
@@ -100,7 +113,7 @@ export const useSpeech = (lang) => {
     utterance.onerror = () => setIsSpeaking(false);
 
     window.speechSynthesis.speak(utterance);
-  }, [locale]);
+  }, [lang]);
 
   const stopSpeaking = useCallback(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {

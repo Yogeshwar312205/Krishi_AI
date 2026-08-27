@@ -1,14 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Mic, MicOff, Volume2, Send, Sparkles, X, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { sendRagQuestion } from '../../services/api';
+import { useSpeech } from '../../shared/voice/useSpeech';
 
 export default function RAGAssistantModal({ isOpen, onClose }) {
   const user = useAppStore((state) => state.user);
+  const globalLang = useAppStore((state) => state.language) || 'en';
+  const [currentLang, setCurrentLang] = useState(globalLang);
+
+  const { isSupported, isListening, isSpeaking, listen, speak, stopSpeaking } = useSpeech(currentLang);
+
   const [messages, setMessages] = useState([
     {
       sender: 'assistant',
-      text: `Hello ${user?.name || 'Farmer'}! I am KrishiFlow AI Sahayak 🌾, your verified agricultural knowledge assistant. Ask me anything about crop profit calculations, mandi deals, VRP fleet dispatch, or platform features.`,
+      text: `Hello ${user?.name || 'Farmer'}! I am KrishiFlow AI Sahayak 🌾. Ask me anything in English, Hindi (हिंदी), or Marathi (मराठी) via text or voice!`,
       sources: [],
+      language: currentLang,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -27,10 +35,10 @@ export default function RAGAssistantModal({ isOpen, onClose }) {
 
   const quickQuestions = [
     "How does KrishiFlow calculate net profit?",
-    "How does VRP vehicle insertion work?",
-    "What is the difference between board rate and agreed rate?",
+    "Give me list of previous trip details that i completed",
+    "Which vehicles are available and their rates",
     "KrishiFlow मध्ये शेतकरी नफा कसा मोजतो?",
-    "KrishiFlow profit की गणना कैसे करता है?"
+    "Pune APMC Onion Market Price"
   ];
 
   const handleSend = async (queryText) => {
@@ -51,16 +59,21 @@ export default function RAGAssistantModal({ isOpen, onClose }) {
     try {
       const response = await sendRagQuestion(textToSend);
 
+      const detectedLang = response.language || currentLang;
+
       const assistantMsg = {
         sender: 'assistant',
         text: response.answer,
         sources: response.sources || [],
         retrieval: response.retrieval,
-        language: response.language,
+        language: detectedLang,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
+
+      // Automatically speak out response in the detected language (Marathi / Hindi / English)
+      speak(response.answer, detectedLang);
     } catch (err) {
       setError(err.message || 'Failed to retrieve grounded answer.');
       setMessages((prev) => [
@@ -69,6 +82,7 @@ export default function RAGAssistantModal({ isOpen, onClose }) {
           sender: 'assistant',
           text: `⚠️ Error: ${err.message || 'Could not connect to KrishiFlow AI Sahayak.'}`,
           sources: [],
+          language: 'en',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -77,12 +91,27 @@ export default function RAGAssistantModal({ isOpen, onClose }) {
     }
   };
 
+  const toggleMic = () => {
+    if (isListening) {
+      listen(() => {});
+      return;
+    }
+    listen((transcript) => {
+      if (transcript) {
+        setInputQuery(transcript);
+        handleSend(transcript);
+      }
+    });
+  };
+
   const handleClearHistory = () => {
+    stopSpeaking();
     setMessages([
       {
         sender: 'assistant',
         text: `Chat history cleared. How can I help you with KrishiFlow today?`,
         sources: [],
+        language: currentLang,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
@@ -92,42 +121,68 @@ export default function RAGAssistantModal({ isOpen, onClose }) {
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-lg bg-emerald-950/95 text-emerald-50 border-l border-emerald-800/60 shadow-2xl flex flex-col h-full">
         {/* Header */}
-        <div className="p-4 border-b border-emerald-800/80 bg-emerald-900/90 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-xl">
-              🌾
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base tracking-wide text-white">KrishiFlow AI Sahayak</h3>
-                <span className="px-2 py-0.5 text-xs font-semibold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded">
-                  RAG Agent
-                </span>
+        <div className="p-4 border-b border-emerald-800/80 bg-emerald-900/90 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-xl">
+                🌾
               </div>
-              <p className="text-xs text-emerald-300/80 font-mono">
-                Authenticated Role: <span className="font-semibold text-amber-300">{user?.role || 'Farmer'}</span>
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-base tracking-wide text-white">KrishiFlow AI Sahayak</h3>
+                  <span className="px-2 py-0.5 text-xs font-semibold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded">
+                    Voice + RAG
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-300/80 font-mono">
+                  Role: <span className="font-semibold text-amber-300">{user?.role || 'Farmer'}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleClearHistory}
+                title="Clear Chat History"
+                className="p-1.5 text-xs text-emerald-300/70 hover:text-white hover:bg-emerald-800/60 rounded transition"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => { stopSpeaking(); onClose(); }}
+                className="p-1.5 text-emerald-300 hover:text-white text-lg font-bold transition"
+              >
+                ✕
+              </button>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleClearHistory}
-              title="Clear Chat History"
-              className="p-1.5 text-xs text-emerald-300/70 hover:text-white hover:bg-emerald-800/60 rounded transition"
-            >
-              Clear
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1.5 text-emerald-300 hover:text-white text-lg font-bold transition"
-            >
-              ✕
-            </button>
+
+          {/* Voice Language Selector */}
+          <div className="flex items-center justify-between pt-1 border-t border-emerald-800/50 text-xs">
+            <span className="text-emerald-300/80 font-semibold">Voice Language:</span>
+            <div className="flex items-center space-x-1.5">
+              {[
+                { code: 'en', label: 'English' },
+                { code: 'hi', label: 'हिंदी (Hindi)' },
+                { code: 'mr', label: 'मराठी (Marathi)' }
+              ].map((langObj) => (
+                <button
+                  key={langObj.code}
+                  onClick={() => setCurrentLang(langObj.code)}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition ${
+                    currentLang === langObj.code
+                      ? 'bg-amber-500 text-amber-950 font-bold shadow'
+                      : 'bg-emerald-950/60 text-emerald-300 hover:bg-emerald-800/60 border border-emerald-800'
+                  }`}
+                >
+                  {langObj.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Quick Suggestion Chips */}
-        <div className="p-3 bg-emerald-900/40 border-b border-emerald-800/40 overflow-x-auto flex gap-2 no-scrollbar">
+        <div className="p-2.5 bg-emerald-900/40 border-b border-emerald-800/40 overflow-x-auto flex gap-2 no-scrollbar">
           {quickQuestions.map((q, idx) => (
             <button
               key={idx}
@@ -148,13 +203,26 @@ export default function RAGAssistantModal({ isOpen, onClose }) {
               className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[88%] p-3.5 rounded-lg text-sm leading-relaxed ${
+                className={`max-w-[88%] p-3.5 rounded-lg text-sm leading-relaxed relative ${
                   msg.sender === 'user'
                     ? 'bg-amber-600 text-amber-50 rounded-br-none font-medium'
                     : 'bg-emerald-900/80 border border-emerald-700/60 text-emerald-100 rounded-bl-none'
                 }`}
               >
-                <p className="whitespace-pre-line">{msg.text}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="whitespace-pre-line flex-1">{msg.text}</p>
+                  
+                  {/* TTS Voice Replay Button for Assistant Messages */}
+                  {msg.sender === 'assistant' && (
+                    <button
+                      onClick={() => speak(msg.text, msg.language || currentLang)}
+                      title="Listen Voice Output"
+                      className="p-1 rounded bg-emerald-800/80 hover:bg-emerald-700 text-amber-300 shrink-0 transition"
+                    >
+                      <Volume2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
 
                 {/* Sources Section */}
                 {msg.sources && msg.sources.length > 0 && (
@@ -192,31 +260,70 @@ export default function RAGAssistantModal({ isOpen, onClose }) {
           {loading && (
             <div className="flex items-center space-x-2 text-emerald-400 text-xs py-2">
               <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></div>
-              <span>Searching KrishiFlow Knowledge Base & Generating Grounded Answer...</span>
+              <span>Analyzing database & generating voice-ready response...</span>
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
 
-        {/* Input Bar */}
-        <div className="p-3 border-t border-emerald-800/80 bg-emerald-900/90 flex items-center gap-2">
-          <input
-            type="text"
-            value={inputQuery}
-            onChange={(e) => setInputQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask AI Sahayak (English, Hindi, Marathi)..."
-            disabled={loading}
-            className="flex-1 px-3.5 py-2.5 bg-emerald-950 text-emerald-100 placeholder-emerald-500/70 text-sm border border-emerald-700/60 rounded focus:outline-none focus:border-amber-400"
-          />
-          <button
-            onClick={() => handleSend()}
-            disabled={loading || !inputQuery.trim()}
-            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-amber-950 font-bold text-sm rounded transition tracking-wide flex items-center gap-1"
-          >
-            <span>Ask</span>
-            <span>➔</span>
-          </button>
+        {/* Input & Voice Controls */}
+        <div className="p-3 border-t border-emerald-800/80 bg-emerald-900/90 flex flex-col gap-2">
+          {/* Active Speaking Indicator */}
+          {isSpeaking && (
+            <div className="flex items-center justify-between px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded text-xs text-amber-200">
+              <div className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-amber-400 animate-bounce" />
+                <span>Speaking in <strong>{currentLang === 'mr' ? 'मराठी' : currentLang === 'hi' ? 'हिंदी' : 'English'}</strong>...</span>
+              </div>
+              <button
+                onClick={stopSpeaking}
+                className="px-2 py-0.5 bg-amber-500 text-amber-950 font-bold rounded text-[11px]"
+              >
+                Stop
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            {/* Multilingual Voice Input Mic Button */}
+            {isSupported && (
+              <button
+                onClick={toggleMic}
+                title={isListening ? "Listening... click to stop" : "Speak Voice Question"}
+                className={`p-2.5 rounded border transition shrink-0 flex items-center justify-center ${
+                  isListening
+                    ? 'bg-rose-600 text-white animate-pulse border-rose-400 shadow-lg'
+                    : 'bg-emerald-800 hover:bg-emerald-700 text-amber-300 border-emerald-600'
+                }`}
+              >
+                {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </button>
+            )}
+
+            {/* Text Input */}
+            <input
+              type="text"
+              value={inputQuery}
+              onChange={(e) => setInputQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder={
+                isListening
+                  ? "Listening in " + (currentLang === 'mr' ? 'मराठी...' : currentLang === 'hi' ? 'हिंदी...' : 'English...')
+                  : "Ask or speak (English, Hindi, Marathi)..."
+              }
+              disabled={loading}
+              className="flex-1 px-3.5 py-2.5 bg-emerald-950 text-emerald-100 placeholder-emerald-500/70 text-sm border border-emerald-700/60 rounded focus:outline-none focus:border-amber-400"
+            />
+
+            <button
+              onClick={() => handleSend()}
+              disabled={loading || !inputQuery.trim()}
+              className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-amber-950 font-bold text-sm rounded transition tracking-wide flex items-center gap-1 shrink-0"
+            >
+              <span>Ask</span>
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

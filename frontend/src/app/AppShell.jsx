@@ -81,6 +81,8 @@ const screenFor = (tabId) => {
 
 const RAGAssistantModal = lazy(() => import('../features/rag/RAGAssistantModal'));
 
+const KisanVoiceBot = lazy(() => import('../components/KisanVoiceBot').then((m) => ({ default: m.KisanVoiceBot })));
+
 export const AppShell = () => {
   const activeTab = useAppStore((state) => state.activeTab);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
@@ -95,12 +97,6 @@ export const AppShell = () => {
     return () => window.removeEventListener('open-rag-assistant', handleOpenRag);
   }, []);
 
-  /*
-   * A stored tab can belong to a role the user is no longer in — after a role
-   * switch, or after this rebuild renamed the tabs under an existing
-   * localStorage session. Recover to the role's first tab rather than showing
-   * a blank screen.
-   */
   const role = normaliseRole(activeRole);
   useEffect(() => {
     if (!isTabValidForRole(activeTab, role)) {
@@ -117,7 +113,6 @@ export const AppShell = () => {
 
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-8 sm:px-6 lg:max-w-6xl lg:px-10">
           <Suspense fallback={<Loading />}>
-            {/* Keyed so each screen replays its entrance rather than cross-fading. */}
             <div key={activeTab}>{screenFor(activeTab)}</div>
           </Suspense>
         </main>
@@ -127,6 +122,7 @@ export const AppShell = () => {
 
       <Suspense fallback={null}>
         <VoiceAssistant />
+        <KisanVoiceBot />
         <RAGAssistantModal isOpen={isRagOpen} onClose={() => setIsRagOpen(false)} />
       </Suspense>
     </div>
