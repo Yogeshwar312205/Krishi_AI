@@ -1,5 +1,28 @@
 const { TOWN_COORDS, MARKET_COORDS, DISTRICT_COORDS } = require('../../data/mandiGeo');
 
+function levenshtein(a, b) {
+  const tmp = [];
+  let i, j;
+  for (i = 0; i <= a.length; i++) tmp[i] = [i];
+  for (j = 0; j <= b.length; j++) tmp[0][j] = j;
+  for (i = 1; i <= a.length; i++) {
+    for (j = 1; j <= b.length; j++) {
+      tmp[i][j] = a[i - 1] === b[j - 1] 
+        ? tmp[i - 1][j - 1] 
+        : Math.min(tmp[i - 1][j] + 1, tmp[i][j - 1] + 1, tmp[i - 1][j - 1] + 1);
+    }
+  }
+  return tmp[a.length][b.length];
+}
+
+function stringSimilarity(a, b) {
+  if (!a || !b) return 0;
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1.0;
+  const dist = levenshtein(a.toLowerCase(), b.toLowerCase());
+  return 1 - dist / maxLen;
+}
+
 /**
  * Verified Market Aliases Map.
  * Maps common variations (English, Devanagari, spelling variants) to official Agmarknet feed names.
@@ -24,8 +47,9 @@ const VERIFIED_MARKET_MAP = {
   'लासलगाव': { canonical: 'Lasalgaon', searchTerms: ['lasalgaon', 'niphad', 'लासलगाव'] },
 
   // Pimpalgaon Baswant
-  'pimpalgaon': { canonical: 'Pimpalgaon Baswant', searchTerms: ['pimpalgaon', 'पिंपळगाव'] },
-  'पिंपळगाव': { canonical: 'Pimpalgaon Baswant', searchTerms: ['pimpalgaon', 'पिंपळगाव'] },
+  'pimpalgaon': { canonical: 'Pimpalgaon Baswant', searchTerms: ['pimpalgaon', 'pimpalgaon baswant', 'pimapalagon', 'पिंपळगाव'] },
+  'पिंपळगाव': { canonical: 'Pimpalgaon Baswant', searchTerms: ['pimpalgaon', 'pimpalgaon baswant', 'pimapalagon', 'पिंपळगाव'] },
+  'pimapalagon': { canonical: 'Pimpalgaon Baswant', searchTerms: ['pimpalgaon', 'pimpalgaon baswant', 'pimapalagon', 'पिंपळगाव'] },
 
   // Nashik
   'nashik': { canonical: 'Nashik', searchTerms: ['nasik', 'nashik', 'नाशिक'] },
@@ -73,6 +97,7 @@ class MarketResolver {
     if (!text || typeof text !== 'string') return null;
 
     const clean = text.trim().toLowerCase();
+    const words = clean.split(/\s+/);
 
     // 1. Direct match in verified alias map
     for (const [key, val] of Object.entries(VERIFIED_MARKET_MAP)) {
@@ -82,6 +107,15 @@ class MarketResolver {
           searchTerms: val.searchTerms,
           rawInput: key
         };
+      }
+      for (const word of words) {
+        if (word.length >= 5 && stringSimilarity(word, key) > 0.75) {
+          return {
+            canonicalName: val.canonical,
+            searchTerms: val.searchTerms,
+            rawInput: word
+          };
+        }
       }
     }
 
@@ -94,6 +128,16 @@ class MarketResolver {
           searchTerms: [town],
           rawInput: town
         };
+      }
+      for (const word of words) {
+        if (word.length >= 5 && stringSimilarity(word, town) > 0.75) {
+          const canonical = town.charAt(0).toUpperCase() + town.slice(1);
+          return {
+            canonicalName: canonical,
+            searchTerms: [town],
+            rawInput: word
+          };
+        }
       }
     }
 
@@ -108,6 +152,16 @@ class MarketResolver {
           rawInput: cleanMName
         };
       }
+      for (const word of words) {
+        if (word.length >= 5 && stringSimilarity(word, cleanMName) > 0.75) {
+          const canonical = cleanMName.charAt(0).toUpperCase() + cleanMName.slice(1);
+          return {
+            canonicalName: canonical,
+            searchTerms: [cleanMName],
+            rawInput: word
+          };
+        }
+      }
     }
 
     // 4. Check DISTRICT_COORDS from mandiGeo.js
@@ -119,6 +173,16 @@ class MarketResolver {
           searchTerms: [dist],
           rawInput: dist
         };
+      }
+      for (const word of words) {
+        if (word.length >= 5 && stringSimilarity(word, dist) > 0.75) {
+          const canonical = dist.charAt(0).toUpperCase() + dist.slice(1);
+          return {
+            canonicalName: canonical,
+            searchTerms: [dist],
+            rawInput: word
+          };
+        }
       }
     }
 
@@ -168,10 +232,19 @@ class MarketResolver {
 
     const lowerMandi = recordMandi.toLowerCase();
     const lowerDistrict = (recordDistrict || '').toLowerCase();
+    const mandiWords = lowerMandi.split(/[\s\(\)\-\_]+/);
 
     return searchTerms.some(term => {
       const lowerTerm = term.toLowerCase();
-      return lowerMandi.includes(lowerTerm) || lowerDistrict === lowerTerm;
+      if (lowerMandi.includes(lowerTerm) || lowerDistrict === lowerTerm) return true;
+
+      if (lowerTerm.length >= 5) {
+        for (const word of mandiWords) {
+          if (stringSimilarity(lowerTerm, word) > 0.75) return true;
+        }
+      }
+
+      return false;
     });
   }
 }

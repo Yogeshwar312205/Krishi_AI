@@ -24,8 +24,8 @@ class EmbeddingService {
     const isRealKey = this.apiKey && this.apiKey !== 'your_gemini_api_key_here' && !this.apiKey.includes('your_');
 
     if (isRealKey) {
-      const primaryModel = (this.embeddingModel || 'text-embedding-004').replace(/^models\//, '');
-      const modelsToTry = Array.from(new Set([primaryModel, 'text-embedding-004', 'embedding-001']));
+      const primaryModel = (this.embeddingModel || 'gemini-embedding-001').replace(/^models\//, '');
+      const modelsToTry = Array.from(new Set([primaryModel, 'gemini-embedding-001', 'gemini-embedding-2', 'text-embedding-004']));
 
       for (const mName of modelsToTry) {
         try {
