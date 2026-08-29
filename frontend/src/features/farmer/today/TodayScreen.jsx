@@ -3,6 +3,8 @@ import { ArrowUpRight, ArrowDownRight, Minus, Truck, IndianRupee, Sprout, MapPin
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
 import { useLiveMarket, mandiLabel } from '../../../data/useLiveMarket';
+import { useSellAdvice } from '../../../data/sellAdvice';
+import { AdviceReasons } from '../price/AdviceReasons';
 import { fetchBuyerPostings } from '../../../services/api';
 import { Slab } from '../../../design/primitives/Slab';
 import { Button } from '../../../design/primitives/Button';
@@ -56,8 +58,25 @@ export const TodayScreen = () => {
   // than just being present. Settles on the exact value; honours reduced motion.
   const animatedRate = useCountUp(best.ratePerKg);
 
-  // 'wait' means the rate is still climbing; 'go' means sell into today's peak.
-  const isWait = action === 'wait';
+  // Same rule-based engine the Prices screen shows, so the verdict here and the
+  // "Sell now or wait?" card there never disagree. Only asked for once rates are
+  // live — scoring a demo baseline would be scoring made-up numbers.
+  const { data: adviceData } = useSellAdvice(
+    cropDetails.cropType,
+    best?.ratePerKg,
+    status === 'live',
+  );
+  const advice = adviceData?.advice || null;
+  const rec = advice?.recommendation || null;
+
+  // Engine verdict when we have it; otherwise fall back to the day-over-day
+  // heuristic ('wait' = rate still climbing, 'go' = sell into today's peak).
+  const isWait = rec ? (rec === 'HOLD' || rec === 'HOLD_STRONG') : action === 'wait';
+  const reasonText = rec
+    ? t(`price.advice.recText.${rec}`)
+    : isWait
+      ? t('today.holdWhy')
+      : t('today.sellWhy');
 
   const DeltaIcon = delta > 0 ? ArrowUpRight : delta < 0 ? ArrowDownRight : Minus;
   const deltaLabel =
@@ -155,9 +174,10 @@ export const TodayScreen = () => {
           </p>
         </div>
 
-        {/* The reason, in one plain sentence. */}
+        {/* The reason, in one plain sentence. From the same engine as the
+            Prices screen once rates are live; the day-over-day line otherwise. */}
         <p className={`mt-5 max-w-prose text-base leading-snug ${isWait ? 'text-ink-soft' : 'text-forest-100'}`}>
-          {isWait ? t('today.holdWhy') : t('today.sellWhy')}
+          {reasonText}
         </p>
 
         {/* Crop Arrival Volume & Market Status */}
@@ -169,6 +189,12 @@ export const TodayScreen = () => {
           <MarketStatusStamp status={status} />
         </div>
       </Slab>
+
+      {/* The reasoning behind the verdict, folded away — same Read-more panel
+          the Prices screen uses, so the two stay in step. */}
+      {advice?.reasons?.length > 0 && (
+        <AdviceReasons reasons={advice.reasons} working={advice.working} tone="light" />
+      )}
 
       {/* ---- Buyer Direct Postings / Buyer Rates Section ---- */}
       <section className="detail-enter space-y-3">

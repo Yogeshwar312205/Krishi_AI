@@ -25,7 +25,13 @@ const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = { top: 16, right: 16, bottom: 28, left: 44 };
 
-export const ForecastChart = ({ points }) => {
+/**
+ * `note` is what the caption reads when nothing is hovered. It has to be passed
+ * in rather than hardcoded: the same chart draws either a straight trend off
+ * past rates or the trained model's projection, and "Guessed from past mandi
+ * rates" printed under a model line is simply false.
+ */
+export const ForecastChart = ({ points, note }) => {
   const { t, rate, shortDate } = useT();
   const [hover, setHover] = useState(null);
   const clipId = useId();
@@ -162,7 +168,7 @@ export const ForecastChart = ({ points }) => {
             )}
           </>
         ) : (
-          <span className="text-ink-faint">{t('price.forecast.explain')}</span>
+          <span className="text-ink-faint">{note ?? t('price.forecast.explain')}</span>
         )}
       </figcaption>
     </figure>

@@ -1,6 +1,9 @@
 const Vehicle = require('../models/Vehicle');
 const Order = require('../models/Order');
-const { callOptimizeRoute } = require('../services/aiEngineService');
+const {
+  callOptimizeRoute, callPriceContext, callPriceForecast, callModelInfo,
+} = require('../services/aiEngineService');
+const { getAgmarknetLivePrices, getAgmarknetHistory } = require('../services/agmarknetService');
 const logger = require('../utils/logger');
 
 // Comprehensive APMC Markets across all 6 administrative divisions of Maharashtra
@@ -291,4 +294,187 @@ const getDemandAnalysis = async (req, res) => {
   });
 };
 
-module.exports = { recommendLogistics, getPriceForecast, getDemandAnalysis, MARKETS };
+// GET /api/prices/sell-advice?crop=&state=&originLat=&originLng=&quantityKg=
+//
+// Rule-based "sell now or hold" guidance. The number-crunching lives in the
+// Python engine (ai-engine price_service SECTION 2); this handler just gathers
+// the real inputs it needs:
+//   - baseline ₹/kg   : median of today's reporting Maharashtra APMCs (Agmarknet)
+//   - trailing avg ₹/kg: mean of the last ~14 daily state averages (Agmarknet)
+//   - weather          : the Python side fetches it from OpenWeather given lat/lon
+//
+// Mandi *arrivals* are deliberately NOT sent: the data.gov.in feed has no real
+// volume column (see agmarknetService.js), so the demand/supply read here comes
+// from price momentum only. When a genuine arrivals feed exists, pass
+// currentArrivalsQuintals / baselineArrivalsQuintals straight through.
+//
+// Degrades: if the Python engine is unreachable the response still carries the
+// real price numbers, with advice: null and aiEngineSource naming the outage.
+const getSellAdvice = async (req, res) => {
+  const crop = req.query.crop || req.query.cropType || 'Tomato';
+  const state = req.query.state || 'Maharashtra';
+  const originLat = parseFloat(req.query.originLat);
+  const originLng = parseFloat(req.query.originLng);
+
+  try {
+    const [live, history] = await Promise.all([
+      getAgmarknetLivePrices(crop, state),
+      getAgmarknetHistory(crop, state, 14),
+    ]);
+
+    const rates = (live.records || [])
+      .map((r) => Number(r.modalPricePerKg))
+      .filter((n) => Number.isFinite(n) && n > 0)
+      .sort((a, b) => a - b);
+    if (!rates.length) {
+      return res.status(503).json({
+        success: false,
+        message: `No live ${crop} rates available to base advice on.`,
+      });
+    }
+
+    // Baseline: the caller's own figure if supplied (the Prices screen sends the
+    // net-ranked best rate it is already showing, so the card and the headline
+    // agree), else the state-wide median modal across reporting markets.
+    const override = parseFloat(req.query.baselinePricePerKg);
+    const median = rates[Math.floor(rates.length / 2)];
+    const baseline = Number.isFinite(override) && override > 0 ? override : median;
+
+    const histDays = history.days || [];
+    const trailingAvg = histDays.length
+      ? histDays.reduce((s, d) => s + Number(d.avgRatePerKg || 0), 0) / histDays.length
+      : null;
+
+    const payload = {
+      cropType: crop,
+      baselinePricePerKg: Math.round(baseline * 100) / 100,
+      currentPricePerKg: Math.round(baseline * 100) / 100,
+      trailingAvgPricePerKg: trailingAvg ? Math.round(trailingAvg * 100) / 100 : null,
+    };
+    if (Number.isFinite(originLat) && Number.isFinite(originLng)) {
+      payload.latitude = originLat;
+      payload.longitude = originLng;
+    }
+
+    let advice = null;
+    let aiEngineSource = 'Python rule-based context scorer';
+    try {
+      advice = await callPriceContext(payload);
+    } catch (err) {
+      logger.warn(`Sell-advice: Python engine unavailable (${err.message}); returning prices only.`);
+      aiEngineSource = 'unavailable — advice withheld (prices are live Agmarknet)';
+    }
+
+    return res.json({
+      success: true,
+      crop,
+      state,
+      aiEngineSource,
+      inputs: {
+        baselinePricePerKg: payload.baselinePricePerKg,
+        baselineSource: Number.isFinite(override) && override > 0 ? 'caller' : 'state median',
+        trailingAvgPricePerKg: payload.trailingAvgPricePerKg,
+        reportingMarkets: rates.length,
+        historyDays: histDays.length,
+        isLiveGovtData: live.isLiveGovtData,
+        weatherRequested: Boolean(payload.latitude),
+        arrivalsAvailable: false,
+      },
+      advice,
+    });
+  } catch (error) {
+    logger.error(`Sell-advice error: ${error.message}`);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// GET /api/prices/model-forecast?crop=&market=&district=
+//
+// The trained XGBoost model's ~7-period-ahead price for a crop, as a chart
+// series (real history + projection).
+//
+// This is a STATE-LEVEL forecast, and the inputs say so. `getAgmarknetHistory`
+// averages each day across every reporting Maharashtra market on purpose — a
+// single mandi rarely reports daily, so there is no per-market series to feed a
+// per-market prediction. So unless the caller names a market, none is sent:
+// the model then treats that feature as missing rather than being handed an
+// arbitrary mandi to price against a state-average history. The min/max spread
+// is likewise the MEDIAN across reporting markets — a typical market's daily
+// spread, which is what `price_range` meant during training — not whichever
+// market happens to top the rate-sorted list.
+//
+// Degrades every way: model unhealthy, output implausible, ai engine down, or
+// no history all return `forecast.available: false` with a reason. `modelInfo`
+// (status + crop coverage for both the model and the rule-based scorer) is
+// always included so the UI can render its NOTE.
+const getModelForecast = async (req, res) => {
+  const crop = req.query.crop || req.query.cropType || 'Tomato';
+  const state = 'Maharashtra';
+  const market = req.query.market || null;
+  const district = req.query.district || null;
+
+  const median = (values) => {
+    const sorted = values.filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
+    return sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
+  };
+
+  try {
+    const [live, history, modelInfo] = await Promise.all([
+      getAgmarknetLivePrices(crop, state),
+      getAgmarknetHistory(crop, state, 21),
+      callModelInfo(),
+    ]);
+
+    const days = history.days || [];
+    const historyPerKg = days.map((d) => Number(d.avgRatePerKg)).filter((n) => Number.isFinite(n) && n > 0);
+
+    if (!historyPerKg.length) {
+      return res.json({
+        success: true, crop, market, scope: 'state',
+        forecast: { available: false, reason: 'no Agmarknet price history for this crop' },
+        modelInfo,
+      });
+    }
+
+    const records = live.records || [];
+    const medianMin = median(records.map((r) => Number(r.minPricePerQuintal)));
+    const medianMax = median(records.map((r) => Number(r.maxPricePerQuintal)));
+
+    const payload = {
+      cropType: crop,
+      historyPerKg,
+      // Only ever a market the caller actually asked for — see the note above.
+      market,
+      district,
+      minPricePerKg: medianMin ? medianMin / 100 : undefined,
+      maxPricePerKg: medianMax ? medianMax / 100 : undefined,
+      historyDates: days.slice(-7).map((d) => d.date),
+    };
+
+    let forecast;
+    try {
+      forecast = await callPriceForecast(payload);
+    } catch (err) {
+      logger.warn(`model-forecast: ai engine unavailable (${err.message})`);
+      forecast = { available: false, reason: 'forecast engine unreachable' };
+    }
+
+    return res.json({
+      success: true,
+      crop,
+      market,
+      scope: market ? 'market' : 'state',
+      reportingMarkets: records.length,
+      forecast,
+      modelInfo,
+    });
+  } catch (error) {
+    logger.error(`Model forecast error: ${error.message}`);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+module.exports = {
+  recommendLogistics, getPriceForecast, getDemandAnalysis,
+  getSellAdvice, getModelForecast, MARKETS,
+};

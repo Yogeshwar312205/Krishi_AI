@@ -111,6 +111,53 @@ export const fetchAgmarknetHistory = async (crop = 'Tomato', state = 'Maharashtr
   }
 };
 
+/**
+ * Rule-based "sell now or wait" guidance for a crop.
+ *
+ * The scoring runs in the Python engine (weather from OpenWeather × per-crop
+ * weather-friendliness, plus the recent price trend). This endpoint gathers the
+ * live Agmarknet inputs and calls it. `originLng`/`originLat` are the farm
+ * location — passed so the engine can look up weather there; omit them and the
+ * weather term is simply left out of the score.
+ *
+ * On any failure the response is `{ success: true, advice: null }` — the caller
+ * still shows the live rates, just without the advice card.
+ */
+export const fetchSellAdvice = async (
+  crop = 'Tomato',
+  { originLng, originLat, baselinePricePerKg, state = 'Maharashtra' } = {},
+) => {
+  try {
+    const response = await apiClient.get('/prices/sell-advice', {
+      params: { crop, state, originLng, originLat, baselinePricePerKg },
+    });
+    return response.data;
+  } catch (err) {
+    console.warn('Failed to fetch sell advice:', err.message);
+    return { success: false, advice: null };
+  }
+};
+
+/**
+ * The trained model's ~7-period-ahead price for a crop, as a chart series
+ * (real history + projection), plus `modelInfo` — status and crop coverage for
+ * both the model and the rule-based scorer, which drives the forecast NOTE.
+ *
+ * `forecast.available` is false (with a reason) whenever the model can't
+ * produce a number; the caller then falls back to its own history-trend line.
+ */
+export const fetchModelForecast = async (crop = 'Tomato', { market, district } = {}) => {
+  try {
+    const response = await apiClient.get('/prices/model-forecast', {
+      params: { crop, market, district },
+    });
+    return response.data;
+  } catch (err) {
+    console.warn('Failed to fetch model forecast:', err.message);
+    return { success: false, forecast: { available: false, reason: 'unreachable' }, modelInfo: null };
+  }
+};
+
 /*
  * The commodity list is fetched at most once per session per state.
  *

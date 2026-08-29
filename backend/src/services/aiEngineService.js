@@ -30,6 +30,39 @@ const callOptimizeRoute = async (payload) => {
   }
 };
 
+// Rule-based sell/hold context scorer (weather + demand/supply). See
+// ai-engine/app/services/price_service.py SECTION 2.
+const callPriceContext = async (payload) => {
+  try {
+    const response = await pythonClient.post('/price-context', payload);
+    return response.data;
+  } catch (error) {
+    logger.error(`Python price-context call failed: ${error.message}`);
+    throw error;
+  }
+};
+
+// Trained XGBoost 7-period price forecast + chart series. SECTION 3.
+const callPriceForecast = async (payload) => {
+  try {
+    const response = await pythonClient.post('/price-forecast', payload);
+    return response.data;
+  } catch (error) {
+    logger.error(`Python price-forecast call failed: ${error.message}`);
+    throw error;
+  }
+};
+
+// Status + crop coverage of the forecast model and the rule-based scorer.
+const callModelInfo = async () => {
+  try {
+    const response = await pythonClient.get('/model-info', { 'axios-retry': { retries: 0 } });
+    return response.data;
+  } catch (error) {
+    return { trained: true, available: false, status: { reason: `ai engine unreachable: ${error.message}` } };
+  }
+};
+
 const checkAiEngineHealth = async () => {
   try {
     const res = await pythonClient.get('/health', { 'axios-retry': { retries: 0 } });
@@ -41,5 +74,8 @@ const checkAiEngineHealth = async () => {
 
 module.exports = {
   callOptimizeRoute,
+  callPriceContext,
+  callPriceForecast,
+  callModelInfo,
   checkAiEngineHealth
 };

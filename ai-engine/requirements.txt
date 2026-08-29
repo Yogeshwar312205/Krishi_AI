@@ -7,3 +7,8 @@ pandas==2.2.1
 lightgbm==4.3.0
 scikit-learn==1.4.1.post1
 python-dotenv==1.0.1
+# Trained mandi-price forecast model (app/models/mandi_price_model.pkl, an
+# XGBRegressor bundle). joblib loads it; xgboost runs inference. Loading is
+# guarded — a version-incompatible pickle disables the model, it does not crash.
+joblib==1.5.3
+xgboost==2.1.4

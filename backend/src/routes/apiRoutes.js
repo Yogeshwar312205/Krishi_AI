@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 const { getNearbyVehicles, seedVehicles } = require('../controllers/vehicleController');
-const { recommendLogistics, getPriceForecast, getDemandAnalysis, MARKETS } = require('../controllers/orchestratorController');
+const {
+  recommendLogistics, getPriceForecast, getDemandAnalysis,
+  getSellAdvice, getModelForecast, MARKETS,
+} = require('../controllers/orchestratorController');
 const { sendSMSAlert } = require('../controllers/alertController');
 const { getDispatchSuggestions } = require('../controllers/dispatchController');
 const { listFleet, addVehicle, reportLocation } = require('../controllers/fleetController');
@@ -114,6 +117,14 @@ router.get('/routing/route', apiLimiter, protect, async (req, res) => {
 
 router.get('/prices/forecast', apiLimiter, getPriceForecast);
 router.get('/demand/analysis', apiLimiter, getDemandAnalysis);
+
+// Rule-based sell-now/hold guidance from live Agmarknet prices + OpenWeather.
+// The scoring runs in the Python engine; see orchestratorController.getSellAdvice.
+router.get('/prices/sell-advice', apiLimiter, getSellAdvice);
+
+// Trained XGBoost 7-period price forecast as a chart series, plus model +
+// rule-based crop coverage for the UI's NOTE. See getModelForecast.
+router.get('/prices/model-forecast', apiLimiter, getModelForecast);
 
 // SMS Alert Trigger
 router.post('/alerts/send-sms', apiLimiter, sendSMSAlert);

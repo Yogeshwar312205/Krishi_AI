@@ -24,10 +24,20 @@ app.include_router(optimize.router, tags=["VRP Logistics"])
 
 @app.get("/health")
 def health_check():
+    from app.services.forecast_model import model_info
+
     return {
         "status": "online",
         "engine": "FastAPI KrishiFlow AI Engine",
-        "modelsLoaded": ["LightGBM Agmarknet V2", "Exponential Spoilage Model", "Google OR-Tools VRP Solver"]
+        # Honest inventory: rule-based / arithmetic services, plus one trained
+        # model whose availability is reported live (see /model-info).
+        "services": [
+            "Static price table + rule-based context scorer (weather + demand/supply)",
+            "XGBoost 7-period mandi price forecast (Maharashtra, 5 crops)",
+            "Exponential (Q10) spoilage math",
+            "Haversine market-ranking VRP",
+        ],
+        "priceModel": model_info(),
     }
 
 if __name__ == "__main__":

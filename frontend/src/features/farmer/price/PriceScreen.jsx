@@ -5,14 +5,17 @@ import { useT } from '../../../i18n/useT';
 import { useLiveMarket, mandiLabel, COMMISSION_RATE } from '../../../data/useLiveMarket';
 import { AHEAD_DAYS } from '../../../data/demoMarket';
 import { ensure } from '../../../data/marketCache';
+import { useModelForecast } from '../../../data/modelForecast';
 import { SectionHead } from '../../../design/primitives/SectionHead';
 import { SegmentedToggle } from '../../../design/primitives/SegmentedToggle';
 import { LedgerRow } from '../../../design/primitives/LedgerRow';
 import { MarketStatusStamp } from '../../../design/primitives/MarketStatusStamp';
 import { Button } from '../../../design/primitives/Button';
 import { ForecastChart } from './ForecastChart';
+import { ForecastNote } from './ForecastNote';
 import { MandiRow } from './MandiRow';
 import { WhyFurther } from './WhyFurther';
+import { SellAdvice } from './SellAdvice';
 
 /**
  * Everything about "where and when do I sell?", in one screen.
@@ -48,6 +51,12 @@ export const PriceScreen = () => {
   const {
     best, comparison, advantage, forecast, status, fetchedAt, latestArrivalDate, liveCount, totalArrivalQuintals,
   } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
+
+  // The trained model's series, when it can produce one for this crop. Falls
+  // back to the history-trend `forecast` above otherwise.
+  const model = useModelForecast(cropDetails.cropType);
+  const usingModelForecast = Array.isArray(model.chartPoints) && model.chartPoints.length > 2;
+  const forecastPoints = usingModelForecast ? model.chartPoints : forecast;
 
   const cropName = t(`crops.${cropDetails.cropType}`);
   const visible = showAll ? comparison : comparison.slice(0, COLLAPSED_ROWS);
@@ -146,6 +155,14 @@ export const PriceScreen = () => {
         </p>
       </div>
 
+      {/* The headline decision — sell now or hold — sits above the tabs because
+          it is the question the whole screen exists to answer. Weather + demand
+          scoring, with its full working. Only shown against live rates: scoring
+          a demo baseline would dress fabricated numbers up as advice. */}
+      {status === 'live' && (
+        <SellAdvice cropType={cropDetails.cropType} baselineRate={best?.ratePerKg} />
+      )}
+
       <SegmentedToggle options={options} value={panel} onChange={setPanel} />
 
       {/* Keyed so switching panels replays the entrance — the change is felt, not just seen. */}
@@ -194,8 +211,17 @@ export const PriceScreen = () => {
           <div className="space-y-4">
             <div className="border-2 border-ink bg-white p-4">
               <p className="eyebrow mb-3">{t('price.forecast.nextDays', { count: AHEAD_DAYS })}</p>
-              <ForecastChart points={forecast} />
-              <p className="mt-3 text-sm leading-snug text-ink-faint">{t('price.forecast.explain')}</p>
+              <ForecastChart
+                points={forecastPoints}
+                note={usingModelForecast
+                  ? t('price.forecast.explainModel')
+                  : t('price.forecast.explain')}
+              />
+              <ForecastNote
+                modelInfo={model.modelInfo}
+                usingModel={usingModelForecast}
+                cropType={cropDetails.cropType}
+              />
             </div>
             {provenance}
           </div>

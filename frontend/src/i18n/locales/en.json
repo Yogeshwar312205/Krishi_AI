@@ -132,11 +132,23 @@
       "nextDays": "Next {{count}} days",
       "confidence": "Confidence",
       "explain": "Guessed from past mandi rates. Not a promise.",
+      "explainModel": "From the trained price model, using recent government mandi rates. Not a promise.",
       "high": "Highest expected",
       "low": "Lowest expected",
       "todayMark": "Today",
       "past": "Already happened",
-      "ahead": "Our guess"
+      "ahead": "Our guess",
+      "note": {
+        "title": "About these forecasts",
+        "scope": "The chart is the Maharashtra-wide average rate, not one mandi's.",
+        "modelOn": "The dashed line is from the trained price model.",
+        "modelOff": "The trained price model is not running now, so the dashed line is a trend from recent mandi rates.",
+        "modelSkipped": "The price model has nothing to add for {{crop}} today, so the dashed line is a trend from recent mandi rates.",
+        "model": "Price model ({{count}}-day ahead): {{crops}}",
+        "modelState": "Maharashtra mandis only.",
+        "ruleBased": "Sell-or-wait advice is tuned for: {{crops}}.",
+        "ruleBasedOther": "Any other crop still gets advice from a general profile."
+      }
     },
     "mandis": {
       "title": "Compare mandis",
@@ -203,6 +215,38 @@
       "youKeepMore": "You keep this much more",
       "youKeepLess": "You keep this much less",
       "nearestWins": "The nearest mandi, {{mandi}}, is also the one paying the most today. No need to send the truck further."
+    },
+    "advice": {
+      "title": "Sell now or wait?",
+      "checking": "Checking weather and demand…",
+      "offline": "The advice service is offline right now. The mandi rates above are still live.",
+      "rec": {
+        "SELL_NOW": "Sell now",
+        "SELL_SOON": "Sell in a day or two",
+        "HOLD": "No rush",
+        "HOLD_STRONG": "Hold"
+      },
+      "recText": {
+        "SELL_NOW": "Today's conditions are working against this crop.",
+        "SELL_SOON": "Waiting is more likely to cost you than to help.",
+        "HOLD": "Holding a little longer is reasonable.",
+        "HOLD_STRONG": "Conditions point to a better price soon."
+      },
+      "baseline": "Today's mandi rate",
+      "adjusted": "Likely rate after weather and demand",
+      "changeUp": "{{pct}} higher than today's rate",
+      "changeDown": "{{pct}} lower than today's rate",
+      "changeFlat": "About the same as today's rate",
+      "weather": "Weather risk to the crop",
+      "weatherNa": "Weather not included — set your farm location on the Crop screen",
+      "market": "Demand and supply",
+      "marketNa": "No demand signal yet",
+      "score": "{{n}} out of 100",
+      "why": "Why",
+      "working": "How this is worked out",
+      "workingNote": "A rule-based guide, not a prediction. It weighs today's weather against how fast {{crop}} spoils, and today's rate against its recent trend.",
+      "sure": "How sure",
+      "sources": "Based on: {{list}}"
     }
   },
   "transport": {
@@ -403,6 +447,7 @@
       "remove": "Remove",
       "mandi": "Mandi",
       "empty": "No buying rates posted yet.",
+      "emptyForCrop": "No buyer has posted a rate for {{crop}} yet.",
       "farmerTitle": "Buyer Rate Postings",
       "farmerSubtitle": "Direct procurement offers from verified traders",
       "trader": "Trader",
