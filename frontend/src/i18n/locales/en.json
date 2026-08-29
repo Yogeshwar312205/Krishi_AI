@@ -1,4 +1,48 @@
 {
+  "vrpDemo": {
+    "title": "How dispatch routing works",
+    "intro": "One freighter, already on the road. A pickup request lands mid-run. Watch the cheapest place to slot it in get found — and the route redrawn under the truck.",
+    "entry": "How dispatch routing works",
+    "play": "Play",
+    "pause": "Pause",
+    "restart": "Restart",
+    "next": "Next step",
+    "recalculating": "Recalculating route…",
+    "newRequest": "New request",
+    "reqFarmer": "Kiran Thorat",
+    "reqRoute": "Lasalgaon farm → Mumbai APMC",
+    "footnote": "A scripted walk-through. The distances, times and costs are copied from a real dispatch run — see VRP.md.",
+    "map": {
+      "depot": "Nashik depot",
+      "stopA": "Pimpalgaon",
+      "mandi": "Mumbai APMC",
+      "farm": "Lasalgaon farm",
+      "van": "Idle van · Nashik"
+    },
+    "step": {
+      "drivingName": "On its committed route",
+      "drivingBody": "The freighter is already driving Nashik → Pimpalgaon → Mumbai APMC, with 4,000 kg aboard and 3,000 kg to collect on the way.",
+      "requestName": "A pickup request arrives",
+      "requestBody": "Kiran Thorat needs 2,500 kg of tomato moved from a Lasalgaon farm to Mumbai APMC. The farmer never picks a truck.",
+      "rankingName": "Cheapest insertion",
+      "rankingBody": "Every vehicle is priced by the extra road it would drive to serve this farmer. An idle van in Nashik would cover all 292 km from scratch; this freighter already passes Lasalgaon.",
+      "rerouteName": "Route redrawn",
+      "rerouteBody": "Lasalgaon slots in between Pimpalgaon and Mumbai APMC. One leg is dropped, two are added, and the truck carries on — 55 km further, not 292."
+    },
+    "metric": {
+      "committed": "Committed route",
+      "withPickup": "With this pickup"
+    },
+    "rank": {
+      "heading": "Extra road to serve this farmer",
+      "freighter": "This freighter — already bound for Mumbai APMC",
+      "van": "Idle van — the whole way from Nashik",
+      "verdict": "The nearer truck costs five times as much. Seeing that is the whole point."
+    },
+    "cap": {
+      "free": "Free"
+    }
+  },
   "common": {
     "yes": "Yes",
     "no": "No",

@@ -13,6 +13,12 @@ import { LanguagePicker } from './shared/LanguagePicker';
  */
 const AuthScreen = lazy(() => import('./features/auth/AuthScreen').then((m) => ({ default: m.AuthScreen })));
 const LandingScreen = lazy(() => import('./features/auth/LandingScreen').then((m) => ({ default: m.LandingScreen })));
+/*
+ * The dispatch-routing walk-through is reachable before sign-in — it is a
+ * "here is what this app does" piece, and a visitor deciding whether to sign up
+ * is exactly its audience. It renders its own chrome and a back control.
+ */
+const VrpSimulationScreen = lazy(() => import('./features/logistics/VrpSimulationScreen').then((m) => ({ default: m.VrpSimulationScreen })));
 
 /*
  * The unauthenticated pair: a hero screen that sells the product in five
@@ -21,12 +27,16 @@ const LandingScreen = lazy(() => import('./features/auth/LandingScreen').then((m
  * right panel instead of always opening login.
  */
 const Gate = () => {
-  const [stage, setStage] = useState('landing'); // 'landing' | 'login' | 'signup'
+  const [stage, setStage] = useState('landing'); // 'landing' | 'login' | 'signup' | 'vrp-demo'
 
   if (stage === 'landing') {
     // The landing screen keeps the picker in a sticky header band of its own —
     // the whole screen is one green surface, so the band is seamless.
     return <LandingScreen onEnter={setStage} />;
+  }
+
+  if (stage === 'vrp-demo') {
+    return <VrpSimulationScreen onExit={() => setStage('landing')} />;
   }
 
   return (

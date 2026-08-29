@@ -3,6 +3,8 @@ import {
   User, MapPin, Package, Clock, ChevronDown, RefreshCw, CloudOff, Ban, HelpCircle,
 } from 'lucide-react';
 import { useT } from '../../i18n/useT';
+import { useAppStore } from '../../store/useAppStore';
+import { VRP_DEMO_TAB } from '../../app/routes';
 import { approveSuggestion } from '../../services/api';
 import { SectionHead } from '../../design/primitives/SectionHead';
 import { Button } from '../../design/primitives/Button';
@@ -64,6 +66,7 @@ export const RequestHead = ({ request, t, number }) => (
 
 export const DispatchScreen = () => {
   const { t, tCount, number } = useT();
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
 
   const {
     pending, vehicleById, loading, error, source, counts,
@@ -112,9 +115,25 @@ export const DispatchScreen = () => {
         title={t('dispatch.title')}
         note={t('dispatch.note')}
         action={
-          <Button full={false} variant="secondary" icon={RefreshCw} onClick={refresh} busy={loading}>
-            {t('dispatch.refresh')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/*
+             * The way in to the routing walk-through. A dispatcher who has
+             * never seen why the nearest truck is often the wrong one needs
+             * the picture, not the paragraph — see VrpSimulationScreen.
+             */}
+            <button
+              type="button"
+              onClick={() => setActiveTab(VRP_DEMO_TAB)}
+              aria-label={t('vrpDemo.entry')}
+              title={t('vrpDemo.entry')}
+              className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-ink bg-white text-ink transition-colors hover:bg-turmeric-300"
+            >
+              <HelpCircle className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
+            </button>
+            <Button full={false} variant="secondary" icon={RefreshCw} onClick={refresh} busy={loading}>
+              {t('dispatch.refresh')}
+            </Button>
+          </div>
         }
       />
 

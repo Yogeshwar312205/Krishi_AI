@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  Sprout, Truck, Store, Boxes, ArrowRight, TrendingUp, TrendingDown, Minus,
+  Sprout, Truck, Store, Boxes, ArrowRight, TrendingUp, TrendingDown, Minus, Navigation,
 } from 'lucide-react';
 import { useT } from '../../i18n/useT';
 import { LanguagePicker } from '../../shared/LanguagePicker';
@@ -165,6 +165,16 @@ export const LandingScreen = ({ onEnter }) => {
             className="lift mt-6 text-sm font-semibold text-forest-100 underline decoration-forest-300 underline-offset-4 hover:text-white"
           >
             {t('auth.demoTitle')}
+          </button>
+
+          {/* The dispatch-routing walk-through — playable without an account. */}
+          <button
+            type="button"
+            onClick={() => onEnter('vrp-demo')}
+            className="lift mt-4 flex items-center gap-1.5 text-sm font-semibold text-forest-100 underline decoration-forest-300 underline-offset-4 hover:text-white"
+          >
+            <Navigation className="h-4 w-4 shrink-0 text-turmeric-300" strokeWidth={2.25} aria-hidden="true" />
+            {t('vrpDemo.entry')}
           </button>
         </div>
       </div>

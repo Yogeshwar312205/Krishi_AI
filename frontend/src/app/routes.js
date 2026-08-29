@@ -82,15 +82,25 @@ export const TABS_BY_ROLE = {
  */
 export const PROFILE_TAB = 'profile';
 
+/**
+ * The dispatch-routing walk-through. A destination, not a tab — the same shape
+ * as PROFILE_TAB. Reached from the "?" on the fleet owner's Dispatch screen
+ * (and, pre-auth, straight from the landing page via App.jsx's Gate). Kept out
+ * of every role's nav list so it never spends one of the four bottom-bar slots.
+ */
+export const VRP_DEMO_TAB = 'vrp-demo';
+
 export const tabsForRole = (role) => TABS_BY_ROLE[normaliseRole(role)] || FARMER_TABS;
 
 export const defaultTabForRole = (role) => tabsForRole(role)[0].id;
 
 /** True when `tabId` is reachable in `role` — used to recover from a stale stored tab. */
 export const isTabValidForRole = (tabId, role) =>
-  tabId === PROFILE_TAB || tabsForRole(role).some((tab) => tab.id === tabId);
+  tabId === PROFILE_TAB || tabId === VRP_DEMO_TAB
+  || tabsForRole(role).some((tab) => tab.id === tabId);
 
 export const ALL_TAB_IDS = [
   ...[...FARMER_TABS, ...BUYER_TABS, ...LOGISTICS_TABS].map((t) => t.id),
   PROFILE_TAB,
+  VRP_DEMO_TAB,
 ];

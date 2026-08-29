@@ -5,7 +5,7 @@ import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
 import { SideNav } from './SideNav';
 import { useTabHistory } from './useTabHistory';
-import { normaliseRole, defaultTabForRole, isTabValidForRole, PROFILE_TAB } from './routes';
+import { normaliseRole, defaultTabForRole, isTabValidForRole, PROFILE_TAB, VRP_DEMO_TAB } from './routes';
 
 import { TodayScreen } from '../features/farmer/today/TodayScreen';
 import { PriceScreen } from '../features/farmer/price/PriceScreen';
@@ -23,6 +23,7 @@ const CropScreen = lazy(() => import('../features/farmer/crop/CropScreen').then(
  * those views never downloads them.
  */
 const DispatchScreen = lazy(() => import('../features/logistics/DispatchScreen').then((m) => ({ default: m.DispatchScreen })));
+const VrpSimulationScreen = lazy(() => import('../features/logistics/VrpSimulationScreen').then((m) => ({ default: m.VrpSimulationScreen })));
 const FleetScreen = lazy(() => import('../features/logistics/FleetScreen').then((m) => ({ default: m.FleetScreen })));
 const LogisticsRoutesScreen = lazy(() => import('../features/logistics/LogisticsRoutesScreen').then((m) => ({ default: m.LogisticsRoutesScreen })));
 const LogisticsJobsScreen = lazy(() => import('../features/logistics/LogisticsJobsScreen').then((m) => ({ default: m.LogisticsJobsScreen })));
@@ -36,7 +37,7 @@ const Loading = () => {
   return <div className="py-16 text-center text-ink-faint">{t('common.loading')}</div>;
 };
 
-const screenFor = (tabId) => {
+const screenFor = (tabId, setActiveTab) => {
   switch (tabId) {
     case 'today':
       return <TodayScreen />;
@@ -53,6 +54,8 @@ const screenFor = (tabId) => {
 
     case 'logistics-dispatch':
       return <DispatchScreen />;
+    case VRP_DEMO_TAB:
+      return <VrpSimulationScreen onExit={() => setActiveTab('logistics-dispatch')} />;
     case 'logistics-jobs':
       return <LogisticsJobsScreen />;
     case 'logistics-fleet':
@@ -111,7 +114,7 @@ export const AppShell = () => {
 
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-8 sm:px-6 lg:max-w-6xl lg:px-10">
           <Suspense fallback={<Loading />}>
-            <div key={activeTab}>{screenFor(activeTab)}</div>
+            <div key={activeTab}>{screenFor(activeTab, setActiveTab)}</div>
           </Suspense>
         </main>
 
