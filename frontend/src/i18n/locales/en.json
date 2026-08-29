@@ -157,6 +157,18 @@
     "addCrop": "Add my crop",
     "cropArrivals": "Today's Crop Arrivals"
   },
+  "weather": {
+    "clear": "Clear sky",
+    "partCloud": "Some clouds",
+    "cloudy": "Cloudy",
+    "fog": "Fog",
+    "drizzle": "Light rain",
+    "rain": "Rain",
+    "snow": "Snow",
+    "thunder": "Thunderstorm",
+    "unknown": "Weather unavailable",
+    "hotPerishable": "Hot today — {{crop}} in an open truck loses about {{amount}} an hour on the road."
+  },
   "price": {
     "title": "Crop rates",
     "subtitle": "Where to sell {{crop}} for the most money",
@@ -226,7 +238,9 @@
       "labour": "Loading and unloading",
       "net": "Money in your hand",
       "netPerKg": "You get, per kg",
-      "freightPerKg": "Vehicle cost, per kg"
+      "freightPerKg": "Vehicle cost, per kg",
+      "spoilage": "Spoilage on the way",
+      "spoilagePerKg": "Spoilage, per kg"
     },
     "alert": {
       "title": "Tell me when the rate goes up",
@@ -240,10 +254,14 @@
       "title": "How this is worked out",
       "rateQty": "{{rate}} × {{qty}} kg",
       "freightCalc": "{{km}} km × ₹{{perKm}} per km",
-      "commissionCalc": "{{percent}} of the sale"
+      "commissionCalc": "{{percent}} of the sale",
+      "spoilageCalc": "{{percent}} lost over about {{hours}} h in an open truck"
     },
     "freight": {
       "explain": "Truck cost: diesel ₹{{diesel}} a litre ÷ {{kmpl}} km a litre, plus ₹{{extra}} a km for the driver, tolls and the empty return trip."
+    },
+    "spoilage": {
+      "coldSaves": "A refrigerated van cuts this to {{cold}} — about {{saved}} saved."
     },
     "source": {
       "market": "Exact mandi location",
@@ -460,25 +478,31 @@
     "offlineNote": "The server is not reachable, so you are on sample data.",
     "terms": "By continuing you agree to our terms and privacy policy."
   },
-  "voice": {
-    "open": "Ask by voice",
-    "title": "Ask me",
-    "subtitle": "Speak in Hindi, Marathi or English",
+  "assistant": {
+    "title": "AI Sahayak",
+    "open": "Open AI Sahayak",
+    "role": "Signed in as {{role}}",
+    "greeting": "Ram Ram. Ask me about today's rates, spoilage on the way, vehicles, or your past trips — by voice or by typing.",
+    "cleared": "Chat cleared. Ask me anything about KrishiFlow.",
+    "clear": "Clear",
     "close": "Close",
-    "tap": "Tap and speak",
+    "lang": "Language",
+    "placeholder": "Ask or speak…",
     "listening": "Listening…",
-    "stopSpeaking": "Stop",
-    "notUnderstood": "I did not catch that. Try asking about rates, or say \"book a vehicle\".",
-    "unsupported": "Voice does not work in this browser. Please type your question instead.",
-    "typeInstead": "Or type your question",
-    "send": "Send",
-    "tryAsking": "Try asking",
-    "example1": "What is the rate today?",
-    "example2": "Book a vehicle",
-    "example3": "Should I sell or wait?",
-    "answer": {
-      "rate": "{{crop}} is {{rate}} per kg at {{mandi}} today.",
-      "opening": "Opening {{screen}}."
+    "thinking": "Checking the data…",
+    "send": "Ask",
+    "sources": "Sources ({{count}})",
+    "speaking": "Reading the answer aloud",
+    "stop": "Stop",
+    "replay": "Read aloud",
+    "mic": "Speak your question",
+    "error": "Could not reach the assistant. Please try again.",
+    "micUnsupported": "Voice input does not work in this browser — type your question instead.",
+    "q": {
+      "rate": "What is the tomato rate today?",
+      "spoil": "Will onion spoil on the way to Vashi?",
+      "sell": "Should I sell now or wait?",
+      "vehicles": "Which vehicles are available and their rates?"
     }
   },
   "buyer": {

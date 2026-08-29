@@ -204,6 +204,25 @@ export const sendPriceAlertSms = async ({ phone, cropType, targetPrice, currentP
   }
 };
 
+/**
+ * Current conditions at the farm, for the spoilage estimate and the Today
+ * strip. Backed by Open-Meteo (keyless), 20-min cached server-side. On any
+ * failure the caller gets `{ weather: null }` and the UI simply drops the strip
+ * and falls back to a default road temperature — same degrade-silently contract
+ * as `fetchSellAdvice`.
+ */
+export const fetchLiveWeather = async (lat, lon) => {
+  try {
+    const { data } = await apiClient.get('/weather/live', { params: { lat, lon } });
+    // The backend answers 200 with null fields when Open-Meteo is unreachable.
+    if (!data?.weather || data.weather.temperature == null) return { weather: null };
+    return { weather: data.weather };
+  } catch (err) {
+    console.warn('Failed to fetch live weather:', err.message);
+    return { weather: null };
+  }
+};
+
 export const fetchAllMarkets = async (crop = 'Tomato', state = '') => {
   try {
     const response = await apiClient.get('/markets', {
@@ -480,9 +499,9 @@ export const addFleetVehicle = async (vehicle) => {
 
 /* ------------------------------------------------------------- RAG Agent */
 
-export const sendRagQuestion = async (message, conversationId = null) => {
+export const sendRagQuestion = async (message, conversationId = null, language = null) => {
   try {
-    const { data } = await apiClient.post('/rag/chat', { message, conversationId });
+    const { data } = await apiClient.post('/rag/chat', { message, conversationId, language });
     return data.data;
   } catch (err) {
     throw toApiError(err, 'Could not process question with KrishiFlow AI Sahayak.');

@@ -24,6 +24,8 @@
  * behind it or a rewritten label — separate from this file, but the same issue.
  */
 
+import { transitHours, spoilageFraction } from './geo';
+
 /** Per-kg rates by crop, keyed by mandi. Invented. */
 const DEMO_RATES = {
   Tomato: { Vashi: 48.0, Pune: 44.0, Nashik: 38.5, Pimpalgaon: 39.0 },
@@ -68,13 +70,24 @@ export const buildMandiComparison = (cropType, quantityKg) => {
       const freight = mandi.freightPerKg * qty;
       const commission = gross * COMMISSION_RATE;
 
+      // Same spoilage term as the live rows (data/useLiveMarket.js). No live
+      // weather on the demo path, so it uses the default road temperature.
+      const hours = transitHours(mandi.distanceKm);
+      const spoilFrac = spoilageFraction(cropType, hours);
+      const spoilageCost = gross * spoilFrac;
+      const spoilageCostCold = gross * spoilageFraction(cropType, hours, undefined, true);
+
       return {
         ...mandi,
         ratePerKg,
         gross,
         freight,
         commission,
-        net: gross - freight - commission,
+        transitHours: hours,
+        spoilageFraction: spoilFrac,
+        spoilageCost,
+        spoilageCostCold,
+        net: gross - freight - commission - spoilageCost,
       };
     })
     .sort((a, b) => b.net - a.net);

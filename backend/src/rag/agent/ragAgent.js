@@ -17,7 +17,7 @@ class RAGAgent {
    * @param {object} user - Authenticated JWT user object (req.user)
    * @param {string} conversationId 
    */
-  async processQuery(userMessage, user, conversationId = null) {
+  async processQuery(userMessage, user, conversationId = null, preferredLanguage = null) {
     const startTime = Date.now();
 
     // 1. Sanitize & Defense
@@ -37,6 +37,14 @@ class RAGAgent {
     // 2. Query Processor (Language & Entity Extraction)
     let processedQuery = queryProcessor.process(cleanQuery);
 
+    // An explicit language choice from the client (the assistant's language
+    // toggle) wins over text detection — a farmer who set the toggle to Marathi
+    // and then typed a romanised or English-looking query still wants Marathi.
+    if (['en', 'hi', 'mr'].includes(preferredLanguage)) {
+      processedQuery.language = preferredLanguage;
+      processedQuery.languagePinned = true;
+    }
+
     // Initial Intent Detection before session context merge
     const initialIntent = intentClassifier.classify(cleanQuery, processedQuery.entities);
 
@@ -47,6 +55,12 @@ class RAGAgent {
         ...processedQuery,
         cleanQuery
       }, initialIntent);
+    }
+
+    // Re-pin after the session merge so a stored language can't override the
+    // client's explicit choice.
+    if (['en', 'hi', 'mr'].includes(preferredLanguage)) {
+      processedQuery.language = preferredLanguage;
     }
 
     const { language, entities } = processedQuery;
@@ -85,7 +99,7 @@ class RAGAgent {
 
     // 4. Router Execution
     const routeResult = await router.route(processedQuery, intent, user);
-    const { mode, toolResult, ragChunks, toolUsed, dataSource } = routeResult;
+    const { mode, toolResult, ragChunks, toolUsed, dataSource, extraContext } = routeResult;
 
     let rawAnswer = '';
 
@@ -155,8 +169,13 @@ class RAGAgent {
       }
 
       const ragContextStr = ragChunks.length > 0 ? promptInjection.formatSecureContext(ragChunks) : 'NO_RAG_CONTEXT';
-      const toolContextStr = toolResult?.success ? `<live_market_data>\n${JSON.stringify(toolResult, null, 2)}\n</live_market_data>` : '';
-      const combinedContext = `${toolContextStr}\n\n${ragContextStr}`;
+      const TOOL_TAGS = {
+        getTransportSpoilageRisk: 'transport_risk_data',
+        getPriceForecast: 'price_forecast_data',
+      };
+      const toolTag = TOOL_TAGS[toolUsed] || 'live_market_data';
+      const toolContextStr = toolResult?.success ? `<${toolTag}>\n${JSON.stringify(toolResult, null, 2)}\n</${toolTag}>` : '';
+      const combinedContext = [toolContextStr, extraContext, ragContextStr].filter(Boolean).join('\n\n');
 
       rawAnswer = await geminiService.generateAnswer(
         SYSTEM_PROMPT,
@@ -190,6 +209,19 @@ class RAGAgent {
         formattedContext,
         language
       );
+    }
+
+    // 4b. Safety net: a computed tool (spoilage / forecast / market) succeeded
+    // but the model still returned a refusal-shaped answer. Serve the
+    // deterministic synthesizer over the same context instead of a dead end.
+    const COMPUTED_TOOLS = new Set(['getTransportSpoilageRisk', 'getPriceForecast', 'getLiveMandiPrices']);
+    const looksLikeRefusal = /couldn't find|could not find|couldn't retrieve|पुरेसे उत्तर|पर्याप्त उत्तर|पडताळलेला भाव डेटा|सत्यापित मूल्य डेटा/i;
+    if (COMPUTED_TOOLS.has(toolUsed) && toolResult?.success && looksLikeRefusal.test(rawAnswer || '')) {
+      logger.warn(`[RAGAgent] Model refused despite a successful ${toolUsed} payload — using the deterministic synthesizer.`);
+      const TOOL_TAGS = { getTransportSpoilageRisk: 'transport_risk_data', getPriceForecast: 'price_forecast_data' };
+      const tag = TOOL_TAGS[toolUsed] || 'live_market_data';
+      const ctx = `<${tag}>\n${JSON.stringify(toolResult, null, 2)}\n</${tag}>`;
+      rawAnswer = geminiService.synthesizeGroundedFallback(cleanQuery, ctx, language);
     }
 
     // 5. Output Security Guardrail (Scrub secrets)

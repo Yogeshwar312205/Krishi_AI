@@ -9,7 +9,7 @@ const logger = require('../utils/logger');
  */
 const handleRagChat = async (req, res) => {
   try {
-    const { message, conversationId } = req.body;
+    const { message, conversationId, language } = req.body;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({
@@ -21,7 +21,12 @@ const handleRagChat = async (req, res) => {
     // Authenticated user comes strictly from JWT middleware (protect)
     const user = req.user;
 
-    const response = await ragAgent.processQuery(message, user, conversationId);
+    // The client can pin the reply language (the assistant's language toggle).
+    // Only a supported code is honoured; anything else lets the agent detect it
+    // from the text.
+    const preferredLanguage = ['en', 'hi', 'mr'].includes(language) ? language : null;
+
+    const response = await ragAgent.processQuery(message, user, conversationId, preferredLanguage);
 
     return res.json({
       success: true,

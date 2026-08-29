@@ -20,6 +20,35 @@ class CitationBuilder {
       seenKeys.add('agmarknet-govt-feed');
     }
 
+    if (toolResult && toolResult.toolUsed === 'getPriceForecast') {
+      const f = toolResult.forecast || {};
+      const section = f.available
+        ? `${toolResult.commodity} · ${f.changePct >= 0 ? '+' : ''}${f.changePct}% over ${f.horizonPeriods} periods`
+        : `${toolResult.commodity} · model output not available`;
+      citations.push({
+        documentId: 'krishiflow-price-forecast',
+        title: `Price forecast & sell/hold call (${toolResult.commodity})`,
+        section,
+        source: toolResult.source || 'KrishiFlow price engine (XGBoost + rule-based scorer)',
+        url: '/farmer/profit-calculator',
+        snippet: `Recommendation: ${toolResult.recommendation || 'n/a'}. Current ₹${toolResult.currentPricePerKg || '?'}/kg. ${toolResult.engineStatus || ''}`.trim()
+      });
+      seenKeys.add('krishiflow-price-forecast');
+    }
+
+    if (toolResult && toolResult.toolUsed === 'getTransportSpoilageRisk' && toolResult.assessment) {
+      const a = toolResult.assessment;
+      citations.push({
+        documentId: 'krishiflow-spoilage-model',
+        title: `Spoilage estimate (${toolResult.commodity})`,
+        section: `${a.distanceKm} km haul · ${a.transitHours} h · ${a.ambientTempC}°C`,
+        source: toolResult.source || 'KrishiFlow spoilage model (Q10)',
+        url: '/docs/farmer-guide',
+        snippet: `Open truck ${a.openTruckSpoilagePct}% vs refrigerated ${a.refrigeratedSpoilagePct}%. Formula: ${a.formula}.`
+      });
+      seenKeys.add('krishiflow-spoilage-model');
+    }
+
     if (Array.isArray(chunks) && chunks.length > 0) {
       chunks.forEach(chunk => {
         const key = `${chunk.documentId}-${chunk.section}`;

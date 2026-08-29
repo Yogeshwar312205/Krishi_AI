@@ -82,8 +82,6 @@ const screenFor = (tabId, setActiveTab) => {
 
 const RAGAssistantModal = lazy(() => import('../features/rag/RAGAssistantModal'));
 
-const KisanVoiceBot = lazy(() => import('../components/KisanVoiceBot').then((m) => ({ default: m.KisanVoiceBot })));
-
 export const AppShell = () => {
   const activeTab = useAppStore((state) => state.activeTab);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
@@ -122,7 +120,6 @@ export const AppShell = () => {
       </div>
 
       <Suspense fallback={null}>
-        <KisanVoiceBot />
         <RAGAssistantModal isOpen={isRagOpen} onClose={() => setIsRagOpen(false)} />
       </Suspense>
     </div>

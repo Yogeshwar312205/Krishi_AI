@@ -1,72 +1,104 @@
 const axios = require('axios');
 const logger = require('../../utils/logger');
 
+/**
+ * A current, generally-available model to fall back to when the configured
+ * GEMINI_MODEL has been retired by Google (a 404 "no longer available" — which
+ * is exactly what a stale `gemini-1.5-flash` / `gemini-2.x` value in .env now
+ * returns). `-lite` and the `-latest` alias are the stable, low-latency choice
+ * for short grounded answers.
+ */
+const DEFAULT_MODEL = 'gemini-flash-lite-latest';
+const RETIRED_MODEL_HINT = /no longer available|is not found for API version|not supported for generateContent/i;
+
 class GeminiService {
   constructor() {
     this.apiKey = process.env.GEMINI_API_KEY || '';
-    this.model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    this.model = (process.env.GEMINI_MODEL || DEFAULT_MODEL).replace(/^models\//, '');
+  }
+
+  /** Pulls the first text part out of a generateContent response, skipping any
+   *  thought-only parts that thinking models (Gemini 3.x flash) emit first. */
+  extractText(data) {
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    for (const p of parts) {
+      if (typeof p?.text === 'string' && p.text.trim()) return p.text.trim();
+    }
+    return '';
+  }
+
+  buildPayload(systemPrompt, userQuestion, formattedContext, language) {
+    const langDirective = language === 'mr'
+      ? "MANDATORY LANGUAGE: Write the ENTIRE response in MARATHI (मराठी, Devanagari script). Keep only numbers, ₹, units, market names and model terms (e.g. XGBoost, SELL_SOON) as-is. Do NOT reply in English or Hindi."
+      : language === 'hi'
+      ? "MANDATORY LANGUAGE: Write the ENTIRE response in HINDI (हिंदी, Devanagari script). Keep only numbers, ₹, units, market names and model terms (e.g. XGBoost, SELL_SOON) as-is. Do NOT reply in English or Marathi."
+      : "MANDATORY LANGUAGE: Write the ENTIRE response in English, even if the context or question contains other languages.";
+
+    return {
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: systemPrompt },
+            { text: `\n${langDirective}` },
+            { text: `\nUSER QUESTION (${language}): ${userQuestion}` },
+            { text: `\nRETRIEVED CONTEXT:\n${formattedContext}` }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        // Headroom for a trilingual answer PLUS the reasoning tokens the 3.x
+        // flash "thinking" models spend before the visible answer.
+        maxOutputTokens: 2048
+      }
+    };
+  }
+
+  async callModel(modelName, payload) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${this.apiKey}`;
+    const response = await axios.post(url, payload, { timeout: 20000 });
+    return this.extractText(response.data);
   }
 
   /**
    * Sends prompt and context payload to Gemini API for grounded completion.
-   * @param {string} systemPrompt 
-   * @param {string} userQuestion 
-   * @param {string} formattedContext 
-   * @param {string} language 
    * @returns {Promise<string>}
    */
   async generateAnswer(systemPrompt, userQuestion, formattedContext, language = 'en') {
     const isRealKey = this.apiKey && this.apiKey !== 'your_gemini_api_key_here' && !this.apiKey.includes('your_');
 
     if (isRealKey) {
-      try {
-        const modelName = (this.model || 'gemini-1.5-flash').replace(/^models\//, '');
-        const keyPreview = this.apiKey.substring(0, 6) + '...' + this.apiKey.substring(this.apiKey.length - 4);
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-        
-        logger.info(`[GeminiService] Calling Gemini REST API | Model: ${modelName} | Endpoint: v1beta | KeyPreview: ${keyPreview}`);
+      const payload = this.buildPayload(systemPrompt, userQuestion, formattedContext, language);
+      const keyPreview = this.apiKey.substring(0, 6) + '...' + this.apiKey.substring(this.apiKey.length - 4);
 
-        const url = `${endpoint}?key=${this.apiKey}`;
-        
-        const langDirective = language === 'mr'
-          ? "CRITICAL MANDATORY LANGUAGE DIRECTIVE: The user asked in MARATHI (मराठी). You MUST write your ENTIRE response strictly in MARATHI (मराठी in Devanagari script). Do NOT reply in English or Hindi!"
-          : language === 'hi'
-          ? "CRITICAL MANDATORY LANGUAGE DIRECTIVE: The user asked in HINDI (हिंदी). You MUST write your ENTIRE response strictly in HINDI (हिंदी in Devanagari script). Do NOT reply in English or Marathi!"
-          : "Respond in English.";
-
-        const payload = {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { text: systemPrompt },
-                { text: `\n${langDirective}` },
-                { text: `\nUSER QUESTION (${language}): ${userQuestion}` },
-                { text: `\nRETRIEVED CONTEXT:\n${formattedContext}` }
-              ]
+      // Try the configured model; if Google has retired it, retry once on a
+      // current model so a stale .env doesn't silently disable the assistant.
+      const attempts = this.model === DEFAULT_MODEL ? [this.model] : [this.model, DEFAULT_MODEL];
+      for (let i = 0; i < attempts.length; i += 1) {
+        const modelName = attempts[i];
+        try {
+          logger.info(`[GeminiService] generateContent | Model: ${modelName}${i > 0 ? ' (fallback)' : ''} | Key: ${keyPreview}`);
+          const text = await this.callModel(modelName, payload);
+          if (text) {
+            if (i > 0) {
+              logger.warn(`[GeminiService] Configured model "${this.model}" is unavailable; served "${modelName}". Update GEMINI_MODEL in backend/.env.`);
             }
-          ],
-          generationConfig: {
-            temperature: 0.2, // Low temperature for high factual grounding
-            maxOutputTokens: 800
+            return text;
           }
-        };
-
-        const response = await axios.post(url, payload, { timeout: 12000 });
-
-        const candidates = response.data?.candidates;
-        if (candidates && candidates.length > 0) {
-          const text = candidates[0].content?.parts?.[0]?.text;
-          if (text) return text.trim();
+          logger.warn(`[GeminiService] Model ${modelName} returned no text part.`);
+        } catch (err) {
+          const errorDetails = err.response?.data?.error?.message || err.message;
+          const statusCode = err.response?.status || 'Network/Timeout';
+          const retriable = i + 1 < attempts.length && (statusCode === 404 || RETIRED_MODEL_HINT.test(errorDetails));
+          logger.warn(`[GeminiService] generateContent failed (HTTP ${statusCode}) on ${modelName}: ${errorDetails}.${retriable ? ' Retrying on ' + DEFAULT_MODEL + '.' : ' Falling back to internal grounded synthesizer.'}`);
+          if (!retriable) break;
         }
-      } catch (err) {
-        const errorDetails = err.response?.data?.error?.message || err.message;
-        const statusCode = err.response?.status || 'Network/Timeout';
-        logger.warn(`[GeminiService] Gemini API generateContent failed (HTTP ${statusCode}): ${errorDetails}. Falling back to internal grounded synthesizer.`);
       }
     }
 
-    // High-precision internal grounded response synthesizer when API Key is absent or rate-limited
+    // Internal grounded response synthesizer when the key is absent, the model
+    // is unavailable, or the API is rate-limited.
     return this.synthesizeGroundedFallback(userQuestion, formattedContext, language);
   }
 
@@ -259,6 +291,93 @@ class GeminiService {
           }
         } catch (e) {
           logger.warn(`Failed to parse available vehicles JSON in fallback: ${e.message}`);
+        }
+      }
+    }
+
+    // Any text already extracted above (e.g. the live market line) is kept and
+    // the tool sections below append to it, so a "net profit" query still shows
+    // the price line together with the spoilage estimate.
+    const lead = () => (extractedText.trim() ? extractedText.trim() + '\n\n' : '');
+
+    // Handle Price Forecast JSON
+    if (formattedContext.includes('<price_forecast_data>')) {
+      const m = formattedContext.match(/<price_forecast_data>([\s\S]*?)<\/price_forecast_data>/);
+      if (m) {
+        try {
+          const d = JSON.parse(m[1].trim());
+          const crop = d.commodity || 'crop';
+          const rec = d.recommendation || d.ruleRecommendation || 'no clear call';
+          const cur = d.currentPricePerKg;
+          const f = d.forecast || {};
+          const recMr = { SELL_NOW: 'आताच विका', SELL_SOON: 'एक-दोन दिवसांत विका', HOLD: 'घाई नाही', HOLD_STRONG: 'थांबा' };
+          const recHi = { SELL_NOW: 'अभी बेचें', SELL_SOON: 'एक-दो दिन में बेचें', HOLD: 'जल्दी नहीं', HOLD_STRONG: 'रुकें' };
+          let s;
+          if (language === 'hi') {
+            s = `${crop} — सुझाव: **${recHi[rec] || rec}**।\n`;
+            if (cur) s += `• अभी का भाव: लगभग ₹${cur}/किग्रा\n`;
+            if (f.available) s += `• मॉडल अनुमान: ${f.horizonPeriods} अवधि में ₹${f.predictedPricePerKg}/किग्रा (${f.changePct >= 0 ? '+' : ''}${f.changePct}%)\n`;
+            else s += `• प्रशिक्षित मॉडल के पास इस फसल के लिए अभी भरोसेमंद अनुमान नहीं है; हाल के रुझान और नियम-आधारित सलाह पर भरोसा करें।\n`;
+            s += `\nस्रोत: KrishiFlow मूल्य इंजन (XGBoost + नियम-आधारित स्कोरर)। यह सलाह है, गारंटी नहीं।`;
+          } else if (language === 'mr') {
+            s = `${crop} — सल्ला: **${recMr[rec] || rec}**.\n`;
+            if (cur) s += `• सध्याचा भाव: सुमारे ₹${cur}/किग्रॅ\n`;
+            if (f.available) s += `• मॉडेल अंदाज: ${f.horizonPeriods} कालावधींत ₹${f.predictedPricePerKg}/किग्रॅ (${f.changePct >= 0 ? '+' : ''}${f.changePct}%)\n`;
+            else s += `• प्रशिक्षित मॉडेलकडे या पिकासाठी सध्या विश्वासार्ह अंदाज नाही; अलीकडचा कल आणि नियम-आधारित सल्ला पाहा.\n`;
+            s += `\nस्रोत: KrishiFlow किंमत इंजिन (XGBoost + नियम-आधारित स्कोरर). हा सल्ला आहे, हमी नाही.`;
+          } else {
+            s = `${crop} — recommendation: **${rec}**.\n`;
+            if (cur) s += `• Current price: about ₹${cur}/kg\n`;
+            if (f.available) s += `• Model estimate: ₹${f.predictedPricePerKg}/kg over ${f.horizonPeriods} periods (${f.changePct >= 0 ? '+' : ''}${f.changePct}%)\n`;
+            else s += `• The trained model has nothing reliable for this crop right now; go by the recent trend and the rule-based call.\n`;
+            s += `\nSource: KrishiFlow price engine (XGBoost + rule-based scorer). This is guidance, not a guarantee.`;
+          }
+          return lead() + s;
+        } catch (e) {
+          logger.warn(`Failed to parse price_forecast JSON in fallback: ${e.message}`);
+        }
+      }
+    }
+
+    // Handle Transport Spoilage Risk JSON
+    if (formattedContext.includes('<transport_risk_data>')) {
+      const m = formattedContext.match(/<transport_risk_data>([\s\S]*?)<\/transport_risk_data>/);
+      if (m) {
+        try {
+          const d = JSON.parse(m[1].trim());
+          const a = d.assessment || {};
+          const realTemp = d.weather?.temperatureC != null;
+          const tC = realTemp ? d.weather.temperatureC : a.ambientTempC;
+          const km = a.distanceKm;
+          const hrs = a.transitHours;
+          const open = a.openTruckSpoilagePct;
+          const cold = a.refrigeratedSpoilagePct;
+          const saveRs = a.refrigeratedSavingRupees;
+          const crop = d.commodity || 'crop';
+          const dAssumed = d.distanceAssumed;
+          let s;
+          if (language === 'hi') {
+            s = `${tC}°C पर ${km} किमी (लगभग ${hrs} घंटे) के सफ़र में ${crop} की अनुमानित ख़राबी:\n\n`;
+            s += `• खुले ट्रक में: लगभग ${open}%\n• ठंडी (रेफ्रिजरेटेड) गाड़ी में: लगभग ${cold}%\n`;
+            if (saveRs) s += `• ठंडी गाड़ी से बचत: लगभग ₹${saveRs}\n`;
+            if (dAssumed) s += `\n(दूरी नहीं बताई गई थी, इसलिए एक सामान्य ${km} किमी सफ़र माना गया है।)`;
+            s += `\n\nस्रोत: KrishiFlow स्पॉयलेज मॉडल (Q10)${realTemp ? ' + Open-Meteo मौसम' : ''}।`;
+          } else if (language === 'mr') {
+            s = `${tC}°C तापमानात ${km} किमी (सुमारे ${hrs} तास) प्रवासात ${crop} ची अंदाजे नासाडी:\n\n`;
+            s += `• उघड्या ट्रकमध्ये: सुमारे ${open}%\n• थंड (रेफ्रिजरेटेड) गाडीत: सुमारे ${cold}%\n`;
+            if (saveRs) s += `• थंड गाडीमुळे बचत: सुमारे ₹${saveRs}\n`;
+            if (dAssumed) s += `\n(अंतर दिलेले नव्हते, म्हणून नेहमीचा ${km} किमी प्रवास गृहीत धरला आहे.)`;
+            s += `\n\nस्रोत: KrishiFlow स्पॉयलेज मॉडेल (Q10)${realTemp ? ' + Open-Meteo हवामान' : ''}.`;
+          } else {
+            s = `Estimated ${crop} spoilage over a ${km} km haul (about ${hrs} h) at ${tC}°C:\n\n`;
+            s += `• Open truck: about ${open}%\n• Refrigerated van: about ${cold}%\n`;
+            if (saveRs) s += `• A refrigerated van saves roughly ₹${saveRs}\n`;
+            if (dAssumed) s += `\n(No distance was given, so a typical ${km} km haul is assumed.)`;
+            s += `\n\nSource: KrishiFlow spoilage model (Q10)${realTemp ? ' + Open-Meteo weather' : ''}.`;
+          }
+          return lead() + s;
+        } catch (e) {
+          logger.warn(`Failed to parse transport_risk JSON in fallback: ${e.message}`);
         }
       }
     }

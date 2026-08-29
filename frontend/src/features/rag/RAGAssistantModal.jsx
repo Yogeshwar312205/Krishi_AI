@@ -1,327 +1,322 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Volume2, Send, Sparkles, X, RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Mic, MicOff, Volume2, Send, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { useT } from '../../i18n/useT';
+import { translate } from '../../i18n';
 import { sendRagQuestion } from '../../services/api';
 import { useSpeech } from '../../shared/voice/useSpeech';
+import { normaliseRole, ROLES } from '../../app/routes';
+import { Markdown } from './Markdown';
+
+/**
+ * AI Sahayak — the one assistant.
+ *
+ * Rate-board language: square corners, ruled rows, ink on paper, no shadows or
+ * gradients, motion through the shared keyframe classes only.
+ *
+ * The in-drawer language toggle is the single language control for the
+ * assistant: it pins the reply language on the backend, drives speech in/out,
+ * AND localises the assistant's own copy (greeting, chips, placeholders) —
+ * independent of the app-wide language picker.
+ *
+ * Backend answers come as markdown; `<Markdown>` renders the subset Gemini
+ * emits (headings, bold, lists, rules).
+ */
+
+const ROLE_KEYS = {
+  [ROLES.FARMER]: 'roles.farmer',
+  [ROLES.BUYER]: 'roles.buyer',
+  [ROLES.LOGISTICS]: 'roles.logistics',
+};
+
+const LANGS = [
+  { code: 'en', key: 'lang.en' },
+  { code: 'hi', key: 'lang.hi' },
+  { code: 'mr', key: 'lang.mr' },
+];
+
+const QUICK_KEYS = ['assistant.q.rate', 'assistant.q.spoil', 'assistant.q.sell', 'assistant.q.vehicles'];
 
 export default function RAGAssistantModal({ isOpen, onClose }) {
   const user = useAppStore((state) => state.user);
   const globalLang = useAppStore((state) => state.language) || 'en';
-  const [currentLang, setCurrentLang] = useState(globalLang);
+  const { t } = useT();
 
-  const { isSupported, isListening, isSpeaking, listen, speak, stopSpeaking } = useSpeech(currentLang);
+  // The assistant's language. Starts from the app language; the toggle overrides
+  // it for everything below without touching the app-wide picker.
+  const [lang, setLang] = useState(globalLang);
+  const { isSupported, isListening, isSpeaking, listen, speak, stopSpeaking } = useSpeech(lang);
 
-  const [messages, setMessages] = useState([
-    {
-      sender: 'assistant',
-      text: `Hello ${user?.name || 'Farmer'}! I am KrishiFlow AI Sahayak 🌾. Ask me anything in English, Hindi (हिंदी), or Marathi (मराठी) via text or voice!`,
-      sources: [],
-      language: currentLang,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
-  const [inputQuery, setInputQuery] = useState('');
+  /** Assistant-scoped translate — always in the drawer's chosen language. */
+  const at = useCallback((key, vars) => translate(lang, key, vars), [lang]);
+
+  const roleLabel = t(ROLE_KEYS[normaliseRole(user?.role)] || 'roles.farmer');
+
+  const greetingMsg = useCallback((textKey = 'assistant.greeting') => ({
+    sender: 'assistant',
+    text: translate(lang, textKey),
+    sources: [],
+    greeting: true,
+    at: new Date(),
+  }), [lang]);
+
+  const [messages, setMessages] = useState(() => [greetingMsg()]);
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const chatEndRef = useRef(null);
+  const feedRef = useRef(null);
+
+  // Follow the app language until the user picks inside the drawer.
+  useEffect(() => { setLang(globalLang); }, [globalLang]);
+
+  // Re-render the opening line in the newly chosen language (only while the feed
+  // is still just that line — never rewrite a real conversation).
+  useEffect(() => {
+    setMessages((prev) => (
+      prev.length === 1 && prev[0].greeting ? [greetingMsg()] : prev
+    ));
+  }, [lang, greetingMsg]);
 
   useEffect(() => {
-    if (isOpen) {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (isOpen) feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, isOpen]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') { stopSpeaking(); onClose(); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose, stopSpeaking]);
 
-  const quickQuestions = [
-    "How does KrishiFlow calculate net profit?",
-    "Give me list of previous trip details that i completed",
-    "Which vehicles are available and their rates",
-    "KrishiFlow मध्ये शेतकरी नफा कसा मोजतो?",
-    "Pune APMC Onion Market Price"
-  ];
+  const time = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const handleSend = async (queryText) => {
-    const textToSend = queryText || inputQuery;
-    if (!textToSend.trim() || loading) return;
+  const send = async (text) => {
+    const q = (text ?? input).trim();
+    if (!q || loading) return;
 
-    const userMsg = {
-      sender: 'user',
-      text: textToSend,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    if (!queryText) setInputQuery('');
+    setMessages((prev) => [...prev, { sender: 'user', text: q, at: new Date() }]);
+    if (text === undefined) setInput('');
     setLoading(true);
-    setError(null);
 
     try {
-      const response = await sendRagQuestion(textToSend);
-
-      const detectedLang = response.language || currentLang;
-
-      const assistantMsg = {
+      const res = await sendRagQuestion(q, null, lang);
+      const answerLang = res.language || lang;
+      setMessages((prev) => [...prev, {
         sender: 'assistant',
-        text: response.answer,
-        sources: response.sources || [],
-        retrieval: response.retrieval,
-        language: detectedLang,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
-
-      // Automatically speak out response in the detected language (Marathi / Hindi / English)
-      speak(response.answer, detectedLang);
+        text: res.answer,
+        sources: res.sources || [],
+        lang: answerLang,
+        at: new Date(),
+      }]);
+      speak(res.answer, answerLang);
     } catch (err) {
-      setError(err.message || 'Failed to retrieve grounded answer.');
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: 'assistant',
-          text: `⚠️ Error: ${err.message || 'Could not connect to KrishiFlow AI Sahayak.'}`,
-          sources: [],
-          language: 'en',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
+      setMessages((prev) => [...prev, {
+        sender: 'assistant',
+        text: err.message || at('assistant.error'),
+        sources: [],
+        isError: true,
+        at: new Date(),
+      }]);
     } finally {
       setLoading(false);
     }
   };
 
   const toggleMic = () => {
-    if (isListening) {
-      listen(() => {});
-      return;
-    }
-    listen((transcript) => {
-      if (transcript) {
-        setInputQuery(transcript);
-        handleSend(transcript);
-      }
-    });
+    if (isListening) { listen(() => {}); return; }
+    listen((transcript) => { if (transcript) { setInput(transcript); send(transcript); } });
   };
 
-  const handleClearHistory = () => {
+  const clear = () => {
     stopSpeaking();
-    setMessages([
-      {
-        sender: 'assistant',
-        text: `Chat history cleared. How can I help you with KrishiFlow today?`,
-        sources: [],
-        language: currentLang,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]);
+    setMessages([greetingMsg('assistant.cleared')]);
   };
+
+  const quick = useMemo(() => QUICK_KEYS.map((k) => translate(lang, k)), [lang]);
+
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg bg-emerald-950/95 text-emerald-50 border-l border-emerald-800/60 shadow-2xl flex flex-col h-full">
-        {/* Header */}
-        <div className="p-4 border-b border-emerald-800/80 bg-emerald-900/90 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-xl">
-                🌾
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base tracking-wide text-white">KrishiFlow AI Sahayak</h3>
-                  <span className="px-2 py-0.5 text-xs font-semibold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded">
-                    Voice + RAG
-                  </span>
-                </div>
-                <p className="text-xs text-emerald-300/80 font-mono">
-                  Role: <span className="font-semibold text-amber-300">{user?.role || 'Farmer'}</span>
-                </p>
-              </div>
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-ink/40"
+      onClick={() => { stopSpeaking(); onClose(); }}
+    >
+      <div
+        role="dialog"
+        aria-label={at('assistant.title')}
+        lang={lang}
+        className="detail-enter flex h-full w-full max-w-md flex-col border-l-2 border-ink bg-paper"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* ---- Header ---- */}
+        <div className="border-b-2 border-ink bg-white px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-display text-xl leading-none text-ink">{at('assistant.title')}</p>
+              <p className="mt-1 text-sm text-ink-faint">{at('assistant.role', { role: roleLabel })}</p>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex shrink-0 items-center gap-2">
               <button
-                onClick={handleClearHistory}
-                title="Clear Chat History"
-                className="p-1.5 text-xs text-emerald-300/70 hover:text-white hover:bg-emerald-800/60 rounded transition"
+                type="button"
+                onClick={clear}
+                className="border-2 border-rule px-2 py-1 text-xs font-bold text-ink-soft hover:border-ink hover:text-ink"
               >
-                Clear
+                {at('assistant.clear')}
               </button>
               <button
+                type="button"
                 onClick={() => { stopSpeaking(); onClose(); }}
-                className="p-1.5 text-emerald-300 hover:text-white text-lg font-bold transition"
+                aria-label={at('assistant.close')}
+                className="flex h-8 w-8 items-center justify-center border-2 border-ink bg-white text-ink hover:bg-forest-50"
               >
-                ✕
+                <X className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
               </button>
             </div>
           </div>
 
-          {/* Voice Language Selector */}
-          <div className="flex items-center justify-between pt-1 border-t border-emerald-800/50 text-xs">
-            <span className="text-emerald-300/80 font-semibold">Voice Language:</span>
-            <div className="flex items-center space-x-1.5">
-              {[
-                { code: 'en', label: 'English' },
-                { code: 'hi', label: 'हिंदी (Hindi)' },
-                { code: 'mr', label: 'मराठी (Marathi)' }
-              ].map((langObj) => (
+          {/* Language — controls replies, speech, and this drawer's own copy */}
+          <div className="mt-3 flex items-center gap-2 border-t-2 border-rule pt-2.5">
+            <span className="eyebrow shrink-0">{at('assistant.lang')}</span>
+            <div className="flex gap-1.5">
+              {LANGS.map((l) => (
                 <button
-                  key={langObj.code}
-                  onClick={() => setCurrentLang(langObj.code)}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition ${
-                    currentLang === langObj.code
-                      ? 'bg-amber-500 text-amber-950 font-bold shadow'
-                      : 'bg-emerald-950/60 text-emerald-300 hover:bg-emerald-800/60 border border-emerald-800'
+                  key={l.code}
+                  type="button"
+                  onClick={() => setLang(l.code)}
+                  aria-pressed={lang === l.code}
+                  className={`border-2 px-2 py-0.5 text-xs font-bold transition-colors ${
+                    lang === l.code
+                      ? 'border-forest-700 bg-forest-700 text-white'
+                      : 'border-rule text-ink-soft hover:border-ink'
                   }`}
                 >
-                  {langObj.label}
+                  {translate(l.code, l.key)}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Quick Suggestion Chips */}
-        <div className="p-2.5 bg-emerald-900/40 border-b border-emerald-800/40 overflow-x-auto flex gap-2 no-scrollbar">
-          {quickQuestions.map((q, idx) => (
+        {/* ---- Quick questions ---- */}
+        <div className="no-scrollbar flex gap-2 overflow-x-auto border-b-2 border-rule bg-white px-4 py-2">
+          {quick.map((q, i) => (
             <button
-              key={idx}
-              onClick={() => handleSend(q)}
+              key={i}
+              type="button"
+              onClick={() => send(q)}
               disabled={loading}
-              className="whitespace-nowrap text-xs px-2.5 py-1 bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/60 rounded transition text-left"
+              className="shrink-0 border-2 border-rule px-2.5 py-1 text-xs font-semibold text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
             >
               {q}
             </button>
           ))}
         </div>
 
-        {/* Chat Feed */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-4 font-sans text-sm">
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
-            >
+        {/* ---- Feed ---- */}
+        <div ref={feedRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
               <div
-                className={`max-w-[88%] p-3.5 rounded-lg text-sm leading-relaxed relative ${
-                  msg.sender === 'user'
-                    ? 'bg-amber-600 text-amber-50 rounded-br-none font-medium'
-                    : 'bg-emerald-900/80 border border-emerald-700/60 text-emerald-100 rounded-bl-none'
+                className={`max-w-[92%] border-2 px-3 py-2.5 text-sm ${
+                  m.sender === 'user'
+                    ? 'border-forest-700 bg-forest-700 text-white'
+                    : m.isError
+                      ? 'border-terracotta-700 bg-terracotta-50 text-ink'
+                      : 'border-ink bg-white text-ink'
                 }`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="whitespace-pre-line flex-1">{msg.text}</p>
-                  
-                  {/* TTS Voice Replay Button for Assistant Messages */}
-                  {msg.sender === 'assistant' && (
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    {m.sender === 'assistant' && !m.isError
+                      ? <Markdown text={m.text} />
+                      : <p className="whitespace-pre-line leading-relaxed">{m.text}</p>}
+                  </div>
+                  {m.sender === 'assistant' && !m.isError && (
                     <button
-                      onClick={() => speak(msg.text, msg.language || currentLang)}
-                      title="Listen Voice Output"
-                      className="p-1 rounded bg-emerald-800/80 hover:bg-emerald-700 text-amber-300 shrink-0 transition"
+                      type="button"
+                      onClick={() => speak(m.text, m.lang || lang)}
+                      aria-label={at('assistant.replay')}
+                      className="shrink-0 border-2 border-rule p-1 text-ink-soft hover:border-ink hover:text-ink"
                     >
-                      <Volume2 className="h-4 w-4" />
+                      <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   )}
                 </div>
 
-                {/* Sources Section */}
-                {msg.sources && msg.sources.length > 0 && (
-                  <div className="mt-3 pt-2.5 border-t border-emerald-700/50">
-                    <p className="text-xs uppercase tracking-wider font-semibold text-amber-300 mb-1.5">
-                      Verified Sources ({msg.sources.length}):
-                    </p>
-                    <div className="space-y-1.5">
-                      {msg.sources.map((src, sIdx) => (
-                        <div
-                          key={sIdx}
-                          className="text-xs bg-emerald-950/70 p-2 rounded border border-emerald-800/80 text-emerald-200"
-                        >
-                          <div className="font-semibold text-emerald-300">
-                            {src.title} — <span className="text-emerald-400 font-normal">{src.section}</span>
-                          </div>
-                          {src.snippet && (
-                            <p className="text-[11px] text-emerald-400/80 mt-0.5 line-clamp-2">
-                              "{src.snippet}"
-                            </p>
-                          )}
-                        </div>
+                {m.sources?.length > 0 && (
+                  <div className="mt-2.5 border-t-2 border-rule pt-2">
+                    <p className="eyebrow mb-1.5">{at('assistant.sources', { count: m.sources.length })}</p>
+                    <ul className="space-y-1.5">
+                      {m.sources.map((s, si) => (
+                        <li key={si} className="border-l-4 border-forest-700 bg-paper px-2 py-1 text-xs text-ink-soft">
+                          <span className="font-bold text-ink">{s.title}</span>
+                          {s.section ? ` — ${s.section}` : ''}
+                          {s.snippet && <span className="mt-0.5 block text-ink-faint">{s.snippet}</span>}
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
                 )}
 
-                <div className="mt-1 text-[10px] opacity-60 text-right">
-                  {msg.timestamp}
-                </div>
+                <p className={`mt-1 text-right text-[10px] ${m.sender === 'user' ? 'text-forest-100' : 'text-ink-faint'}`}>
+                  {time(m.at)}
+                </p>
               </div>
             </div>
           ))}
 
-          {loading && (
-            <div className="flex items-center space-x-2 text-emerald-400 text-xs py-2">
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></div>
-              <span>Analyzing database & generating voice-ready response...</span>
-            </div>
-          )}
-          <div ref={chatEndRef} />
+          {loading && <p className="text-sm text-ink-faint">{at('assistant.thinking')}</p>}
         </div>
 
-        {/* Input & Voice Controls */}
-        <div className="p-3 border-t border-emerald-800/80 bg-emerald-900/90 flex flex-col gap-2">
-          {/* Active Speaking Indicator */}
+        {/* ---- Input ---- */}
+        <div className="border-t-2 border-ink bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {isSpeaking && (
-            <div className="flex items-center justify-between px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded text-xs text-amber-200">
-              <div className="flex items-center gap-2">
-                <Volume2 className="h-4 w-4 text-amber-400 animate-bounce" />
-                <span>Speaking in <strong>{currentLang === 'mr' ? 'मराठी' : currentLang === 'hi' ? 'हिंदी' : 'English'}</strong>...</span>
-              </div>
-              <button
-                onClick={stopSpeaking}
-                className="px-2 py-0.5 bg-amber-500 text-amber-950 font-bold rounded text-[11px]"
-              >
-                Stop
+            <div className="mb-2 flex items-center justify-between border-2 border-turmeric-300 bg-turmeric-50 px-2.5 py-1.5 text-xs font-semibold text-ink">
+              <span className="flex items-center gap-1.5">
+                <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />
+                {at('assistant.speaking')}
+              </span>
+              <button type="button" onClick={stopSpeaking} className="border-2 border-ink bg-white px-2 py-0.5 font-bold">
+                {at('assistant.stop')}
               </button>
             </div>
           )}
 
+          {!isSupported && <p className="mb-2 text-xs text-ink-faint">{at('assistant.micUnsupported')}</p>}
+
           <div className="flex items-center gap-2">
-            {/* Multilingual Voice Input Mic Button */}
             {isSupported && (
               <button
+                type="button"
                 onClick={toggleMic}
-                title={isListening ? "Listening... click to stop" : "Speak Voice Question"}
-                className={`p-2.5 rounded border transition shrink-0 flex items-center justify-center ${
+                aria-label={isListening ? at('assistant.stop') : at('assistant.mic')}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center border-2 transition-colors ${
                   isListening
-                    ? 'bg-rose-600 text-white animate-pulse border-rose-400 shadow-lg'
-                    : 'bg-emerald-800 hover:bg-emerald-700 text-amber-300 border-emerald-600'
+                    ? 'border-terracotta-700 bg-terracotta-600 text-white'
+                    : 'border-ink bg-white text-ink hover:bg-forest-50'
                 }`}
               >
                 {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>
             )}
 
-            {/* Text Input */}
             <input
               type="text"
-              value={inputQuery}
-              onChange={(e) => setInputQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={
-                isListening
-                  ? "Listening in " + (currentLang === 'mr' ? 'मराठी...' : currentLang === 'hi' ? 'हिंदी...' : 'English...')
-                  : "Ask or speak (English, Hindi, Marathi)..."
-              }
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && send()}
+              placeholder={isListening ? at('assistant.listening') : at('assistant.placeholder')}
               disabled={loading}
-              className="flex-1 px-3.5 py-2.5 bg-emerald-950 text-emerald-100 placeholder-emerald-500/70 text-sm border border-emerald-700/60 rounded focus:outline-none focus:border-amber-400"
+              className="h-11 flex-1 border-2 border-ink bg-white px-3 text-sm text-ink placeholder:text-ink-faint disabled:opacity-60"
             />
 
             <button
-              onClick={() => handleSend()}
-              disabled={loading || !inputQuery.trim()}
-              className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-amber-950 font-bold text-sm rounded transition tracking-wide flex items-center gap-1 shrink-0"
+              type="button"
+              onClick={() => send()}
+              disabled={loading || !input.trim()}
+              className="flex h-11 shrink-0 items-center gap-1.5 border-2 border-ink bg-forest-700 px-3 text-sm font-bold text-white hover:bg-forest-800 disabled:opacity-50"
             >
-              <span>Ask</span>
-              <Send className="h-4 w-4" />
+              <span>{at('assistant.send')}</span>
+              <Send className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowUpRight, ArrowDownRight, Minus, Truck, IndianRupee, Sprout, MapPin, Handshake, Boxes } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, Truck, IndianRupee, Sprout, MapPin, Handshake, Boxes, Thermometer } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
 import { useLiveMarket, mandiLabel } from '../../../data/useLiveMarket';
+import { useWeather, weatherLabelKey } from '../../../data/weather';
+import { PERISHABLE_CROPS } from '../../../utils/constants';
 import { useSellAdvice } from '../../../data/sellAdvice';
 import { AdviceReasons } from '../price/AdviceReasons';
 import { AdviceExplanation } from '../price/AdviceExplanation';
@@ -32,6 +34,13 @@ export const TodayScreen = () => {
   const [isLoadingPostings, setIsLoadingPostings] = useState(true);
 
   const { best, comparison, delta, action, status, totalArrivalQuintals } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
+
+  // Current conditions at the farm. Null when there is no farm pin or the feed
+  // is down — the strip just doesn't render.
+  const weather = useWeather();
+  const perishable = PERISHABLE_CROPS.has(cropDetails.cropType);
+  const spoilPerHour = best?.transitHours > 0 ? (best.spoilageCost || 0) / best.transitHours : 0;
+  const hotNudge = weather && perishable && weather.tempC >= 30 && spoilPerHour >= 1;
 
   // Fetch buyer postings filtered by farmer's crop type
   useEffect(() => {
@@ -148,6 +157,23 @@ export const TodayScreen = () => {
           </button>
         </p>
       </div>
+
+      {/* Today's weather at the farm. It matters here because it is one of the
+          inputs to the spoilage cost on the Prices screen — a hot day makes a
+          soft crop on an open truck lose value faster. */}
+      {weather && (
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-y-2 border-rule py-2.5 text-sm text-ink-soft">
+          <Thermometer className="h-4 w-4 text-forest-600" aria-hidden="true" />
+          <span className="font-display text-lg leading-none tnum text-ink">{number(weather.tempC)}°</span>
+          <span aria-hidden="true">·</span>
+          <span>{t(weatherLabelKey(weather.weathercode))}</span>
+          {hotNudge && (
+            <span className="w-full leading-snug text-terracotta-700">
+              {t('weather.hotPerishable', { crop: cropName, amount: money(spoilPerHour) })}
+            </span>
+          )}
+        </div>
+      )}
 
       {/*
         ---- The signature: the verdict slab ----

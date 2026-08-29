@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { subscribe, peek, ensure, MARKET_TTL_MS } from './marketCache';
-import { roadDistanceKm, DISTRICT_MIN_HAUL_KM } from './geo';
+import {
+  roadDistanceKm,
+  DISTRICT_MIN_HAUL_KM,
+  transitHours,
+  spoilageFraction,
+  DEFAULT_AMBIENT_C,
+} from './geo';
+import { useWeather } from './weather';
 import {
   buildMandiComparison,
   buildForecast as buildDemoForecast,
@@ -36,7 +43,7 @@ export const COMMISSION_RATE = 0.06;
 
 /* ----------------------------------------------------------- live rows */
 
-const buildRows = (records, { originCoords, quantityKg }) => {
+const buildRows = (records, { originCoords, quantityKg, cropType, ambientC = DEFAULT_AMBIENT_C }) => {
   const qty = Math.max(Number(quantityKg) || 0, 1);
   const [originLon, originLat] = originCoords || [];
   const hasOrigin = Number.isFinite(originLat) && Number.isFinite(originLon);
@@ -61,6 +68,16 @@ const buildRows = (records, { originCoords, quantityKg }) => {
       const ratePerKm = rec.logisticsRatePerKm || 31;
       const freight = distanceKm === null ? 0 : ratePerKm * distanceKm;
       const commission = gross * COMMISSION_RATE;
+
+      // The spoilage term the product name promises. Zero for a market we can't
+      // place (no distance) and near-zero for non-perishable crops; for a soft
+      // crop on a long haul it is what drops a high-rate distant mandi below a
+      // nearer one. Ambient temperature is the live reading at the farm when we
+      // have it, the seasonal default otherwise.
+      const hours = transitHours(distanceKm);
+      const spoilFrac = spoilageFraction(cropType, hours, ambientC);
+      const spoilageCost = gross * spoilFrac;
+      const spoilageCostCold = gross * spoilageFraction(cropType, hours, ambientC, true);
 
       return {
         id: rec.mandi,
@@ -88,7 +105,11 @@ const buildRows = (records, { originCoords, quantityKg }) => {
         freight,
         freightPerKg: freight / qty,
         commission,
-        net: gross - freight - commission,
+        transitHours: hours,
+        spoilageFraction: spoilFrac,
+        spoilageCost,
+        spoilageCostCold,
+        net: gross - freight - commission - spoilageCost,
         isLive: true,
       };
     })
@@ -119,6 +140,9 @@ const buildAdvantage = (rows) => {
     // What the higher rate earns on this consignment, before the extra haul.
     grossGain: best.gross - nearest.gross,
     extraCommission: best.commission - nearest.commission,
+    // Extra spoilage from the longer time on the road. Usually small, but for a
+    // soft crop it is the reason `netGain` can come out lower than `grossGain`.
+    extraSpoilage: (best.spoilageCost || 0) - (nearest.spoilageCost || 0),
     netGain: best.net - nearest.net,
   };
 };
@@ -221,6 +245,10 @@ export const mandiLabel = (t, row) => (row?.nameKey ? t(row.nameKey) : row?.name
  */
 export const useLiveMarket = (cropType, quantityKg) => {
   const farmerOrigin = useAppStore((state) => state.farmerOrigin);
+  // Live temperature at the farm feeds the spoilage term; null (no farm pin, or
+  // the weather feed down) falls back to the seasonal road-temperature default.
+  const weather = useWeather();
+  const ambientC = weather?.tempC;
 
   const subscribeToCrop = useCallback((callback) => subscribe(cropType, callback), [cropType]);
   const getSnapshot = useCallback(() => peek(cropType), [cropType]);
@@ -235,7 +263,9 @@ export const useLiveMarket = (cropType, quantityKg) => {
     if (!entry) return demoState(cropType, quantityKg, 'loading');
     if (!entry.isLive || !entry.records.length) return demoState(cropType, quantityKg);
 
-    const rows = buildRows(entry.records, { originCoords: farmerOrigin, quantityKg });
+    const rows = buildRows(entry.records, {
+      originCoords: farmerOrigin, quantityKg, cropType, ambientC,
+    });
     if (!rows.length) return demoState(cropType, quantityKg);
 
     const history = entry.history || [];
@@ -272,7 +302,7 @@ export const useLiveMarket = (cropType, quantityKg) => {
       latestArrivalDate: entry.latestArrivalDate,
       isStaleCache: Date.now() - entry.fetchedAt > MARKET_TTL_MS,
     };
-  }, [entry, cropType, quantityKg, farmerOrigin]);
+  }, [entry, cropType, quantityKg, farmerOrigin, ambientC]);
 };
 
 export default useLiveMarket;

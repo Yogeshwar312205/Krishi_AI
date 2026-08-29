@@ -2,6 +2,8 @@ const marketTool = require('./marketTool');
 const userVehicleTool = require('./userVehicleTool');
 const userTripsTool = require('./userTripsTool');
 const availableVehiclesTool = require('./availableVehiclesTool');
+const spoilageTool = require('./spoilageTool');
+const forecastTool = require('./forecastTool');
 
 class ToolRegistry {
   constructor() {
@@ -10,6 +12,8 @@ class ToolRegistry {
     this.registerTool(userVehicleTool);
     this.registerTool(userTripsTool);
     this.registerTool(availableVehiclesTool);
+    this.registerTool(spoilageTool);
+    this.registerTool(forecastTool);
   }
 
   registerTool(toolInstance) {

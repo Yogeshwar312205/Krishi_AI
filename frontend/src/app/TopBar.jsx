@@ -56,11 +56,11 @@ export const TopBar = () => {
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent('open-rag-assistant'))}
-            className="flex h-[2.125rem] items-center gap-1.5 border-2 border-emerald-900 bg-emerald-700 px-2.5 text-xs font-bold text-white hover:bg-emerald-800 transition"
-            title="Open KrishiFlow AI Sahayak RAG Assistant"
+            className="flex h-[2.125rem] items-center gap-1.5 border-2 border-ink bg-forest-700 px-2.5 text-xs font-bold text-white transition-colors hover:bg-forest-800"
+            title={t('assistant.open')}
           >
-            <span className="text-sm">🌾</span>
-            <span className="hidden xs:inline sm:inline">AI Sahayak</span>
+            <span className="text-sm" aria-hidden="true">🌾</span>
+            <span className="hidden sm:inline">{t('assistant.title')}</span>
           </button>
 
           <span

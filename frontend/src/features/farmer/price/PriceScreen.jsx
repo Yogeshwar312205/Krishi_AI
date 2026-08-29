@@ -41,7 +41,7 @@ export const PriceScreen = () => {
   const cropDetails = useAppStore((state) => state.cropDetails);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const setPendingMandi = useAppStore((state) => state.setPendingMandi);
-  const { t, money, rate, number, shortDate } = useT();
+  const { t, money, rate, number, percent, shortDate } = useT();
 
   const [panel, setPanel] = useState('rates');
   const [showAll, setShowAll] = useState(false);
@@ -261,14 +261,39 @@ export const PriceScreen = () => {
                 sub={t('price.breakdown.commissionCalc', { percent: `${COMMISSION_RATE * 100}%` })}
                 value={`− ${money(best.commission)}`}
               />
+              {(best.spoilageCost || 0) >= 1 && (
+                <LedgerRow
+                  label={t('price.costs.spoilage')}
+                  sub={t('price.breakdown.spoilageCalc', {
+                    percent: percent(best.spoilageFraction || 0),
+                    hours: number(best.transitHours || 0),
+                  })}
+                  value={`− ${money(best.spoilageCost)}`}
+                />
+              )}
               <LedgerRow label={t('price.costs.net')} value={money(best.net)} emphasis />
             </div>
+
+            {(best.spoilageCost || 0) - (best.spoilageCostCold || 0) >= 1 && (
+              <p className="border-l-4 border-forest-700 bg-paper px-3 py-2 text-sm leading-snug text-ink-soft">
+                {t('price.spoilage.coldSaves', {
+                  cold: money(best.spoilageCostCold),
+                  saved: money((best.spoilageCost || 0) - (best.spoilageCostCold || 0)),
+                })}
+              </p>
+            )}
 
             {/* Per-kg, because that is the unit a farmer negotiates in — and the
                 unit in which "the truck ate the difference" becomes obvious. */}
             <div className="border-2 border-ink bg-white px-4">
               <LedgerRow label={t('price.costs.netPerKg')} value={`${rate(best.net / Math.max(best.quantityKg, 1))}`} />
               <LedgerRow label={t('price.costs.freightPerKg')} value={`${rate(best.freightPerKg || 0)}`} />
+              {(best.spoilageCost || 0) >= 1 && (
+                <LedgerRow
+                  label={t('price.costs.spoilagePerKg')}
+                  value={`${rate((best.spoilageCost || 0) / Math.max(best.quantityKg, 1))}`}
+                />
+              )}
             </div>
 
             {provenance}

@@ -81,6 +81,63 @@ class Router {
       };
     }
 
+    // Path A5: Crop Spoilage / Weather Risk in Transit
+    if (intent === 'TRANSPORT_RISK') {
+      logger.info(`[Router] Routing to Transport Spoilage Risk Tool for: ${entities.commodity || 'Tomato'}`);
+      const spoilageTool = toolRegistry.getTool('getTransportSpoilageRisk');
+      const kmMatch = cleanQuery.match(/(\d{2,4})\s*(?:km|kms|kilomet|किमी|किलोमीटर)/i);
+      const toolResult = await spoilageTool.execute({
+        commodity: entities.commodity || 'Tomato',
+        distanceKm: kmMatch ? Number(kmMatch[1]) : undefined,
+        user,
+        language,
+      });
+
+      // Pull in the farmer guide's spoilage section so the model can pair the
+      // numbers with the platform's own explanation of how they are used.
+      const { searchString } = queryRewriter.rewrite(
+        `crop spoilage transit refrigerated van net profit after spoilage ${cleanQuery}`,
+        intent,
+      );
+      const ragResult = await retriever.retrieve(searchString, user, { topicFilter: 'FARMER_WORKFLOW' });
+
+      return {
+        mode: 'COMBINED',
+        toolResult,
+        ragChunks: ragResult.chunks || [],
+        toolUsed: 'getTransportSpoilageRisk',
+        dataSource: 'KrishiFlow Spoilage Model + Knowledge Base',
+        retrievalStats: ragResult,
+      };
+    }
+
+    // Path A6: Price Forecast / "sell now or wait"
+    if (intent === 'PRICE_FORECAST') {
+      logger.info(`[Router] Routing to Price Forecast Tool for: ${entities.commodity || 'Tomato'}`);
+      const forecastTool = toolRegistry.getTool('getPriceForecast');
+      const toolResult = await forecastTool.execute({
+        commodity: entities.commodity || 'Tomato',
+        market: entities.market,
+        user,
+        language,
+      });
+
+      const { searchString } = queryRewriter.rewrite(
+        `price forecast sell now or wait trained XGBoost model weather momentum ${cleanQuery}`,
+        intent,
+      );
+      const ragResult = await retriever.retrieve(searchString, user, { topicFilter: 'FARMER_WORKFLOW' });
+
+      return {
+        mode: 'COMBINED',
+        toolResult,
+        ragChunks: ragResult.chunks || [],
+        toolUsed: 'getPriceForecast',
+        dataSource: 'KrishiFlow Price Forecast + Knowledge Base',
+        retrievalStats: ragResult,
+      };
+    }
+
     // Path B: Combined Query (Live Data + RAG Rules)
     if (intent === 'COMBINED' || (intent === 'PROFIT_CALCULATION' && entities.commodity)) {
       logger.info(`[Router] Routing to COMBINED execution (Live Tool + RAG Retrieval)`);
@@ -95,6 +152,25 @@ class Router {
       const { searchString, topicFilter } = queryRewriter.rewrite(cleanQuery, intent);
       const ragResult = await retriever.retrieve(searchString, user, { topicFilter });
 
+      // A "net profit" answer has to account for spoilage the same way the
+      // Prices screen does, so pull the Q10 estimate in as extra context.
+      let extraContext = '';
+      try {
+        const spoilageTool = toolRegistry.getTool('getTransportSpoilageRisk');
+        const kmMatch = cleanQuery.match(/(\d{2,4})\s*(?:km|kms|kilomet|किमी|किलोमीटर)/i);
+        const risk = await spoilageTool.execute({
+          commodity: entities.commodity || 'Onion',
+          distanceKm: kmMatch ? Number(kmMatch[1]) : undefined,
+          user,
+          language,
+        });
+        if (risk?.success) {
+          extraContext = `<transport_risk_data>\n${JSON.stringify(risk, null, 2)}\n</transport_risk_data>`;
+        }
+      } catch (err) {
+        logger.warn(`[Router] spoilage enrichment skipped: ${err.message}`);
+      }
+
       const resolvedSource = toolResult.isLiveGovtData !== false ? 'data.gov.in + Knowledge Base' : 'fallback + Knowledge Base';
 
       return {
@@ -103,7 +179,8 @@ class Router {
         ragChunks: ragResult.chunks || [],
         toolUsed: 'getLiveMandiPrices',
         dataSource: resolvedSource,
-        retrievalStats: ragResult
+        retrievalStats: ragResult,
+        extraContext,
       };
     }
 

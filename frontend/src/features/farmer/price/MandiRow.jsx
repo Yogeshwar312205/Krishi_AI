@@ -20,6 +20,11 @@ export const MandiRow = ({ row, rank, expanded, onToggle, onContact }) => {
   const isBest = rank === 0;
   const fuel = row.fuelDetails;
 
+  // Only worth a row when it moves the number — a soft crop on a real haul.
+  const showSpoilage = (row.spoilageCost || 0) >= 1;
+  const coldSaving = (row.spoilageCost || 0) - (row.spoilageCostCold || 0);
+  const showColdSaving = coldSaving >= 1;
+
   return (
     <div className={`rule-hair ${isBest ? 'bg-forest-50' : ''}`}>
       <button
@@ -100,11 +105,37 @@ export const MandiRow = ({ row, rank, expanded, onToggle, onContact }) => {
               <dd className="shrink-0 font-semibold tnum text-terracotta-600">− {money(row.commission)}</dd>
             </div>
 
+            {showSpoilage && (
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-ink-soft">
+                  {t('price.costs.spoilage')}
+                  <span className="ml-1.5 text-ink-faint tnum">
+                    {t('price.breakdown.spoilageCalc', {
+                      percent: percent(row.spoilageFraction || 0),
+                      hours: number(row.transitHours || 0),
+                    })}
+                  </span>
+                </dt>
+                <dd className="shrink-0 font-semibold tnum text-terracotta-600">− {money(row.spoilageCost)}</dd>
+              </div>
+            )}
+
             <div className="flex items-baseline justify-between gap-3 border-t-2 border-ink pt-2">
               <dt className="font-bold text-ink">{t('price.costs.net')}</dt>
               <dd className="shrink-0 font-display text-2xl leading-none tnum text-forest-700">{money(row.net)}</dd>
             </div>
           </dl>
+
+          {/* Cold chain only earns its cost when it saves more than it costs;
+              the number the farmer needs to weigh that is this one. */}
+          {showColdSaving && (
+            <p className="mt-3 border-l-4 border-forest-700 bg-paper px-3 py-2 text-sm leading-snug text-ink-soft">
+              {t('price.spoilage.coldSaves', {
+                cold: money(row.spoilageCostCold),
+                saved: money(coldSaving),
+              })}
+            </p>
+          )}
 
           {/* Freight is the number farmers are most likely to dispute, so it is
               the one we show the derivation of rather than just the total. */}

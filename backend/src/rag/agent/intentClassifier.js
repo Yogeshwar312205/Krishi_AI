@@ -9,6 +9,90 @@ class IntentClassifier {
     if (!query) return 'UNKNOWN';
     const lower = query.toLowerCase().trim();
 
+    // 0. Spoilage / weather risk to a load in transit. Checked before the
+    // logistics block because "will my tomato spoil on the route to Vashi"
+    // contains "route" — but the real question is about perishability, not VRP.
+    const isTransportRiskQuery =
+      lower.includes('spoil') ||
+      lower.includes('spoilage') ||
+      lower.includes('perish') ||
+      lower.includes('rot ') || lower.endsWith('rot') ||
+      lower.includes('go bad') ||
+      lower.includes('wilt') ||
+      lower.includes('reefer') ||
+      lower.includes('refrigerated van') ||
+      lower.includes('cold chain') ||
+      lower.includes('cold storage') ||
+      lower.includes('cold van') ||
+      lower.includes('weather') ||
+      lower.includes('temperature') ||
+      lower.includes('how hot') ||
+      lower.includes('नासाडी') ||
+      lower.includes('सडेल') ||
+      lower.includes('खराब होईल') ||
+      lower.includes('खराब हो') ||
+      lower.includes('हवामान') ||
+      lower.includes('मौसम') ||
+      lower.includes('तापमान') ||
+      lower.includes('थंड गाडी') ||
+      lower.includes('ठंडी गाड़ी') ||
+      lower.includes('nasadi') ||
+      lower.includes('havaman');
+
+    if (isTransportRiskQuery) {
+      return 'TRANSPORT_RISK';
+    }
+
+    // 0b. Price forecast / "sell now or wait". Checked before the plain price
+    // block so "will the tomato price rise" routes to the trained model, not to
+    // a live-rate lookup.
+    const isForecastQuery =
+      lower.includes('forecast') ||
+      lower.includes('predict') ||
+      lower.includes('prediction') ||
+      lower.includes('projection') ||
+      lower.includes('outlook') ||
+      lower.includes('trend') ||
+      lower.includes('next week') ||
+      lower.includes('next 7') ||
+      lower.includes('coming days') ||
+      lower.includes('days ahead') ||
+      lower.includes('will the price') ||
+      lower.includes('will price') ||
+      lower.includes('price go up') ||
+      lower.includes('price go down') ||
+      lower.includes('price rise') ||
+      lower.includes('price fall') ||
+      lower.includes('prices rise') ||
+      lower.includes('prices fall') ||
+      lower.includes('going up') ||
+      lower.includes('going down') ||
+      lower.includes('sell now or wait') ||
+      lower.includes('sell or wait') ||
+      lower.includes('wait or sell') ||
+      lower.includes('should i sell') ||
+      lower.includes('should i wait') ||
+      lower.includes('sell or hold') ||
+      lower.includes('hold or sell') ||
+      lower.includes('अंदाज') ||
+      lower.includes('भाकित') ||
+      lower.includes('वाढेल') ||
+      lower.includes('घसरेल') ||
+      lower.includes('भाव वाढ') ||
+      lower.includes('विकू की थांबू') ||
+      lower.includes('विकावे की थांबावे') ||
+      lower.includes('बेचूँ या रुकूँ') ||
+      lower.includes('भाव बढ़ेगा') ||
+      lower.includes('भाव गिरेगा') ||
+      lower.includes('आगे भाव') ||
+      lower.includes('viku ki thambu') ||
+      lower.includes('vadhel') ||
+      lower.includes('ghasrel');
+
+    if (isForecastQuery) {
+      return 'PRICE_FORECAST';
+    }
+
     // 1. Logistics, VRP, Route Optimization & Dispatch Workflows (HIGHER PRIORITY than plain vehicle keywords)
     const isLogisticsVrpQuery =
       lower.includes('vrp') ||
@@ -146,13 +230,26 @@ class IntentClassifier {
       lower.includes('net') ||
       lower.includes('revenue') ||
       lower.includes('transport') ||
+      lower.includes('worth it') ||
+      lower.includes('worth sending') ||
+      lower.includes('worth the') ||
+      lower.includes('take home') ||
+      lower.includes('take-home') ||
       lower.includes('नफा') ||
       lower.includes('कमाई') ||
+      lower.includes('परवडेल') ||
       lower.includes('खर्च');
 
     const isLocationFollowup = /^at\s+/i.test(lower) || /^in\s+/i.test(lower) || lower.startsWith('what about');
 
     if (hasPriceKeyword && hasProfitKeyword && (entities.commodity || entities.market)) {
+      return 'COMBINED';
+    }
+
+    // A profit / net / "worth it" question about a specific crop or market is a
+    // COMBINED query even without a bare "price" word — it needs the live rate,
+    // the freight rules AND the spoilage estimate the COMBINED path now pulls in.
+    if (hasProfitKeyword && (entities.commodity || entities.market)) {
       return 'COMBINED';
     }
 
