@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Truck, Package, MapPin, Phone, CloudOff, RefreshCw, PackageCheck, Play, Flag, X,
+  Truck, Package, MapPin, Phone, CloudOff, RefreshCw, PackageCheck, Play, Flag, X, IndianRupee,
 } from 'lucide-react';
 import { useT } from '../../i18n/useT';
 import { fetchDispatchQueue, updateRequestStatus } from '../../services/api';
+import { fleetJobTotals, isDelivered, deliveredAt } from '../../data/ledger';
 import { SectionHead } from '../../design/primitives/SectionHead';
 import { SegmentedToggle } from '../../design/primitives/SegmentedToggle';
 import { Button } from '../../design/primitives/Button';
@@ -27,7 +28,7 @@ const ACTIONS = {
 const OPEN = ['assigned', 'collected', 'in_transit'];
 
 export const LogisticsJobsScreen = () => {
-  const { t, number, money } = useT();
+  const { t, number, money, shortDate } = useT();
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +65,7 @@ export const LogisticsJobsScreen = () => {
   const open = jobs.filter((j) => OPEN.includes(j.status));
   const done = jobs.filter((j) => !OPEN.includes(j.status));
   const list = panel === 'open' ? open : done;
+  const doneTotals = fleetJobTotals(jobs);
 
   return (
     <div className="space-y-6 pt-4 pb-4">
@@ -104,6 +106,25 @@ export const LogisticsJobsScreen = () => {
           <p className="font-display text-3xl text-ink-faint">
             {panel === 'open' ? t('tracking.noOpen') : t('tracking.noDone')}
           </p>
+        </div>
+      )}
+
+      {panel === 'done' && doneTotals.jobs > 0 && (
+        <div className="space-y-1">
+          <dl className="grid grid-cols-2 gap-px border-2 border-ink bg-ink sm:grid-cols-4">
+            {[
+              [t('history.jobs'), number(doneTotals.jobs)],
+              [t('history.carried'), `${number(doneTotals.kg)} ${t('common.kg')}`],
+              [t('history.detourKm'), `${number(Math.round(doneTotals.addedKm))} ${t('common.km')}`],
+              [t('history.freightEarned'), money(doneTotals.freightEarned)],
+            ].map(([k, v]) => (
+              <div key={k} className="bg-white px-2 py-2.5 text-center">
+                <dt className="text-xs font-semibold text-ink-faint">{k}</dt>
+                <dd className="mt-0.5 font-display text-xl leading-none tnum text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-sm text-ink-faint">{t('history.seasonSoFar')}</p>
         </div>
       )}
 
@@ -150,7 +171,7 @@ export const LogisticsJobsScreen = () => {
                   {request.farmerName} · <span className="tnum">{request.farmerPhone}</span>
                 </p>
 
-                {request.dispatch?.insertionCostKm != null && (
+                {request.dispatch?.insertionCostKm != null && !isDelivered(request) && (
                   <p className="text-sm text-ink-faint tnum">
                     {t('tracking.costWas', {
                       km: number(request.dispatch.insertionCostKm),
@@ -179,6 +200,28 @@ export const LogisticsJobsScreen = () => {
                     vehicleId={request.vehicle.id}
                     vehicleNo={request.vehicle.vehicleNo}
                   />
+                </div>
+              )}
+
+              {isDelivered(request) && (
+                <div className="border-t-2 border-ink bg-forest-50 px-4">
+                  <p className="eyebrow flex items-center gap-1.5 pt-3.5">
+                    <IndianRupee className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
+                    {t('history.jobFreight')}
+                  </p>
+                  <p className="mt-1 font-display text-3xl leading-none tnum text-forest-700">
+                    {money(request.dispatch?.addedFreightCost || 0)}
+                  </p>
+                  {request.dispatch?.insertionCostKm != null && (
+                    <p className="mt-1 text-sm text-ink-soft tnum">
+                      {t('history.detourKm')}: {number(Math.round(request.dispatch.insertionCostKm))} {t('common.km')}
+                    </p>
+                  )}
+                  <p className="pb-3.5 pt-1.5 text-sm text-ink-faint">
+                    {deliveredAt(request)
+                      ? t('history.deliveredOn', { date: shortDate(deliveredAt(request)) })
+                      : t('tracking.status.delivered')}
+                  </p>
                 </div>
               )}
 

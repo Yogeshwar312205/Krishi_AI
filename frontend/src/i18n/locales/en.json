@@ -699,6 +699,28 @@
     "base": "Where it is based",
     "baseWhy": "Picked from a list, not typed. Every suggestion is measured from here."
   },
+  "history": {
+    "farmerTitle": "Past trips & earnings",
+    "fleetTitle": "Completed work",
+    "buyerTitle": "Received so far",
+    "seasonSoFar": "This season so far",
+    "trips": "Trips",
+    "jobs": "Jobs done",
+    "moved": "Moved",
+    "carried": "Carried",
+    "detourKm": "Detour km",
+    "gross": "Sale value",
+    "freight": "Freight paid",
+    "freightEarned": "Freight earned",
+    "jobFreight": "Freight for this job",
+    "takeHome": "Take-home",
+    "received": "Lots received",
+    "volumeIn": "Volume in",
+    "spend": "Paid to farmers",
+    "deliveredOn": "Delivered {{date}}",
+    "noRate": "No agreed rate was recorded for this trip.",
+    "empty": "Nothing finished yet"
+  },
   "tracking": {
     "jobsTitle": "My jobs",
     "jobsNote": "Work your fleet has taken on, and how far along each one is.",

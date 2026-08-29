@@ -3,6 +3,7 @@ import { Truck, MessageSquare, Send, Handshake, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useT } from '../../i18n/useT';
 import { fetchBuyerInbound } from '../../services/api';
+import { buyerProcurementTotals, isDelivered, deliveredAt } from '../../data/ledger';
 import { SectionHead } from '../../design/primitives/SectionHead';
 import { LedgerRow } from '../../design/primitives/LedgerRow';
 import { Button } from '../../design/primitives/Button';
@@ -21,7 +22,7 @@ export const BuyerInboundScreen = () => {
   const deals = useAppStore((state) => state.deals);
   const sendDealMessage = useAppStore((state) => state.sendDealMessage);
   const agreeDeal = useAppStore((state) => state.agreeDeal);
-  const { t, number, rate, money } = useT();
+  const { t, number, rate, money, shortDate } = useT();
 
   const [replies, setReplies] = useState({});
   const [quotes, setQuotes] = useState({});
@@ -32,7 +33,6 @@ export const BuyerInboundScreen = () => {
     setLoading(true);
     try {
       const shipments = await fetchBuyerInbound();
-      console.log('Loaded inbound shipments:', shipments);
       setInboundShipments(shipments || []);
     } catch (err) {
       console.error('Failed to load inbound shipments:', err);
@@ -47,6 +47,12 @@ export const BuyerInboundScreen = () => {
   }, []);
 
   const open = deals.filter((deal) => deal.status !== 'Closed');
+
+  // On the way vs. already received — the second list is the buyer's record of
+  // what they have actually procured, and what it cost.
+  const onTheWay = inboundShipments.filter((s) => !isDelivered(s));
+  const received = inboundShipments.filter(isDelivered);
+  const procured = buyerProcurementTotals(inboundShipments);
 
   const reply = (deal) => {
     const text = (replies[deal.id] || '').trim();
@@ -70,6 +76,54 @@ export const BuyerInboundScreen = () => {
     });
     setQuotes((current) => ({ ...current, [deal.id]: '' }));
   };
+
+  const renderShipment = (shipment) => (
+    <article key={shipment.id} className="border-2 border-ink bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ink px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Truck className="h-5 w-5 shrink-0 text-forest-700" strokeWidth={2.25} aria-hidden="true" />
+          <p className="font-display text-2xl leading-none text-ink">
+            {t(`crops.${shipment.cropType}`)} · <span className="tnum">{number(shipment.quantityKg)} {t('common.kg')}</span>
+          </p>
+        </div>
+        <span className={`border-2 border-ink px-2 py-1 text-sm font-bold leading-none text-ink ${
+          isDelivered(shipment) ? 'bg-forest-200' : 'bg-turmeric-300'
+        }`}>
+          {t(`tracking.status.${shipment.status}`)}
+        </span>
+      </div>
+
+      <div className="px-4">
+        <LedgerRow
+          label={t('buyer.inbound.from')}
+          sub={shipment.vehicle ? `${shipment.vehicle.vehicleNo} · ${shipment.vehicle.driverName}` : t('transport.track.waiting')}
+          value={<span className="font-sans text-base">{shipment.farmerName}</span>}
+        />
+        <LedgerRow
+          label={t('transport.route.pickup')}
+          value={<span className="font-sans text-base">{shipment.origin.label}</span>}
+        />
+        <LedgerRow
+          label={t('transport.route.drop')}
+          value={<span className="font-sans text-base">{shipment.destination.label}</span>}
+        />
+        {shipment.agreedRatePerKg && (
+          <LedgerRow
+            label={t('deal.agreedTitle')}
+            sub={`${rate(shipment.agreedRatePerKg)}/${t('common.kg')}`}
+            value={money(shipment.agreedRatePerKg * shipment.quantityKg)}
+            emphasis
+          />
+        )}
+      </div>
+
+      {isDelivered(shipment) && deliveredAt(shipment) && (
+        <p className="border-t-2 border-ink bg-forest-50 px-4 py-2.5 text-sm text-ink-faint">
+          {t('history.deliveredOn', { date: shortDate(deliveredAt(shipment)) })}
+        </p>
+      )}
+    </article>
+  );
 
   return (
     <div className="space-y-6 pt-4 pb-4">
@@ -175,8 +229,8 @@ export const BuyerInboundScreen = () => {
         </section>
       )}
 
-      <SectionHead 
-        level="group" 
+      <SectionHead
+        level="group"
         title={t('buyer.inbound.shipments')}
         action={
           <Button full={false} variant="secondary" icon={RefreshCw} onClick={loadInbound} busy={loading}>
@@ -192,52 +246,50 @@ export const BuyerInboundScreen = () => {
       ) : inboundShipments.length === 0 ? (
         <div className="border-2 border-ink bg-white px-4 py-10 text-center">
           <p className="font-display text-3xl text-ink-faint">{t('buyer.inbound.empty')}</p>
-          <p className="mt-2 text-sm text-ink-soft">
-            No shipments are currently heading to your location.
-          </p>
         </div>
       ) : (
         <div className="stagger space-y-3">
-          {inboundShipments.map((shipment) => (
-            <article key={shipment.id} className="border-2 border-ink bg-white">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ink px-4 py-3">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <Truck className="h-5 w-5 shrink-0 text-forest-700" strokeWidth={2.25} aria-hidden="true" />
-                  <p className="font-display text-2xl leading-none text-ink">
-                    {t(`crops.${shipment.cropType}`)} · <span className="tnum">{number(shipment.quantityKg)} {t('common.kg')}</span>
-                  </p>
-                </div>
-                <span className="border-2 border-ink bg-turmeric-300 px-2 py-1 text-sm font-bold leading-none text-ink">
-                  {t(`tracking.status.${shipment.status}`)}
-                </span>
-              </div>
-
-              <div className="px-4">
-                <LedgerRow
-                  label={t('buyer.inbound.from')}
-                  sub={shipment.vehicle ? `${shipment.vehicle.vehicleNo} · ${shipment.vehicle.driverName}` : t('transport.track.waiting')}
-                  value={<span className="font-sans text-base">{shipment.farmerName}</span>}
-                />
-                <LedgerRow
-                  label={t('transport.route.pickup')}
-                  value={<span className="font-sans text-base">{shipment.origin.label}</span>}
-                />
-                <LedgerRow
-                  label={t('transport.route.drop')}
-                  value={<span className="font-sans text-base">{shipment.destination.label}</span>}
-                />
-                {shipment.agreedRatePerKg && (
-                  <LedgerRow
-                    label={t('deal.agreedTitle')}
-                    sub={`${rate(shipment.agreedRatePerKg)}/${t('common.kg')}`}
-                    value={money(shipment.agreedRatePerKg * shipment.quantityKg)}
-                    emphasis
-                  />
-                )}
-              </div>
-            </article>
-          ))}
+          {onTheWay.length === 0 ? (
+            <div className="border-2 border-ink bg-white px-4 py-8 text-center">
+              <p className="font-display text-2xl text-ink-faint">{t('buyer.inbound.empty')}</p>
+            </div>
+          ) : (
+            onTheWay.map(renderShipment)
+          )}
         </div>
+      )}
+
+      {/* ---- What has actually arrived, and what it cost ---- */}
+      {!loading && inboundShipments.length > 0 && (
+        <section className="space-y-3">
+          <SectionHead level="group" title={t('history.buyerTitle')} />
+
+          {received.length > 0 ? (
+            <>
+              <dl className="grid grid-cols-3 gap-px border-2 border-ink bg-ink">
+                {[
+                  [t('history.received'), number(procured.lots)],
+                  [t('history.volumeIn'), `${number(procured.kg)} ${t('common.kg')}`],
+                  [t('history.spend'), money(procured.spend)],
+                ].map(([k, v]) => (
+                  <div key={k} className="bg-white px-2 py-2.5 text-center">
+                    <dt className="text-xs font-semibold text-ink-faint">{k}</dt>
+                    <dd className="mt-0.5 font-display text-xl leading-none tnum text-ink">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-sm text-ink-faint">{t('history.seasonSoFar')}</p>
+
+              <div className="stagger space-y-3">
+                {received.map(renderShipment)}
+              </div>
+            </>
+          ) : (
+            <div className="border-2 border-ink bg-white px-4 py-8 text-center">
+              <p className="font-display text-2xl text-ink-faint">{t('history.empty')}</p>
+            </div>
+          )}
+        </section>
       )}
     </div>
   );

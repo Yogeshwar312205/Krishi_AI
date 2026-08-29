@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   Truck, CalendarDays, Sunrise, Sun, Sunset, Send, Phone, MapPin,
-  ClipboardList, Check, Handshake, ArrowLeft, CloudOff, RefreshCw, X,
+  ClipboardList, Check, Handshake, ArrowLeft, CloudOff, RefreshCw, X, IndianRupee,
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
 import { useLiveMarket } from '../../../data/useLiveMarket';
 import { createPickupRequest, cancelPickupRequest } from '../../../services/api';
+import { farmerSeasonTotals, tripEconomics, deliveredAt, isDelivered } from '../../../data/ledger';
 import { useMyRequests } from './useMyRequests';
 import { DealPanel } from './DealPanel';
 import { TrackingTimeline } from '../../logistics/TrackingTimeline';
@@ -60,7 +61,7 @@ export const TransportScreen = () => {
   const farmerAddress = useAppStore((state) => state.farmerAddress);
   const farmerOrigin = useAppStore((state) => state.farmerOrigin);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
-  const { t, money, number, rate } = useT();
+  const { t, money, number, rate, shortDate } = useT();
 
   const deals = useAppStore((state) => state.deals);
   const pendingMandi = useAppStore((state) => state.pendingMandi);
@@ -135,6 +136,41 @@ export const TransportScreen = () => {
 
   const open = requests.filter((r) => OPEN_STATUSES.includes(r.status));
   const past = requests.filter((r) => !OPEN_STATUSES.includes(r.status));
+  const season = farmerSeasonTotals(requests);
+
+  const renderEarnings = (request) => {
+    const econ = tripEconomics(request);
+    const when = deliveredAt(request);
+    return (
+      <div className="border-t-2 border-ink bg-forest-50 px-4">
+        <p className="eyebrow flex items-center gap-1.5 pt-3.5">
+          <IndianRupee className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
+          {t('history.takeHome')}
+        </p>
+        {econ.hasRate ? (
+          <>
+            <LedgerRow
+              label={t('history.gross')}
+              sub={`${rate(request.agreedRatePerKg)}/${t('common.kg')} · ${number(request.quantityKg)} ${t('common.kg')}`}
+              value={<span className="font-sans text-base tnum">{money(econ.gross)}</span>}
+            />
+            <LedgerRow
+              label={t('history.freight')}
+              value={<span className="font-sans text-base tnum">− {money(econ.freight)}</span>}
+            />
+            <LedgerRow label={t('history.takeHome')} value={money(econ.takeHome)} emphasis />
+          </>
+        ) : (
+          <p className="py-3.5 text-base text-ink-soft">{t('history.noRate')}</p>
+        )}
+        {when && (
+          <p className="pb-3.5 text-sm text-ink-faint">
+            {t('history.deliveredOn', { date: shortDate(when) })}
+          </p>
+        )}
+      </div>
+    );
+  };
 
   const renderRequest = (request) => (
     <article key={request.id} className="border-2 border-ink bg-white">
@@ -176,6 +212,13 @@ export const TransportScreen = () => {
           />
         )}
       </div>
+
+      {/*
+       * What the trip actually paid. Only once the lot is delivered — before
+       * that the freight the fleet charged is not yet on the record, so a
+       * "take-home" line would be a guess.
+       */}
+      {isDelivered(request) && renderEarnings(request)}
 
       {/*
        * Who is coming. A pending request has no truck attached and says so
@@ -416,10 +459,35 @@ export const TransportScreen = () => {
               </section>
             )}
 
-            {past.length > 0 && (
+            {!error && !loading && requests.length > 0 && (
               <section className="space-y-3">
-                <SectionHead level="group" title={t('transport.bookings.past')} />
-                {past.map(renderRequest)}
+                <SectionHead level="group" title={t('history.farmerTitle')} />
+
+                {season.trips > 0 && (
+                  <>
+                    <dl className="grid grid-cols-3 gap-px border-2 border-ink bg-ink">
+                      {[
+                        [t('history.trips'), number(season.trips)],
+                        [t('history.moved'), `${number(season.kg)} ${t('common.kg')}`],
+                        [t('history.takeHome'), money(season.takeHome)],
+                      ].map(([k, v]) => (
+                        <div key={k} className="bg-white px-2 py-2.5 text-center">
+                          <dt className="text-xs font-semibold text-ink-faint">{k}</dt>
+                          <dd className="mt-0.5 font-display text-xl leading-none tnum text-ink">{v}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <p className="text-sm text-ink-faint">{t('history.seasonSoFar')}</p>
+                  </>
+                )}
+
+                {past.length > 0 ? (
+                  past.map(renderRequest)
+                ) : (
+                  <div className="border-2 border-ink bg-white px-4 py-8 text-center">
+                    <p className="font-display text-2xl text-ink-faint">{t('history.empty')}</p>
+                  </div>
+                )}
               </section>
             )}
           </div>
