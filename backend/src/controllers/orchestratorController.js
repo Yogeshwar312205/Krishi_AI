@@ -4,6 +4,7 @@ const {
   callOptimizeRoute, callPriceContext, callPriceForecast, callModelInfo,
 } = require('../services/aiEngineService');
 const { getAgmarknetLivePrices, getAgmarknetHistory } = require('../services/agmarknetService');
+const { buildPriceDecision, explainPriceDecision } = require('../services/priceSuggestionService');
 const logger = require('../utils/logger');
 
 // Comprehensive APMC Markets across all 6 administrative divisions of Maharashtra
@@ -315,6 +316,7 @@ const getSellAdvice = async (req, res) => {
   const state = req.query.state || 'Maharashtra';
   const originLat = parseFloat(req.query.originLat);
   const originLng = parseFloat(req.query.originLng);
+  const language = ['en', 'hi', 'mr'].includes(req.query.language) ? req.query.language : 'en';
 
   try {
     const [live, history] = await Promise.all([
@@ -356,14 +358,40 @@ const getSellAdvice = async (req, res) => {
       payload.longitude = originLng;
     }
 
+    const historyPerKg = histDays.map((d) => Number(d.avgRatePerKg)).filter((n) => Number.isFinite(n) && n > 0);
+    const priceMedian = (values) => {
+      const valid = values.filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
+      return valid.length ? valid[Math.floor(valid.length / 2)] / 100 : undefined;
+    };
+
     let advice = null;
-    let aiEngineSource = 'Python rule-based context scorer';
+    let forecast = { available: false, reason: 'forecast unavailable' };
+    let aiEngineSource = 'Python rule-based context scorer + trained XGBoost forecast';
     try {
-      advice = await callPriceContext(payload);
+      const [contextResult, forecastResult] = await Promise.allSettled([
+        callPriceContext(payload),
+        callPriceForecast({
+          cropType: crop,
+          historyPerKg,
+          historyDates: histDays.map((d) => d.date),
+          minPricePerKg: priceMedian((live.records || []).map((r) => Number(r.minPricePerQuintal))),
+          maxPricePerKg: priceMedian((live.records || []).map((r) => Number(r.maxPricePerQuintal))),
+        }),
+      ]);
+      if (contextResult.status === 'fulfilled') advice = contextResult.value;
+      if (forecastResult.status === 'fulfilled') forecast = forecastResult.value;
+      if (contextResult.status === 'rejected' || forecastResult.status === 'rejected') {
+        aiEngineSource = 'partially unavailable — live Agmarknet prices retained';
+      }
     } catch (err) {
-      logger.warn(`Sell-advice: Python engine unavailable (${err.message}); returning prices only.`);
-      aiEngineSource = 'unavailable — advice withheld (prices are live Agmarknet)';
+      logger.warn(`Sell-advice: AI engine partly unavailable (${err.message}).`);
+      aiEngineSource = 'partially unavailable — live Agmarknet prices retained';
     }
+
+    const decision = advice ? buildPriceDecision({ advice, forecast }) : null;
+    const explanation = decision
+      ? await explainPriceDecision({ crop, advice, forecast, decision, language })
+      : { available: false, source: 'no decision to explain' };
 
     return res.json({
       success: true,
@@ -381,6 +409,9 @@ const getSellAdvice = async (req, res) => {
         arrivalsAvailable: false,
       },
       advice,
+      forecast,
+      decision,
+      explanation,
     });
   } catch (error) {
     logger.error(`Sell-advice error: ${error.message}`);

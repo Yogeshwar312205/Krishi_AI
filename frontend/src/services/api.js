@@ -125,11 +125,11 @@ export const fetchAgmarknetHistory = async (crop = 'Tomato', state = 'Maharashtr
  */
 export const fetchSellAdvice = async (
   crop = 'Tomato',
-  { originLng, originLat, baselinePricePerKg, state = 'Maharashtra' } = {},
+  { originLng, originLat, baselinePricePerKg, state = 'Maharashtra', language = 'en' } = {},
 ) => {
   try {
     const response = await apiClient.get('/prices/sell-advice', {
-      params: { crop, state, originLng, originLat, baselinePricePerKg },
+      params: { crop, state, originLng, originLat, baselinePricePerKg, language },
     });
     return response.data;
   } catch (err) {

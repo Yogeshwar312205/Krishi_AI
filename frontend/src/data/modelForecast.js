@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchModelForecast } from '../services/api';
 
 /**
@@ -27,6 +27,16 @@ const load = (crop) => {
     .catch((err) => { inFlight.delete(crop); throw err; });
   inFlight.set(crop, p);
   return p;
+};
+
+/**
+ * The live-rate refresh button must refresh this series too.  Otherwise the
+ * chart can keep an old model projection for up to 15 minutes after the price
+ * board has fetched new Agmarknet history.
+ */
+const forceLoad = (crop) => {
+  cache.delete(crop);
+  return load(crop);
 };
 
 const shape = (value) => {
@@ -62,7 +72,14 @@ export const useModelForecast = (cropType) => {
     return () => { alive = false; };
   }, [cropType]);
 
-  return state;
+  const refresh = useCallback(async () => {
+    setState((prev) => ({ ...prev, status: 'loading' }));
+    const value = await forceLoad(cropType);
+    setState(shape(value));
+    return value;
+  }, [cropType]);
+
+  return { ...state, refresh };
 };
 
 export default useModelForecast;

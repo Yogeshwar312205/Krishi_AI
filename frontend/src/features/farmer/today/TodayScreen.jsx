@@ -5,6 +5,7 @@ import { useT } from '../../../i18n/useT';
 import { useLiveMarket, mandiLabel } from '../../../data/useLiveMarket';
 import { useSellAdvice } from '../../../data/sellAdvice';
 import { AdviceReasons } from '../price/AdviceReasons';
+import { AdviceExplanation } from '../price/AdviceExplanation';
 import { fetchBuyerPostings } from '../../../services/api';
 import { Slab } from '../../../design/primitives/Slab';
 import { Button } from '../../../design/primitives/Button';
@@ -25,7 +26,7 @@ export const TodayScreen = () => {
   const cropDetails = useAppStore((state) => state.cropDetails);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const setPendingMandi = useAppStore((state) => state.setPendingMandi);
-  const { t, money, rate, number } = useT();
+  const { t, money, rate, number, lang } = useT();
 
   const [buyerPostings, setBuyerPostings] = useState([]);
   const [isLoadingPostings, setIsLoadingPostings] = useState(true);
@@ -58,16 +59,20 @@ export const TodayScreen = () => {
   // than just being present. Settles on the exact value; honours reduced motion.
   const animatedRate = useCountUp(best.ratePerKg);
 
-  // Same rule-based engine the Prices screen shows, so the verdict here and the
-  // "Sell now or wait?" card there never disagree. Only asked for once rates are
+  // Same source as the Prices screen's "Sell now or wait?" card, so the two
+  // never disagree: the rule-based call, the model-softened `decision`, and the
+  // Gemini explanation all come from one request. Only asked for once rates are
   // live — scoring a demo baseline would be scoring made-up numbers.
   const { data: adviceData } = useSellAdvice(
     cropDetails.cropType,
     best?.ratePerKg,
     status === 'live',
+    lang,
   );
   const advice = adviceData?.advice || null;
-  const rec = advice?.recommendation || null;
+  const decision = adviceData?.decision || null;
+  const explanation = adviceData?.explanation || null;
+  const rec = decision?.recommendation || advice?.recommendation || null;
 
   // Engine verdict when we have it; otherwise fall back to the day-over-day
   // heuristic ('wait' = rate still climbing, 'go' = sell into today's peak).
@@ -190,10 +195,24 @@ export const TodayScreen = () => {
         </div>
       </Slab>
 
-      {/* The reasoning behind the verdict, folded away — same Read-more panel
-          the Prices screen uses, so the two stay in step. */}
-      {advice?.reasons?.length > 0 && (
-        <AdviceReasons reasons={advice.reasons} working={advice.working} tone="light" />
+      {/* The reasoning behind the verdict: the plain-language explanation up
+          top, the step-by-step working folded below it. Same components the
+          Prices "Sell now or wait?" card uses, so the two screens stay in step. */}
+      {advice && (explanation?.summary || advice.reasons?.length > 0) && (
+        <div className="border-2 border-ink bg-white px-4 py-3.5">
+          {explanation?.summary && (
+            <AdviceExplanation
+              explanation={explanation}
+              combined={decision}
+              forecastHorizon={adviceData?.forecast?.horizonPeriods}
+            />
+          )}
+          {advice.reasons?.length > 0 && (
+            <div className={explanation?.summary ? 'mt-3 border-t-2 border-ink pt-3' : ''}>
+              <AdviceReasons reasons={advice.reasons} working={advice.working} tone="light" />
+            </div>
+          )}
+        </div>
       )}
 
       {/* ---- Buyer Direct Postings / Buyer Rates Section ---- */}

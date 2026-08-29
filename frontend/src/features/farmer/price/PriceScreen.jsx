@@ -57,6 +57,7 @@ export const PriceScreen = () => {
   const model = useModelForecast(cropDetails.cropType);
   const usingModelForecast = Array.isArray(model.chartPoints) && model.chartPoints.length > 2;
   const forecastPoints = usingModelForecast ? model.chartPoints : forecast;
+  const forecastHorizon = model.forecast?.horizonPeriods || model.modelInfo?.horizonPeriods || AHEAD_DAYS;
 
   const cropName = t(`crops.${cropDetails.cropType}`);
   const visible = showAll ? comparison : comparison.slice(0, COLLAPSED_ROWS);
@@ -85,7 +86,12 @@ export const PriceScreen = () => {
   const refresh = async () => {
     setRefreshing(true);
     try {
-      await ensure(cropDetails.cropType, { force: true });
+      // Keep the live board and the model chart on the same Agmarknet refresh.
+      // The model endpoint fetches the recent history it needs server-side.
+      await Promise.all([
+        ensure(cropDetails.cropType, { force: true }),
+        model.refresh(),
+      ]);
     } finally {
       setRefreshing(false);
     }
@@ -210,13 +216,21 @@ export const PriceScreen = () => {
         {panel === 'forecast' && (
           <div className="space-y-4">
             <div className="border-2 border-ink bg-white p-4">
-              <p className="eyebrow mb-3">{t('price.forecast.nextDays', { count: AHEAD_DAYS })}</p>
+              <p className="eyebrow mb-3">{t('price.forecast.nextDays', { count: forecastHorizon })}</p>
               <ForecastChart
                 points={forecastPoints}
                 note={usingModelForecast
                   ? t('price.forecast.explainModel')
                   : t('price.forecast.explain')}
               />
+              {usingModelForecast && Number.isFinite(model.forecast?.predictedPricePerKg) && (
+                <p className="mt-3 border-l-4 border-forest-700 bg-paper px-3 py-2 text-sm text-ink-soft">
+                  {t('price.forecast.modelEstimate', {
+                    rate: rate(model.forecast.predictedPricePerKg),
+                    count: forecastHorizon,
+                  })}
+                </p>
+              )}
               <ForecastNote
                 modelInfo={model.modelInfo}
                 usingModel={usingModelForecast}

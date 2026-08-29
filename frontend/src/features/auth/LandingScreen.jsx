@@ -76,7 +76,16 @@ export const LandingScreen = ({ onEnter }) => {
       <div className="mx-auto min-h-full w-full max-w-5xl px-6 py-10 sm:px-10 sm:py-14 lg:px-6 lg:py-20">
         <div className="stagger">
 
-          <div className="flex items-center justify-between gap-4">
+          {/*
+           * Sticky, not scrolling. The board and the role cards run past a
+           * phone screen, and the language picker used to leave with the
+           * header — a Marathi speaker on the English build then had to scroll
+           * back up to switch. The whole screen is one forest surface, so a
+           * bg-forest-700 band pinned to the top is invisible as a band; only
+           * the wordmark and the picker stay put. Bled to the gutters so no
+           * content shows beside it on the way up.
+           */}
+          <div className="sticky top-0 z-40 -mx-6 flex items-center justify-between gap-4 bg-forest-700 px-6 py-3 sm:-mx-10 sm:px-10 lg:-mx-6 lg:px-6">
             <div className="flex items-center gap-2.5">
               <span className="h-9 w-1.5 shrink-0 bg-turmeric-300" aria-hidden="true" />
               <span className="font-display text-3xl leading-none tracking-tight">

@@ -2,17 +2,18 @@
 Price guidance for a harvested lot: what it is worth today and whether to sell
 now or hold.
 
-There is NO trained model here yet. This file is organised into four sections
-so the eventual model drops into SECTION 3 without disturbing the rest:
+This service combines a rule-based context score with the trained forecast
+model when the model can safely produce an output:
 
     SECTION 1  Static reference price table (the old behaviour, honestly named).
     SECTION 2  Rule-based CONTEXT SCORER — weather + mandi demand/supply -> a
                price adjustment and a sell/hold recommendation. This is the new
                work and it is the part that runs today.
-    SECTION 3  ML model placeholder — not implemented. Signature, feature list
-               and the blend hook are stubbed so wiring it later is mechanical.
-    SECTION 4  Orchestrator — `predict_crop_price()`. Ties 1+2 together now,
-               and 1+2+3 once the model exists.
+    SECTION 3  Trained ML model integration — a guarded XGBoost 7-period
+               forecast, blended with the context-adjusted price only when
+               the artifact and prediction pass their health/plausibility checks.
+    SECTION 4  Orchestrator — `predict_crop_price()`. Ties the available
+               signals together and identifies which ones were used.
 
 Nothing in here invents a data source. When weather or arrivals are missing the
 corresponding term is dropped and the response says so.

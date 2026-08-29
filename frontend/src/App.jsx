@@ -4,6 +4,7 @@ import { useAppStore } from './store/useAppStore';
 import { fetchHealthStatus } from './services/api';
 import { prefetch } from './data/marketCache';
 import { BOARD_CROPS } from './utils/constants';
+import { LanguagePicker } from './shared/LanguagePicker';
 
 /*
  * Split from the shell: the auth screen is the one thing a returning user with
@@ -23,9 +24,27 @@ const Gate = () => {
   const [stage, setStage] = useState('landing'); // 'landing' | 'login' | 'signup'
 
   if (stage === 'landing') {
+    // The landing screen keeps the picker in a sticky header band of its own —
+    // the whole screen is one green surface, so the band is seamless.
     return <LandingScreen onEnter={setStage} />;
   }
-  return <AuthScreen initialMode={stage} onBack={() => setStage('landing')} />;
+
+  return (
+    <>
+      {/*
+       * The sign-up form runs several screens deep on a phone, and its own
+       * header (with the picker) belongs to the short green panel above it —
+       * scroll into the fields and the way to another language is gone. So on
+       * mobile the picker is pinned to the viewport corner here instead: a
+       * solid ruled box, no shadow, the way a stamp sits on a page. The
+       * desktop auth panel carries its own where there is room.
+       */}
+      <div className="fixed right-2 top-2 z-50 lg:hidden">
+        <LanguagePicker compact />
+      </div>
+      <AuthScreen initialMode={stage} onBack={() => setStage('landing')} />
+    </>
+  );
 };
 
 export function App() {

@@ -201,17 +201,16 @@ export const AuthScreen = ({ initialMode = 'login', onBack }) => {
           password box.
         */}
         <section className="flex min-h-full flex-col lg:col-span-5 bg-forest-700 px-5 py-7 text-white sm:px-8 sm:py-8 lg:px-9 lg:py-12">
-          <div className="mb-8 flex items-center justify-between gap-4">
+          <div className="mb-8 flex items-center gap-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="h-9 w-1.5 shrink-0 bg-turmeric-300" aria-hidden="true" />
               <span className="font-display text-3xl leading-none tracking-tight">
                 Krushi<span className="text-turmeric-300">Flow</span>
               </span>
             </div>
-            {/* Reachable before a single word of the form has to be read. */}
-            <div className="shrink-0 lg:hidden">
-              <LanguagePicker compact />
-            </div>
+            {/* On mobile the language picker is pinned to the viewport by
+                <Gate> so it never scrolls out of reach; the desktop panel
+                carries its own at the foot of this section. */}
           </div>
 
           <p className="max-w-md font-display text-3xl text-white sm:text-4xl">

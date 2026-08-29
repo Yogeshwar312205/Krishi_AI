@@ -20,21 +20,22 @@ const TTL_MS = 10 * 60 * 1000;
 const cache = new Map();     // key -> { at, value }
 const inFlight = new Map();  // key -> Promise
 
-const keyFor = (crop, origin, baseline) => {
+const keyFor = (crop, origin, baseline, language) => {
   const lng = Number.isFinite(origin?.[0]) ? origin[0].toFixed(2) : 'na';
   const lat = Number.isFinite(origin?.[1]) ? origin[1].toFixed(2) : 'na';
   const base = Number.isFinite(baseline) ? baseline.toFixed(1) : 'na';
-  return `${crop}|${lng}|${lat}|${base}`;
+  return `${crop}|${lng}|${lat}|${base}|${language}`;
 };
 
-const load = (crop, origin, baseline) => {
-  const key = keyFor(crop, origin, baseline);
+const load = (crop, origin, baseline, language) => {
+  const key = keyFor(crop, origin, baseline, language);
   if (inFlight.has(key)) return inFlight.get(key);
 
   const promise = fetchSellAdvice(crop, {
     originLng: origin?.[0],
     originLat: origin?.[1],
     baselinePricePerKg: Number.isFinite(baseline) ? baseline : undefined,
+    language,
   })
     .then((value) => {
       cache.set(key, { at: Date.now(), value });
@@ -69,9 +70,9 @@ const snapshotFrom = (value) => ({
  *   best). Passed through so the advice card and the headline agree; omit it and
  *   the backend falls back to the state-wide median.
  */
-export const useSellAdvice = (cropType, baselinePricePerKg, enabled = true) => {
+export const useSellAdvice = (cropType, baselinePricePerKg, enabled = true, language = 'en') => {
   const origin = useAppStore((state) => state.farmerOrigin);
-  const key = keyFor(cropType, origin, baselinePricePerKg);
+  const key = keyFor(cropType, origin, baselinePricePerKg, language);
 
   const [state, setState] = useState(() => {
     const hit = cache.get(key);
@@ -94,12 +95,12 @@ export const useSellAdvice = (cropType, baselinePricePerKg, enabled = true) => {
 
     setState((prev) => (prev.data ? prev : { status: 'loading', data: null }));
 
-    load(cropType, origin, baselinePricePerKg)
+    load(cropType, origin, baselinePricePerKg, language)
       .then((value) => { if (alive) setState(snapshotFrom(value)); })
       .catch(() => { if (alive) setState({ status: 'error', data: null }); });
 
     return () => { alive = false; };
-  }, [enabled, key, cropType, origin, baselinePricePerKg]);
+  }, [enabled, key, cropType, origin, baselinePricePerKg, language]);
 
   return state;
 };
