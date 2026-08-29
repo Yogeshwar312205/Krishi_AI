@@ -1,5 +1,6 @@
 const BuyerPosting = require('../models/BuyerPosting');
 const logger = require('../utils/logger');
+const journal = require('../services/journal');
 
 /**
  * Create a new buyer posting (rate announcement)
@@ -38,7 +39,12 @@ const createPosting = async (req, res) => {
     });
 
     await posting.save();
-    
+
+    await journal.record({
+      entityType: 'BuyerPosting', entityId: posting._id, eventType: 'CREATE',
+      payload: posting.toObject(), actorId: req.user._id, drill: !!posting.drill,
+    });
+
     // Populate buyer details for response
     await posting.populate('buyer', 'name phone company');
 
@@ -197,6 +203,11 @@ const deletePosting = async (req, res) => {
 
     await posting.deleteOne();
 
+    await journal.record({
+      entityType: 'BuyerPosting', entityId: id, eventType: 'DELETE',
+      payload: {}, actorId: req.user._id, drill: !!posting.drill,
+    });
+
     logger.info(`Buyer posting deleted: ${id} by user ${req.user._id}`);
 
     return res.json({
@@ -242,6 +253,11 @@ const updateReceivedQuantity = async (req, res) => {
     }
 
     await posting.save();
+
+    await journal.record({
+      entityType: 'BuyerPosting', entityId: posting._id, eventType: 'UPDATE',
+      payload: posting.toObject(), actorId: req.user._id, drill: !!posting.drill,
+    });
 
     return res.json({
       success: true,

@@ -63,3 +63,7 @@ desktop.ini
 .cache/
 .temp/
 .tmp/
+
+# Resilience "black box" — event journal, snapshots, offline write queue.
+# Runtime state, not source. Regenerated on boot / by the drill.
+backend/data/

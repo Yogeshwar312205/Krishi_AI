@@ -67,6 +67,10 @@ const BuyerPostingSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
+
+  /* Marks a record created by the Blackout resilience drill — the drill only
+   * touches { drill: true } docs, never a real buyer's posting. */
+  drill: { type: Boolean, default: false, index: true },
 }, { timestamps: true });
 
 // Compound index for efficient queries by crop and mandi

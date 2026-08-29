@@ -78,6 +78,10 @@ const VehicleSchema = new mongoose.Schema({
     },
   },
   locationUpdatedAt: { type: Date, default: null },
+
+  /* Marks a record created by the Blackout resilience drill — the drill only
+   * touches { drill: true } docs, never a real fleet. */
+  drill: { type: Boolean, default: false, index: true },
 }, { timestamps: true });
 
 VehicleSchema.index({ location: '2dsphere' });

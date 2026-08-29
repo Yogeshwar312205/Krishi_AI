@@ -59,6 +59,37 @@ export const fetchHealthStatus = async () => {
   }
 };
 
+/* ---- Blackout resilience console (/api/system/*) -------------------------- *
+ * Unauthenticated on the backend; a Bearer header, if present, is ignored.
+ * `getSystemHealth` degrades silently so the poll never throws; the action
+ * calls surface a readable error.                                            */
+
+export const getSystemHealth = async () => {
+  try {
+    const res = await axios.get(`${API_BASE_URL}/api/system/health`, { timeout: 6000 });
+    return res.data;
+  } catch (err) {
+    return { ok: false, mode: 'unknown', db: 'down', mongoConnected: false, unreachable: true };
+  }
+};
+
+const systemAction = async (path, human) => {
+  try {
+    const res = await axios.post(`${API_BASE_URL}/api/system${path}`, {}, { timeout: 60000 });
+    return res.data;
+  } catch (err) {
+    throw toApiError(err, human);
+  }
+};
+
+export const seedDrillData = () => systemAction('/drill/seed', 'Could not seed the drill data.');
+export const simulateBlackout = () => systemAction('/drill/blackout', 'Could not run the blackout.');
+export const resetDrill = () => systemAction('/drill/reset', 'Could not reset the drill.');
+export const startLoadGen = () => systemAction('/drill/load/start', 'Could not start the load generator.');
+export const stopLoadGen = () => systemAction('/drill/load/stop', 'Could not stop the load generator.');
+export const recoverSystem = () => systemAction('/recover', 'Recovery failed.');
+export const takeSystemSnapshot = () => systemAction('/snapshot', 'Could not take a snapshot.');
+
 export const submitOptimization = async (payload) => {
   try {
     const response = await apiClient.post('/recommend', payload);

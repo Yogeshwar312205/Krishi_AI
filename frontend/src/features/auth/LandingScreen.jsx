@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  Sprout, Truck, Store, Boxes, ArrowRight, TrendingUp, TrendingDown, Minus, Navigation,
+  Sprout, Truck, Store, Boxes, ArrowRight, TrendingUp, TrendingDown, Minus, Navigation, ShieldAlert,
 } from 'lucide-react';
 import { useT } from '../../i18n/useT';
 import { LanguagePicker } from '../../shared/LanguagePicker';
@@ -175,6 +175,16 @@ export const LandingScreen = ({ onEnter }) => {
           >
             <Navigation className="h-4 w-4 shrink-0 text-turmeric-300" strokeWidth={2.25} aria-hidden="true" />
             {t('vrpDemo.entry')}
+          </button>
+
+          {/* The Blackout resilience drill — runnable without an account. */}
+          <button
+            type="button"
+            onClick={() => onEnter('blackout')}
+            className="lift mt-3 flex items-center gap-1.5 text-sm font-semibold text-forest-100 underline decoration-forest-300 underline-offset-4 hover:text-white"
+          >
+            <ShieldAlert className="h-4 w-4 shrink-0 text-turmeric-300" strokeWidth={2.25} aria-hidden="true" />
+            {t('blackout.entry')}
           </button>
         </div>
       </div>

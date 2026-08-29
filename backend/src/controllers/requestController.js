@@ -1,6 +1,7 @@
 const PickupRequest = require('../models/PickupRequest');
 const Vehicle = require('../models/Vehicle');
 const logger = require('../utils/logger');
+const journal = require('../services/journal');
 
 /**
  * Farmer pickup requests — the demand side of the dispatch problem.
@@ -79,6 +80,13 @@ const createRequest = async (req, res) => {
       window: window || {},
       status: 'pending',
       timeline: [{ status: 'pending', note: 'Request raised' }],
+    });
+
+    // Black box: the request now exists in two places, not one. If the
+    // pickuprequests collection is later wiped, this event rebuilds it.
+    await journal.record({
+      entityType: 'PickupRequest', entityId: doc._id, eventType: 'CREATE',
+      payload: doc.toObject(), actorId: req.user._id, drill: !!doc.drill,
     });
 
     return res.status(201).json({ success: true, request: publicRequest(doc) });
@@ -182,6 +190,15 @@ const assignRequest = async (req, res) => {
     if (vehicle.status === 'Idle') vehicle.status = 'Loading';
     await vehicle.save();
 
+    await journal.record({
+      entityType: 'PickupRequest', entityId: request._id, eventType: 'ASSIGN',
+      payload: request.toObject(), actorId: req.user._id, drill: !!request.drill,
+    });
+    await journal.record({
+      entityType: 'Vehicle', entityId: vehicle._id, eventType: 'ROUTE_SET',
+      payload: vehicle.toObject(), actorId: req.user._id, drill: !!vehicle.drill,
+    });
+
     return res.json({ success: true, request: publicRequest(request) });
   } catch (error) {
     logger.error(`Assign request failed: ${error.message}`);
@@ -215,6 +232,7 @@ const updateStatus = async (req, res) => {
      * leaving it 'Loading' with nothing to load reads, on the fleet screen, as
      * a truck that is busy when it is standing free.
      */
+    let touchedVehicle = null;
     if (status === 'delivered' || status === 'cancelled') {
       const vehicle = await Vehicle.findOne({
         _id: request.assignedVehicle?._id, owner: req.user._id,
@@ -226,7 +244,19 @@ const updateStatus = async (req, res) => {
         const stillWorking = vehicle.currentRoute.some((stop) => stop.kind !== 'depot');
         if (!stillWorking && vehicle.status !== 'Unavailable') vehicle.status = 'Idle';
         await vehicle.save();
+        touchedVehicle = vehicle;
       }
+    }
+
+    await journal.record({
+      entityType: 'PickupRequest', entityId: request._id, eventType: 'STATUS',
+      payload: request.toObject(), actorId: req.user._id, drill: !!request.drill,
+    });
+    if (touchedVehicle) {
+      await journal.record({
+        entityType: 'Vehicle', entityId: touchedVehicle._id, eventType: 'ROUTE_SET',
+        payload: touchedVehicle.toObject(), actorId: req.user._id, drill: !!touchedVehicle.drill,
+      });
     }
 
     return res.json({ success: true, request: publicRequest(request) });
@@ -247,6 +277,10 @@ const cancelRequest = async (req, res) => {
     if (!request) {
       return res.status(409).json({ success: false, message: 'Too late — a fleet has already taken this.' });
     }
+    await journal.record({
+      entityType: 'PickupRequest', entityId: request._id, eventType: 'STATUS',
+      payload: request.toObject(), actorId: req.user._id, drill: !!request.drill,
+    });
     return res.json({ success: true, request: publicRequest(request) });
   } catch (error) {
     logger.error(`Cancel request failed: ${error.message}`);

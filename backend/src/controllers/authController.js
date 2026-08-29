@@ -2,6 +2,23 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const { getJwtSecret } = require('../config/jwt');
+const journal = require('../services/journal');
+
+/*
+ * Journal a User event with the bcrypt hash included, so a recovered account
+ * can still sign in. `protect` loads req.user without the hash, so we re-read
+ * the document with it before writing the event.
+ */
+const journalUser = async (userId, eventType, actorId) => {
+  try {
+    const full = await User.findById(userId).select('+password').lean();
+    if (full) {
+      await journal.record({ entityType: 'User', entityId: userId, eventType, payload: full, actorId, drill: !!full.drill });
+    }
+  } catch (err) {
+    logger.warn(`[journal] user event skipped: ${err.message}`);
+  }
+};
 
 /*
  * Roles someone may register as.
@@ -130,6 +147,8 @@ const register = async (req, res) => {
       }
       return res.status(503).json({ success: false, message: 'Registration is temporarily unavailable. Please try again shortly.' });
     }
+
+    await journalUser(user._id, 'CREATE', user._id);
 
     const token = generateToken(user._id, user.role);
 
@@ -267,6 +286,8 @@ const updateMe = async (req, res) => {
       return res.status(503).json({ success: false, message: 'Your details could not be saved just now. Please try again shortly.' });
     }
 
+    await journalUser(user._id, 'UPDATE', user._id);
+
     return res.status(200).json({ success: true, user: publicProfile(user) });
   } catch (error) {
     logger.error(`Update profile error: ${error.message}`);
@@ -319,6 +340,8 @@ const changePassword = async (req, res) => {
       logger.error(`Password save error: ${e.message}`);
       return res.status(503).json({ success: false, message: 'Your password could not be changed just now. Please try again shortly.' });
     }
+
+    await journalUser(user._id, 'UPDATE', user._id);
 
     /*
      * The existing token stays valid: it carries id and role, neither of which

@@ -1,6 +1,7 @@
 const Vehicle = require('../models/Vehicle');
 const logger = require('../utils/logger');
 const { broadcast } = require('../sockets/bus');
+const journal = require('../services/journal');
 
 /**
  * A fleet owner's own vehicles. Every query is scoped to `req.user._id`, so one
@@ -84,6 +85,11 @@ const addVehicle = async (req, res) => {
       locationUpdatedAt: new Date(),
     });
 
+    await journal.record({
+      entityType: 'Vehicle', entityId: vehicle._id, eventType: 'CREATE',
+      payload: vehicle.toObject(), actorId: req.user._id, drill: !!vehicle.drill,
+    });
+
     return res.status(201).json({ success: true, vehicle: publicVehicle(vehicle) });
   } catch (error) {
     if (error.code === 11000) {
@@ -122,6 +128,11 @@ const reportLocation = async (req, res) => {
       coordinates: vehicle.location.coordinates,
       at: vehicle.locationUpdatedAt,
       source: 'report',
+    });
+
+    await journal.record({
+      entityType: 'Vehicle', entityId: vehicle._id, eventType: 'LOCATION',
+      payload: vehicle.toObject(), actorId: req.user._id, drill: !!vehicle.drill,
     });
 
     return res.json({ success: true, vehicle: publicVehicle(vehicle) });

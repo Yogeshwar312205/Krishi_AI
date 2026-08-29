@@ -19,6 +19,12 @@ const LandingScreen = lazy(() => import('./features/auth/LandingScreen').then((m
  * is exactly its audience. It renders its own chrome and a back control.
  */
 const VrpSimulationScreen = lazy(() => import('./features/logistics/VrpSimulationScreen').then((m) => ({ default: m.VrpSimulationScreen })));
+/*
+ * The Blackout resilience drill — also reachable before sign-in. Its endpoints
+ * are unauthenticated by design (a wiped user table must not lock the recovery
+ * tools away), so a visitor can watch the whole detect → recover cycle.
+ */
+const BlackoutConsoleScreen = lazy(() => import('./features/system/BlackoutConsoleScreen').then((m) => ({ default: m.BlackoutConsoleScreen })));
 
 /*
  * The unauthenticated pair: a hero screen that sells the product in five
@@ -27,7 +33,7 @@ const VrpSimulationScreen = lazy(() => import('./features/logistics/VrpSimulatio
  * right panel instead of always opening login.
  */
 const Gate = () => {
-  const [stage, setStage] = useState('landing'); // 'landing' | 'login' | 'signup' | 'vrp-demo'
+  const [stage, setStage] = useState('landing'); // 'landing' | 'login' | 'signup' | 'vrp-demo' | 'blackout'
 
   if (stage === 'landing') {
     // The landing screen keeps the picker in a sticky header band of its own —
@@ -37,6 +43,10 @@ const Gate = () => {
 
   if (stage === 'vrp-demo') {
     return <VrpSimulationScreen onExit={() => setStage('landing')} />;
+  }
+
+  if (stage === 'blackout') {
+    return <BlackoutConsoleScreen onExit={() => setStage('landing')} />;
   }
 
   return (

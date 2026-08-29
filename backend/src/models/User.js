@@ -67,6 +67,17 @@ const UserSchema = new mongoose.Schema({
     type: [Number], // [longitude, latitude]
     default: undefined,
   },
+  /*
+   * Marks a record created by the Blackout resilience drill. The drill only
+   * ever deletes or corrupts { drill: true } documents, so real accounts are
+   * physically out of its reach. See services/drill.js and VRP.md's sibling
+   * doc on the resilience console.
+   */
+  drill: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
 }, { timestamps: true });
 
 // Hash password before save

@@ -100,6 +100,10 @@ const PickupRequestSchema = new mongoose.Schema({
     at: { type: Date, default: Date.now },
     note: String,
   }],
+
+  /* Marks a record created by the Blackout resilience drill — the drill only
+   * deletes or corrupts { drill: true } docs, never a real farmer's request. */
+  drill: { type: Boolean, default: false, index: true },
 }, { timestamps: true });
 
 PickupRequestSchema.index({ status: 1, createdAt: -1 });

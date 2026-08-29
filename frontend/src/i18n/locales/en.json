@@ -1,4 +1,78 @@
 {
+  "blackout": {
+    "entry": "Run the Blackout resilience drill",
+    "title": "The Blackout — live recovery drill",
+    "intro": "Wipe part of the live database on purpose, then watch KrishiFlow rebuild it from its event journal and snapshots while new requests keep coming in.",
+    "unreachable": "The console cannot reach the backend. Start the Node server on port 5000.",
+    "detected": "Blackout detected",
+    "detectedLine": "{{affected}} records affected · {{recoverable}} recoverable from the journal · {{unrecoverable}} beyond recovery",
+    "anim": {
+      "title": "Live",
+      "snapshot": "Snapshot",
+      "journal": "Event journal",
+      "database": "Database",
+      "idle": "armed — every write mirrored to the journal",
+      "lost": "beyond recovery"
+    },
+    "light": {
+      "db": "Database",
+      "dbOnline": "Online",
+      "dbDegraded": "Degraded — records missing or corrupt",
+      "dbDown": "Unreachable",
+      "dbRows": "{{n}} protected records",
+      "journal": "Event journal",
+      "journalOk": "Intact",
+      "journalBroken": "Chain broken",
+      "journalEvents": "{{n}} events on file",
+      "recovery": "Recovery",
+      "recIdle": "Idle",
+      "recNeeded": "Recovery mode — writes are being queued",
+      "recRunning": "Rebuilding…",
+      "recDone": "Recovered",
+      "queued": "{{n}} operations queued"
+    },
+    "metric": {
+      "requests": "Pickup requests",
+      "vehicles": "Vehicles",
+      "events": "Journal events",
+      "snapshot": "Last snapshot",
+      "agoSec": "{{n}}s ago",
+      "queued": "Queued ops",
+      "scope": "Drill scope"
+    },
+    "btn": {
+      "seed": "Seed drill data",
+      "blackout": "Simulate blackout",
+      "loadStart": "Start incoming requests",
+      "loadStop": "Stop requests ({{n}} raised)",
+      "recover": "Recover system",
+      "snapshot": "Take snapshot",
+      "reset": "Reset drill"
+    },
+    "progress": {
+      "title": "Recovery progress"
+    },
+    "step": {
+      "detect": "Detect corruption",
+      "snapshot": "Load last snapshot",
+      "replay": "Read journal events",
+      "reconstruct": "Reconstruct records",
+      "validate": "Validate rebuilt records",
+      "restore": "Restore to database",
+      "replay-queue": "Replay queued operations",
+      "complete": "Done"
+    },
+    "result": {
+      "title": "System recovered",
+      "recovered": "Records recovered",
+      "unrecoverable": "Unrecoverable",
+      "opsDuringOutage": "Ops during outage",
+      "queuedReplayed": "Queued replayed",
+      "consistency": "Data consistency",
+      "operational": "System: operational"
+    },
+    "footnote": "The drill only ever deletes or corrupts records tagged for the drill. Real accounts, vehicles, requests and postings are never touched."
+  },
   "vrpDemo": {
     "title": "How dispatch routing works",
     "intro": "One freighter, already on the road. A pickup request lands mid-run. Watch the cheapest place to slot it in get found — and the route redrawn under the truck.",

@@ -24,6 +24,7 @@ const {
 } = require('../services/routingService');
 const { apiLimiter, dispatchLimiter } = require('../middlewares/rateLimiter');
 const { protect, authorize } = require('../middlewares/auth');
+const guardWrites = require('../middlewares/guardWrites');
 const ragRoutes = require('./ragRoutes');
 
 /*
@@ -48,18 +49,21 @@ router.post('/recommend', apiLimiter, recommendLogistics);
  * own vehicles. Nothing here has a seeded fallback: an empty queue means an
  * empty queue, not sample rows somebody might send a real truck against.
  */
-router.post('/requests', apiLimiter, protect, authorize('Farmer'), createRequest);
+// `guardWrites` sits on every mutating route for a Blackout-protected entity:
+// while the system is in recovery mode it parks the write in the offline queue
+// and answers 202 instead of failing. Pass-through when the mode is `idle`.
+router.post('/requests', apiLimiter, protect, authorize('Farmer'), guardWrites, createRequest);
 router.get('/requests/mine', apiLimiter, protect, authorize('Farmer'), myRequests);
-router.post('/requests/:id/cancel', apiLimiter, protect, authorize('Farmer'), cancelRequest);
+router.post('/requests/:id/cancel', apiLimiter, protect, authorize('Farmer'), guardWrites, cancelRequest);
 router.get('/requests/inbound', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), buyerInbound);
 
 router.get('/requests/queue', apiLimiter, protect, authorize(...FLEET), dispatchQueue);
-router.post('/requests/:id/assign', apiLimiter, protect, authorize(...FLEET), assignRequest);
-router.post('/requests/:id/status', apiLimiter, protect, authorize(...FLEET), updateStatus);
+router.post('/requests/:id/assign', apiLimiter, protect, authorize(...FLEET), guardWrites, assignRequest);
+router.post('/requests/:id/status', apiLimiter, protect, authorize(...FLEET), guardWrites, updateStatus);
 
 router.get('/fleet', apiLimiter, protect, authorize(...FLEET), listFleet);
-router.post('/fleet', apiLimiter, protect, authorize(...FLEET), addVehicle);
-router.post('/fleet/:id/location', apiLimiter, protect, authorize(...FLEET), reportLocation);
+router.post('/fleet', apiLimiter, protect, authorize(...FLEET), guardWrites, addVehicle);
+router.post('/fleet/:id/location', apiLimiter, protect, authorize(...FLEET), guardWrites, reportLocation);
 
 // Ranks every feasible (vehicle, pending request) pair by the extra road km it
 // would cost to slot that farmer into the route the vehicle is already driving.
@@ -73,11 +77,11 @@ router.get('/dispatch/suggestions', dispatchLimiter, protect, authorize(...FLEET
  * attractive deals. Posting visibility is public (any authenticated user can
  * read), but only buyers can create or delete their own postings.
  */
-router.post('/buyer/postings', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), createPosting);
+router.post('/buyer/postings', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), guardWrites, createPosting);
 router.get('/buyer/postings', apiLimiter, protect, getPostings);
 router.get('/buyer/postings/mine', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), getMyPostings);
-router.delete('/buyer/postings/:id', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), deletePosting);
-router.patch('/buyer/postings/:id/received', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), updateReceivedQuantity);
+router.delete('/buyer/postings/:id', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), guardWrites, deletePosting);
+router.patch('/buyer/postings/:id/received', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), guardWrites, updateReceivedQuantity);
 
 /*
  * Road geometry for the map layer. Drawing only — see routingService.js.
