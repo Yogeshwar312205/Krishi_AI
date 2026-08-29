@@ -47,7 +47,12 @@ export const DealPanel = ({ comparison, onDealAgreed }) => {
   const [mandiId, setMandiId] = useState(
     () => pendingMandi?.id || comparison[0]?.id || ''
   );
-  const mandi = comparison.find((m) => m.id === mandiId) || pendingMandi || comparison[0];
+  
+  // When dealing with a buyer posting, use the posting's coordinates and rate.
+  // Otherwise use the comparison mandi data.
+  const mandi = pendingMandi?.isBuyerLocation 
+    ? pendingMandi 
+    : (comparison.find((m) => m.id === mandiId) || pendingMandi || comparison[0]);
 
   const [draft, setDraft] = useState('');
   const [agreedRate, setAgreedRate] = useState('');
@@ -81,7 +86,11 @@ export const DealPanel = ({ comparison, onDealAgreed }) => {
         district: mandi.district || null,
         // The mandi's real position, so the truck the dispatcher assigns is
         // routed to where the lot was actually sold.
+        // IMPORTANT: If this is from a buyer posting with specific coordinates,
+        // use those instead of generic mandi center point.
         mandiCoords: mandi.coordinates || null,
+        isBuyerLocation: mandi.isBuyerLocation || false,
+        buyerAddress: mandi.buyerAddress || null,
         distanceKm: mandi.distanceKm,
         cropType: cropDetails.cropType,
         quantityKg: cropDetails.quantityKg,
@@ -117,6 +126,8 @@ export const DealPanel = ({ comparison, onDealAgreed }) => {
         // The mandi's real position, so the truck the dispatcher assigns is
         // routed to where the lot was actually sold.
         mandiCoords: mandi.coordinates || null,
+        isBuyerLocation: mandi.isBuyerLocation || false,
+        buyerAddress: mandi.buyerAddress || null,
         distanceKm: mandi.distanceKm,
         cropType: cropDetails.cropType,
         quantityKg: cropDetails.quantityKg,
@@ -139,6 +150,41 @@ export const DealPanel = ({ comparison, onDealAgreed }) => {
     onDealAgreed?.(id);
   };
 
+  const confirmDealWithRate = (value) => {
+    let id = deal?.id;
+    if (!id) {
+      id = `DEAL-${Math.floor(1000 + Math.random() * 9000)}`;
+      createDeal({
+        id,
+        mandiName: mandi.name,
+        mandiNameKey: mandi.nameKey || null,
+        district: mandi.district || null,
+        mandiCoords: mandi.coordinates || null,
+        isBuyerLocation: mandi.isBuyerLocation || false,
+        buyerAddress: mandi.buyerAddress || null,
+        buyerPostingId: mandi.buyerPostingId || null,
+        buyerId: mandi.buyerId || null,
+        distanceKm: mandi.distanceKm,
+        cropType: cropDetails.cropType,
+        quantityKg: cropDetails.quantityKg,
+        boardRatePerKg: mandi.ratePerKg,
+        agreedRatePerKg: value,
+        farmerName: user?.name || '',
+        farmerPhone: user?.phone || '',
+        trader: trader || null,
+        status: 'Agreed',
+        messages: [{ from: 'farmer', text: t('deal.acceptedBuyerRateMessage', { rate: rate(value) }), at: t('common.today') + ', ' + now() }],
+        bookingId: null,
+        createdAt: t('common.today') + ', ' + now(),
+      });
+    } else {
+      agreeDeal(id, { agreedRatePerKg: value, quantityKg: cropDetails.quantityKg });
+    }
+
+    setShowAgree(false);
+    onDealAgreed?.(id);
+  };
+
   const suggestedRate = trader?.postedRatePerKg || mandi.ratePerKg;
   const agreedValue = deal?.agreedRatePerKg
     ? deal.agreedRatePerKg * cropDetails.quantityKg
@@ -148,39 +194,60 @@ export const DealPanel = ({ comparison, onDealAgreed }) => {
     <div className="space-y-5">
 
       {/* ---- Which mandi. Every reporting mandi, not a shortlist. ---- */}
-      <div>
-        <label className="field-label" htmlFor="deal-mandi">{t('deal.whichMandi')}</label>
-        <select
-          id="deal-mandi"
-          className="field"
-          value={mandiId}
-          onChange={(event) => { setMandiId(event.target.value); setShowAgree(false); }}
-        >
-          {comparison.map((option) => (
-            <option key={option.id} value={option.id}>
-              {mandiLabel(t, option)} · {rate(option.ratePerKg)}/{t('common.kg')} · {number(option.distanceKm)} {t('common.km')}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-sm text-ink-faint">
-          {t('deal.mandiCount', { count: comparison.length })}
-        </p>
-      </div>
+      {!mandi.isBuyerLocation && (
+        <div>
+          <label className="field-label" htmlFor="deal-mandi">{t('deal.whichMandi')}</label>
+          <select
+            id="deal-mandi"
+            className="field"
+            value={mandiId}
+            onChange={(event) => { setMandiId(event.target.value); setShowAgree(false); }}
+          >
+            {comparison.map((option) => (
+              <option key={option.id} value={option.id}>
+                {mandiLabel(t, option)} · {rate(option.ratePerKg)}/{t('common.kg')} · {number(option.distanceKm)} {t('common.km')}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-ink-faint">
+            {t('deal.mandiCount', { count: comparison.length })}
+          </p>
+        </div>
+      )}
+
+      {mandi.isBuyerLocation && (
+        <div className="border-2 border-forest-700 bg-forest-50 px-4 py-3">
+          <p className="eyebrow text-forest-800">{t('deal.dealingWithBuyer')}</p>
+          <p className="mt-1.5 font-display text-2xl leading-none text-ink">{mandi.name}</p>
+          {mandi.traderName && (
+            <p className="mt-1 text-sm text-ink-soft">{mandi.traderName}</p>
+          )}
+          {mandi.traderPhone && (
+            <p className="mt-0.5 text-sm text-ink-soft">{mandi.traderPhone}</p>
+          )}
+        </div>
+      )}
 
       {/* ---- What is on the table ---- */}
       <div className="border-2 border-ink bg-white px-4">
         <LedgerRow
           label={t('deal.boardRate')}
-          sub={t('deal.boardRateWhy')}
+          sub={mandi.isBuyerLocation ? t('deal.buyerOfferedRate') : t('deal.boardRateWhy')}
           value={`${rate(mandi.ratePerKg)}/${t('common.kg')}`}
         />
         <LedgerRow
           label={t('deal.lot')}
           value={<span className="font-sans text-base">{cropName} · {number(cropDetails.quantityKg)} {t('common.kg')}</span>}
         />
+        {mandi.isBuyerLocation && mandi.buyerAddress && (
+          <LedgerRow
+            label={t('deal.deliveryLocation')}
+            value={<span className="font-sans text-base">{mandi.buyerAddress}</span>}
+          />
+        )}
         <LedgerRow
           label={t('price.mandis.net')}
-          sub={`${mandi.distanceApprox ? '~' : ''}${number(mandi.distanceKm)} ${t('common.km')}`}
+          sub={mandi.distanceKm ? `${mandi.distanceApprox ? '~' : ''}${number(mandi.distanceKm)} ${t('common.km')}` : t('deal.directToBuyer')}
           value={money(mandi.net)}
         />
       </div>
@@ -238,6 +305,15 @@ export const DealPanel = ({ comparison, onDealAgreed }) => {
               })}
             />
             <div className="grid gap-2 sm:grid-cols-2">
+              {trader.postedRatePerKg && deal?.status !== 'Agreed' && (
+                <Button
+                  variant="accent"
+                  icon={Handshake}
+                  onClick={() => confirmDealWithRate(trader.postedRatePerKg)}
+                >
+                  {t('deal.acceptBuyerRate', { rate: rate(trader.postedRatePerKg) })}
+                </Button>
+              )}
               <Button icon={Send} onClick={startOrSend} disabled={!draft.trim()}>
                 {deal ? t('deal.send') : t('deal.sendEnquiry')}
               </Button>

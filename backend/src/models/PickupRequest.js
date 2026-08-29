@@ -41,6 +41,28 @@ const PickupRequestSchema = new mongoose.Schema({
    */
   agreedRatePerKg: { type: Number, default: null },
 
+  /**
+   * Link to buyer posting if this request originated from a buyer deal.
+   * This allows buyers to see shipments related to their postings.
+   */
+  buyerPosting: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'BuyerPosting',
+    default: null,
+    index: true,
+  },
+  
+  /**
+   * Buyer who will receive this shipment (for direct buyer deals).
+   * Used to show arrivals in buyer's dashboard.
+   */
+  buyer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true,
+  },
+
   pickupDate: { type: String, required: true }, // ISO yyyy-mm-dd, as the farmer picked it
   /**
    * Hours, not a label. The slot label is translated into three languages, so

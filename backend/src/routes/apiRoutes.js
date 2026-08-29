@@ -7,8 +7,11 @@ const { sendSMSAlert } = require('../controllers/alertController');
 const { getDispatchSuggestions } = require('../controllers/dispatchController');
 const { listFleet, addVehicle, reportLocation } = require('../controllers/fleetController');
 const {
-  createRequest, myRequests, dispatchQueue, assignRequest, updateStatus, cancelRequest,
+  createRequest, myRequests, dispatchQueue, assignRequest, updateStatus, cancelRequest, buyerInbound,
 } = require('../controllers/requestController');
+const {
+  createPosting, getPostings, getMyPostings, deletePosting, updateReceivedQuantity,
+} = require('../controllers/buyerController');
 const {
   getAgmarknetLivePrices, getAgmarknetCommodities, getAgmarknetHistory,
   getLiveGovtWeather, getLiveGovtFuelRates, withProfitBreakdown, CACHE_TTL_MS,
@@ -16,7 +19,7 @@ const {
 const {
   getRoute, parsePath, MAX_WAYPOINTS, CACHE_TTL_MS: ROUTING_CACHE_TTL_MS,
 } = require('../services/routingService');
-const { apiLimiter } = require('../middlewares/rateLimiter');
+const { apiLimiter, dispatchLimiter } = require('../middlewares/rateLimiter');
 const { protect, authorize } = require('../middlewares/auth');
 const ragRoutes = require('./ragRoutes');
 
@@ -45,6 +48,7 @@ router.post('/recommend', apiLimiter, recommendLogistics);
 router.post('/requests', apiLimiter, protect, authorize('Farmer'), createRequest);
 router.get('/requests/mine', apiLimiter, protect, authorize('Farmer'), myRequests);
 router.post('/requests/:id/cancel', apiLimiter, protect, authorize('Farmer'), cancelRequest);
+router.get('/requests/inbound', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), buyerInbound);
 
 router.get('/requests/queue', apiLimiter, protect, authorize(...FLEET), dispatchQueue);
 router.post('/requests/:id/assign', apiLimiter, protect, authorize(...FLEET), assignRequest);
@@ -57,7 +61,20 @@ router.post('/fleet/:id/location', apiLimiter, protect, authorize(...FLEET), rep
 // Ranks every feasible (vehicle, pending request) pair by the extra road km it
 // would cost to slot that farmer into the route the vehicle is already driving.
 // It suggests; the fleet owner approves. Nothing here auto-assigns.
-router.get('/dispatch/suggestions', apiLimiter, protect, authorize(...FLEET), getDispatchSuggestions);
+router.get('/dispatch/suggestions', dispatchLimiter, protect, authorize(...FLEET), getDispatchSuggestions);
+
+/*
+ * Buyer Posting Routes - APMC buyer rates and procurement postings
+ *
+ * Buyers post rates they're offering; farmers query all postings to find
+ * attractive deals. Posting visibility is public (any authenticated user can
+ * read), but only buyers can create or delete their own postings.
+ */
+router.post('/buyer/postings', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), createPosting);
+router.get('/buyer/postings', apiLimiter, protect, getPostings);
+router.get('/buyer/postings/mine', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), getMyPostings);
+router.delete('/buyer/postings/:id', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), deletePosting);
+router.patch('/buyer/postings/:id/received', apiLimiter, protect, authorize('Buyer', 'APMC Buyer', 'Trader'), updateReceivedQuantity);
 
 /*
  * Road geometry for the map layer. Drawing only — see routingService.js.

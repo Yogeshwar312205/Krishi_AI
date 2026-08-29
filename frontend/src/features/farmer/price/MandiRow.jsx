@@ -45,6 +45,7 @@ export const MandiRow = ({ row, rank, expanded, onToggle, onContact }) => {
             {row.distanceApprox && '~'}{number(row.distanceKm)} {t('common.km')}
             {' · '}
             {rate(row.ratePerKg)}/{t('common.kg')}
+            {row.arrivalQuintals ? ` · ${number(row.arrivalQuintals)} ${t('common.quintal')}` : ''}
           </span>
         </span>
 
@@ -118,10 +119,15 @@ export const MandiRow = ({ row, rank, expanded, onToggle, onContact }) => {
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-faint">
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 font-semibold text-forest-700">
               <Crosshair className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
               {row.geoPrecision === 'market' ? t('price.source.market') : t('price.source.district')}
             </span>
+            {row.arrivalQuintals && (
+              <span className="font-semibold text-ink tnum">
+                📦 {t('price.mandis.arrivals')}: {number(row.arrivalQuintals)} {t('common.quintal')}
+              </span>
+            )}
             {row.arrivalDate && (
               <span className="tnum">{t('price.mandis.arrival', { date: shortDate(new Date(row.arrivalDate)) })}</span>
             )}

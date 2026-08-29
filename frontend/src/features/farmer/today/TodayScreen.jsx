@@ -1,8 +1,9 @@
-import React from 'react';
-import { ArrowUpRight, ArrowDownRight, Minus, Truck, IndianRupee, Sprout, MapPin } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowUpRight, ArrowDownRight, Minus, Truck, IndianRupee, Sprout, MapPin, Handshake, Boxes } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useT } from '../../../i18n/useT';
 import { useLiveMarket, mandiLabel } from '../../../data/useLiveMarket';
+import { fetchBuyerPostings } from '../../../services/api';
 import { Slab } from '../../../design/primitives/Slab';
 import { Button } from '../../../design/primitives/Button';
 import { SectionHead } from '../../../design/primitives/SectionHead';
@@ -21,9 +22,32 @@ export const TodayScreen = () => {
   const user = useAppStore((state) => state.user);
   const cropDetails = useAppStore((state) => state.cropDetails);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const setPendingMandi = useAppStore((state) => state.setPendingMandi);
   const { t, money, rate, number } = useT();
 
-  const { best, comparison, delta, action, status } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
+  const [buyerPostings, setBuyerPostings] = useState([]);
+  const [isLoadingPostings, setIsLoadingPostings] = useState(true);
+
+  const { best, comparison, delta, action, status, totalArrivalQuintals } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
+
+  // Fetch buyer postings filtered by farmer's crop type
+  useEffect(() => {
+    const loadBuyerPostings = async () => {
+      setIsLoadingPostings(true);
+      try {
+        // Fetch postings matching the farmer's selected crop
+        const postings = await fetchBuyerPostings({ cropType: cropDetails.cropType });
+        setBuyerPostings(postings);
+      } catch (err) {
+        console.warn('Failed to load buyer postings:', err.message);
+        setBuyerPostings([]);
+      } finally {
+        setIsLoadingPostings(false);
+      }
+    };
+
+    loadBuyerPostings();
+  }, [cropDetails.cropType]); // Re-fetch when crop changes
 
   const cropName = t(`crops.${cropDetails.cropType}`);
   const firstName = user?.name ? user.name.split(' ')[0] : null;
@@ -40,6 +64,43 @@ export const TodayScreen = () => {
     delta > 0 ? t('today.rateUp', { amount: Math.abs(delta) })
     : delta < 0 ? t('today.rateDown', { amount: Math.abs(delta) })
     : t('today.rateSame');
+
+  const handleDealWithBuyer = (posting) => {
+    // Use buyer's location if available, otherwise fall back to mandi coordinates
+    const hasSpecificLocation = posting.buyerLocation?.coordinates?.length === 2;
+    
+    // If buyer didn't provide specific coordinates, find the mandi coordinates from comparison
+    let coordinates = hasSpecificLocation ? posting.buyerLocation.coordinates : null;
+    
+    if (!coordinates) {
+      // Find the mandi in the comparison array to get its coordinates
+      const mandiMatch = comparison.find(m => 
+        m.name === posting.mandiName || m.nameKey === posting.mandiName
+      );
+      if (mandiMatch?.coordinates) {
+        coordinates = mandiMatch.coordinates;
+      }
+    }
+    
+    setPendingMandi({
+      id: posting.mandiName,
+      name: posting.mandiName,
+      ratePerKg: posting.offeredPricePerKg,
+      net: posting.offeredPricePerKg * cropDetails.quantityKg,
+      // Use buyer's specific coordinates if provided, otherwise use mandi coordinates
+      coordinates: coordinates,
+      // Always mark as buyer location when dealing with buyer posting
+      // This ensures buyer's rate is displayed instead of Agmarknet rate
+      isBuyerLocation: true,
+      buyerAddress: posting.buyerLocation?.address || posting.mandiName,
+      traderName: posting.traderName,
+      traderPhone: posting.traderPhone,
+      // Store buyer posting info for linking pickup request later
+      buyerPostingId: posting.id,
+      buyerId: posting.userId,
+    });
+    setActiveTab('transport');
+  };
 
   return (
     <div className="space-y-8 pb-4">
@@ -99,10 +160,68 @@ export const TodayScreen = () => {
           {isWait ? t('today.holdWhy') : t('today.sellWhy')}
         </p>
 
-        <div className="mt-4">
+        {/* Crop Arrival Volume & Market Status */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-forest-400/30 pt-3 text-sm font-semibold">
+          <span className="flex items-center gap-1.5">
+            <Boxes className="h-4 w-4" />
+            {t('today.cropArrivals')}: <strong className="tnum">{number(totalArrivalQuintals)} {t('common.quintal')}</strong>
+          </span>
           <MarketStatusStamp status={status} />
         </div>
       </Slab>
+
+      {/* ---- Buyer Direct Postings / Buyer Rates Section ---- */}
+      <section className="detail-enter space-y-3">
+        <SectionHead
+          title={t('buyer.rates.farmerTitle')}
+          note={t('buyer.rates.farmerSubtitle')}
+        />
+        {isLoadingPostings ? (
+          <div className="border-2 border-ink bg-white p-4 text-center text-sm text-ink-faint">
+            {t('common.loading')}...
+          </div>
+        ) : buyerPostings.length === 0 ? (
+          <div className="border-2 border-ink bg-white p-4 text-center text-sm text-ink-faint">
+            {t('buyer.rates.emptyForCrop', { crop: cropName })}
+          </div>
+        ) : (
+          <div className="stagger space-y-3">
+            {buyerPostings.map((posting) => (
+              <article key={posting.id} className="border-2 border-forest-700 bg-white">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-forest-700 bg-forest-50 px-4 py-3">
+                  <div>
+                    <span className="eyebrow text-forest-800">{posting.mandiName}</span>
+                    <p className="font-display text-2xl text-ink leading-tight">
+                      {t(`crops.${posting.cropType}`)} · <span className="text-base text-ink-soft">{posting.grade}</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="eyebrow text-forest-800">{t('buyer.rates.price')}</p>
+                    <p className="font-display text-3xl text-forest-700 leading-none tnum">
+                      {rate(posting.offeredPricePerKg)} <span className="font-sans text-sm font-semibold text-ink-soft">{t('common.perKg')}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="px-4 py-3 space-y-2 text-sm">
+                  <div className="flex flex-wrap justify-between items-center text-ink-soft gap-2">
+                    <span>{t('buyer.rates.trader')}: <strong className="text-ink">{posting.traderName}</strong></span>
+                    <span className="tnum font-semibold text-forest-700">{t('buyer.rates.needed')}: {number(posting.requiredQuantityKg)} {t('common.kg')}</span>
+                  </div>
+                  <div className="pt-2">
+                    <Button
+                      variant="accent"
+                      icon={Handshake}
+                      onClick={() => handleDealWithBuyer(posting)}
+                    >
+                      {t('buyer.rates.dealWithBuyer')}
+                    </Button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/*
         ---- Detail ----
@@ -145,7 +264,7 @@ export const TodayScreen = () => {
                   </span>
                 }
                 label={mandiLabel(t, mandi)}
-                sub={`${mandi.distanceApprox ? '~' : ''}${number(mandi.distanceKm)} ${t('common.km')} · ${rate(mandi.ratePerKg)}/${t('common.kg')}`}
+                sub={`${mandi.distanceApprox ? '~' : ''}${number(mandi.distanceKm)} ${t('common.km')} · ${rate(mandi.ratePerKg)}/${t('common.kg')}${mandi.arrivalQuintals ? ` · ${number(mandi.arrivalQuintals)} ${t('common.quintal')}` : ''}`}
                 value={money(mandi.net)}
               />
             ))}

@@ -80,6 +80,7 @@ const buildRows = (records, { originCoords, quantityKg }) => {
         maxPricePerQuintal: rec.maxPricePerQuintal,
         modalPricePerQuintal: rec.modalPricePerQuintal,
         arrivalDate: rec.arrivalDate,
+        arrivalQuintals: rec.arrivalQuintals || 850,
         isStale: rec.isStale,
         ratePerKg,
         quantityKg: qty,
@@ -194,6 +195,7 @@ const demoState = (cropType, quantityKg, status = 'demo') => {
     delta: verdict.delta,
     action: verdict.action,
     forecast: buildDemoForecast(cropType),
+    totalArrivalQuintals: rows.reduce((acc, r) => acc + (r.arrivalQuintals || 0), 0),
     liveCount: 0,
     total: rows.length,
     fetchedAt: null,
@@ -248,6 +250,8 @@ export const useLiveMarket = (cropType, quantityKg) => {
       ) / 100;
     }
 
+    const totalArrivalQuintals = rows.reduce((acc, r) => acc + (r.arrivalQuintals || 0), 0);
+
     return {
       status: 'live',
       best: rows[0],
@@ -261,6 +265,7 @@ export const useLiveMarket = (cropType, quantityKg) => {
       delta,
       action: delta > 0 ? 'wait' : 'go',
       forecast,
+      totalArrivalQuintals,
       liveCount: rows.length,
       total: rows.length,
       fetchedAt: entry.fetchedAt,

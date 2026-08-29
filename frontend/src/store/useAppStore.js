@@ -23,6 +23,22 @@ const readStoredLanguage = () => {
   return SUPPORTED_LANGUAGES.includes(stored) ? stored : DEFAULT_LANGUAGE;
 };
 
+/**
+ * Read stored crop details from localStorage
+ * Preserves farmer's crop selection across page refreshes
+ */
+const readStoredCropDetails = () => {
+  try {
+    const raw = localStorage.getItem('cropDetails');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    localStorage.removeItem('cropDetails');
+    return null;
+  }
+};
+
 // Keep <html lang> in sync so the Devanagari CSS and screen readers both apply.
 const applyDocumentLanguage = (lang) => {
   if (typeof document !== 'undefined') document.documentElement.lang = lang;
@@ -49,6 +65,14 @@ const todayAt = (hour, minute = 0) => {
 
 const initialLanguage = readStoredLanguage();
 applyDocumentLanguage(initialLanguage);
+
+const storedCropDetails = readStoredCropDetails();
+const defaultCropDetails = {
+  cropType: 'Tomato',
+  quantityKg: 2500,
+  harvestTime: new Date().toISOString().split('T')[0],
+  temperatureSensitivity: 'High'
+};
 
 export const useAppStore = create((set, get) => ({
   // Auth state
@@ -103,15 +127,12 @@ export const useAppStore = create((set, get) => ({
   // Crop & Wizard Form state
   farmerOrigin: [73.7898, 19.9975], // Nashik default [lng, lat]
   farmerAddress: 'Nashik Central Farm HQ, Maharashtra',
-  cropDetails: {
-    cropType: 'Tomato',
-    quantityKg: 2500,
-    harvestTime: new Date().toISOString().split('T')[0],
-    temperatureSensitivity: 'High'
+  cropDetails: storedCropDetails || defaultCropDetails,
+  setCropDetails: (details) => {
+    const updated = { ...get().cropDetails, ...details };
+    localStorage.setItem('cropDetails', JSON.stringify(updated));
+    set({ cropDetails: updated });
   },
-  setCropDetails: (details) => set((state) => ({
-    cropDetails: { ...state.cropDetails, ...details }
-  })),
   setFarmerOrigin: (coords, address) => set({ farmerOrigin: coords, farmerAddress: address }),
 
   // Optimization recommendations
@@ -233,45 +254,11 @@ export const useAppStore = create((set, get) => ({
    * `bookings` used to sit here: a seeded pair of consignments that no screen
    * reads any more. The farmer's consignments are PickupRequest documents now,
    * fetched in features/farmer/transport/useMyRequests.js.
+   *
+   * `buyerPostings` used to sit here: seeded buyer rate announcements that were
+   * never persisted. Buyer postings are now BuyerPosting documents, fetched
+   * from the backend API and filtered by the farmer's selected crop.
    */
-
-  // APMC Buyer Rate Postings & Procurement Bids (Buyer Dashboard State)
-  buyerPostings: [
-    {
-      id: 'BID-901',
-      cropType: 'Tomato',
-      grade: 'Grade-A Premium Red',
-      offeredPricePerKg: 46,
-      requiredQuantityKg: 5000,
-      receivedQuantityKg: 2500,
-      mandiName: 'Mumbai APMC',
-      traderName: 'Rajesh Mehta (Mehta Produce Corp)',
-      traderPhone: '+91 98200 55443',
-      status: 'Active Procurement',
-      expiresIn: '2 Days'
-    },
-    {
-      id: 'BID-902',
-      cropType: 'Onion',
-      grade: 'Lasalgaon Red Export Grade',
-      offeredPricePerKg: 34,
-      requiredQuantityKg: 10000,
-      receivedQuantityKg: 5000,
-      mandiName: 'Nasik APMC',
-      traderName: 'Rajesh Mehta (Mehta Produce Corp)',
-      traderPhone: '+91 98200 55443',
-      status: 'Active Procurement',
-      expiresIn: '5 Days'
-    }
-  ],
-
-  addBuyerPosting: (posting) => set((state) => ({
-    buyerPostings: [posting, ...state.buyerPostings]
-  })),
-
-  deleteBuyerPosting: (id) => set((state) => ({
-    buyerPostings: state.buyerPostings.filter((p) => p.id !== id)
-  })),
 
   // Inbound Shipments for APMC Buyer
   inboundShipments: [

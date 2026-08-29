@@ -104,6 +104,9 @@ export const TransportScreen = () => {
         // something no fleet owner can act on.
         destination: { label: deal.mandiName, coordinates: deal.mandiCoords || null },
         agreedRatePerKg: deal.agreedRatePerKg,
+        // Link to buyer if this is a buyer deal
+        buyerPostingId: deal.buyerPostingId || null,
+        buyerId: deal.buyerId || null,
         pickupDate,
         window: {
           startHour: slotOption.startHour,

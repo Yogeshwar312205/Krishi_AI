@@ -110,7 +110,8 @@
     "bookVehicle": "गाडी बुक करें",
     "noCrop": "पहले अपनी फसल बताइए",
     "noCropWhy": "फसल जोड़ते ही हम आपको रोज़ सबसे अच्छा भाव दिखाएँगे।",
-    "addCrop": "मेरी फसल जोड़ें"
+    "addCrop": "मेरी फसल जोड़ें",
+    "cropArrivals": "आज की फसल आवक"
   },
   "price": {
     "title": "फसल के भाव",
@@ -151,6 +152,7 @@
       "showAll": "{{count}} और मंडियाँ देखें",
       "showLess": "कम दिखाएँ",
       "arrival": "{{date}} का भाव",
+      "arrivals": "आवक",
       "range": "कम {{min}} – ज़्यादा {{max}}"
     },
     "demand": {
@@ -400,7 +402,12 @@
       "expires": "कब तक खुला",
       "remove": "हटाएँ",
       "mandi": "मंडी",
-      "empty": "अभी कोई खरीद भाव नहीं डाला।"
+      "empty": "अभी कोई खरीद भाव नहीं डाला।",
+      "farmerTitle": "खरीददार दर प्रविष्टियाँ",
+      "farmerSubtitle": "सत्यापित व्यापारियों से सीधी खरीद पेशकश",
+      "trader": "व्यापारी",
+      "needed": "आवश्यकता",
+      "dealWithBuyer": "खरीददार से सौदा करें"
     },
     "inbound": {
       "title": "आवक",
@@ -442,6 +449,10 @@
     "mandiCount": "आज इस फ़सल के भाव देने वाली सभी {{count}} मंडियाँ.",
     "boardRate": "आज का बोर्ड भाव",
     "boardRateWhy": "यह मंडी का औसत है. आपका भाव व्यापारी से तय होगा.",
+    "buyerOfferedRate": "खरीददार का दिया भाव",
+    "deliveryLocation": "डिलीवरी स्थान",
+    "directToBuyer": "सीधे खरीददार को",
+    "dealingWithBuyer": "खरीददार से सौदा तय हुआ",
     "lot": "आपका माल",
     "traderOnPlatform": "KrushiFlow पर व्यापारी",
     "postedRate": "इनका दिया भाव",
@@ -465,6 +476,8 @@
     "nowBook": "अब गाड़ी बुक करें",
     "changeDeal": "सौदा बदलें",
     "otherDeals": "आपके दूसरे सौदे",
+    "acceptBuyerRate": "खरीददार दर {{rate}} स्वीकारें",
+    "acceptedBuyerRateMessage": "खरीददार दर {{rate}} प्रति किग्रा स्वीकार किया।",
     "status": {
       "agreed": "भाव तय",
       "waiting": "जवाब का इंतज़ार"

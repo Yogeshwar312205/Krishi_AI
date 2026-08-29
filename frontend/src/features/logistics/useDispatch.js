@@ -31,9 +31,11 @@ export const useDispatch = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // Empty dependency array - function doesn't depend on any external values
 
-  useEffect(() => { run(); }, [run]);
+  useEffect(() => { 
+    run(); 
+  }, []); // Only run once on mount
 
   const dismiss = useCallback((requestId, vehicleId) => {
     setDismissed((current) => (

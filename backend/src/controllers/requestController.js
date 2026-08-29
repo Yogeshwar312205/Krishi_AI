@@ -49,6 +49,7 @@ const createRequest = async (req, res) => {
     const {
       cropType, quantityKg, origin, destination,
       agreedRatePerKg, pickupDate, window,
+      buyerPostingId, buyerId,
     } = req.body || {};
 
     if (!cropType || !Number(quantityKg)) {
@@ -72,6 +73,8 @@ const createRequest = async (req, res) => {
       origin,
       destination,
       agreedRatePerKg: agreedRatePerKg ?? null,
+      buyerPosting: buyerPostingId || null,
+      buyer: buyerId || null,
       pickupDate: pickupDate || new Date().toISOString().split('T')[0],
       window: window || {},
       status: 'pending',
@@ -251,6 +254,84 @@ const cancelRequest = async (req, res) => {
   }
 };
 
+const buyerInbound = async (req, res) => {
+  try {
+    logger.info(`Buyer inbound request from user: ${req.user._id}, name: ${req.user.name}, role: ${req.user.role}`);
+    
+    // First, check what requests exist in the database
+    const allRequests = await PickupRequest.find({}).select('_id status destination.label buyer farmer');
+    logger.info(`=== DATABASE CHECK ===`);
+    logger.info(`Total pickup requests in DB: ${allRequests.length}`);
+    
+    const statusCounts = {};
+    allRequests.forEach(r => {
+      statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+      logger.info(`  - Request ${r._id}: status=${r.status}, dest=${r.destination?.label || 'N/A'}, buyer=${r.buyer || 'none'}, farmer=${r.farmer}`);
+    });
+    logger.info(`Status breakdown: ${JSON.stringify(statusCounts)}`);
+    
+    // Build query to find active/completed requests for this buyer
+    const query = {
+      status: { $in: ['assigned', 'collected', 'in_transit', 'delivered'] }
+    };
+    
+    // First priority: requests explicitly linked to this buyer
+    query.$or = [
+      { buyer: req.user._id },
+    ];
+    
+    // Second priority: match by buyer's location
+    const buyerLocation = req.user.buyerAddress || req.user.location?.address || '';
+    logger.info(`Buyer location: "${buyerLocation}"`);
+    
+    if (buyerLocation) {
+      // Match destination label that contains buyer's location (case-insensitive)
+      // Extract key location terms (e.g., "Kopargaon APMC" -> "Kopargaon")
+      const locationTerms = buyerLocation.split(/[\s,]+/).filter(term => term.length > 3);
+      logger.info(`Location terms extracted: [${locationTerms.join(', ')}]`);
+      
+      if (locationTerms.length > 0) {
+        // Match if destination contains any of the key terms
+        query.$or.push({
+          'destination.label': { 
+            $regex: locationTerms.join('|'), 
+            $options: 'i' 
+          }
+        });
+      }
+    } else {
+      logger.info(`No buyer location set - will only match by buyer ID`);
+    }
+    
+    logger.info(`Final query: ${JSON.stringify(query)}`);
+    
+    const requests = await PickupRequest.find(query)
+      .populate('assignedVehicle')
+      .populate('buyer', 'name')
+      .sort({ assignedAt: -1 })
+      .limit(50);
+
+    logger.info(`Found ${requests.length} inbound shipments matching query`);
+
+    return res.json({
+      success: true,
+      count: requests.length,
+      buyerLocation: buyerLocation || 'Not set',
+      filtered: !!buyerLocation,
+      debug: {
+        totalRequestsInDb: allRequests.length,
+        statusCounts,
+        queryUsed: query,
+      },
+      requests: requests.map(publicRequest)
+    });
+  } catch (error) {
+    logger.error(`Buyer inbound failed: ${error.message}`);
+    logger.error(error.stack);
+    return res.status(503).json({ success: false, message: 'Could not load inbound shipments.' });
+  }
+};
+
 module.exports = {
-  createRequest, myRequests, dispatchQueue, assignRequest, updateStatus, cancelRequest, publicRequest,
+  createRequest, myRequests, dispatchQueue, assignRequest, updateStatus, cancelRequest, buyerInbound, publicRequest,
 };

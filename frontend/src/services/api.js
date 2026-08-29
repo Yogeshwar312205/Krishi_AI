@@ -442,3 +442,87 @@ export const sendRagQuestion = async (message, conversationId = null) => {
   }
 };
 
+/* ------------------------------------------------------- Buyer Postings */
+
+/**
+ * Create a new buyer rate posting
+ * POST /api/buyer/postings
+ */
+export const createBuyerPosting = async (posting) => {
+  try {
+    const { data } = await apiClient.post('/buyer/postings', posting);
+    return data.posting;
+  } catch (err) {
+    throw toApiError(err, 'Could not create buyer posting.');
+  }
+};
+
+/**
+ * Fetch all active buyer postings (visible to farmers)
+ * GET /api/buyer/postings?cropType=Tomato&mandiName=Mumbai
+ */
+export const fetchBuyerPostings = async (filters = {}) => {
+  try {
+    const { data } = await apiClient.get('/buyer/postings', { params: filters });
+    return data.postings;
+  } catch (err) {
+    console.warn('Failed to fetch buyer postings:', err.message);
+    return [];
+  }
+};
+
+/**
+ * Fetch buyer's own postings
+ * GET /api/buyer/postings/mine
+ */
+export const fetchMyBuyerPostings = async () => {
+  try {
+    const { data } = await apiClient.get('/buyer/postings/mine');
+    return data.postings;
+  } catch (err) {
+    console.warn('Failed to fetch your postings:', err.message);
+    return [];
+  }
+};
+
+/**
+ * Delete a buyer posting
+ * DELETE /api/buyer/postings/:id
+ */
+export const deleteBuyerPosting = async (id) => {
+  try {
+    const { data } = await apiClient.delete(`/buyer/postings/${id}`);
+    return data;
+  } catch (err) {
+    throw toApiError(err, 'Could not delete buyer posting.');
+  }
+};
+
+/**
+ * Update received quantity for a posting
+ * PATCH /api/buyer/postings/:id/received
+ */
+export const updateBuyerPostingReceived = async (id, receivedQuantityKg) => {
+  try {
+    const { data } = await apiClient.patch(`/buyer/postings/${id}/received`, { receivedQuantityKg });
+    return data.posting;
+  } catch (err) {
+    throw toApiError(err, 'Could not update received quantity.');
+  }
+};
+
+/* ------------------------------------------------------------- Buyer Inbound */
+
+/**
+ * Fetch incoming shipments for buyer
+ * GET /api/requests/inbound
+ */
+export const fetchBuyerInbound = async () => {
+  try {
+    const { data } = await apiClient.get('/requests/inbound');
+    return data.requests;
+  } catch (err) {
+    console.warn('Failed to fetch inbound shipments:', err.message);
+    return [];
+  }
+};

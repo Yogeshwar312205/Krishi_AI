@@ -110,7 +110,8 @@
     "bookVehicle": "Book a vehicle",
     "noCrop": "Tell us your crop first",
     "noCropWhy": "Once you add your crop, we will show you the best rate every day.",
-    "addCrop": "Add my crop"
+    "addCrop": "Add my crop",
+    "cropArrivals": "Today's Crop Arrivals"
   },
   "price": {
     "title": "Crop rates",
@@ -151,6 +152,7 @@
       "showAll": "Show {{count}} more mandis",
       "showLess": "Show fewer",
       "arrival": "Rate of {{date}}",
+      "arrivals": "Arrivals",
       "range": "Low {{min}} – high {{max}}"
     },
     "demand": {
@@ -400,7 +402,12 @@
       "expires": "Open for",
       "remove": "Remove",
       "mandi": "Mandi",
-      "empty": "No buying rates posted yet."
+      "empty": "No buying rates posted yet.",
+      "farmerTitle": "Buyer Rate Postings",
+      "farmerSubtitle": "Direct procurement offers from verified traders",
+      "trader": "Trader",
+      "needed": "Needed",
+      "dealWithBuyer": "Deal with Buyer"
     },
     "inbound": {
       "title": "Arrivals",
@@ -442,6 +449,10 @@
     "mandiCount": "All {{count}} mandis reporting this crop today.",
     "boardRate": "Today's board rate",
     "boardRateWhy": "The market average. Your rate is what you settle with the trader.",
+    "buyerOfferedRate": "Buyer's offered rate",
+    "deliveryLocation": "Delivery location",
+    "directToBuyer": "Direct to buyer",
+    "dealingWithBuyer": "Deal agreed with buyer",
     "lot": "Your lot",
     "traderOnPlatform": "Trader on KrushiFlow",
     "postedRate": "Their posted rate",
@@ -465,6 +476,8 @@
     "nowBook": "Now book a vehicle",
     "changeDeal": "Change the deal",
     "otherDeals": "Your other deals",
+    "acceptBuyerRate": "Accept Buyer Rate {{rate}}",
+    "acceptedBuyerRateMessage": "Accepted buyer rate {{rate}} per kg.",
     "status": {
       "agreed": "Price agreed",
       "waiting": "Waiting for reply"

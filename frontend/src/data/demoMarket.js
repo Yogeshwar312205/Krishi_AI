@@ -37,10 +37,10 @@ const DEMO_RATES = {
 
 /** Mandi metadata. Coordinates are real; distances are from Nashik. */
 export const DEMO_MANDIS = [
-  { id: 'Vashi',      name: 'Vashi',      distanceKm: 165, freightPerKg: 3.4 },
-  { id: 'Pune',       name: 'Pune',       distanceKm: 210, freightPerKg: 4.1 },
-  { id: 'Nashik',     name: 'Nashik',     distanceKm: 15,  freightPerKg: 0.7 },
-  { id: 'Pimpalgaon', name: 'Pimpalgaon', distanceKm: 35,  freightPerKg: 1.0 },
+  { id: 'Vashi',      name: 'Vashi',      distanceKm: 165, freightPerKg: 3.4, arrivalQuintals: 2850 },
+  { id: 'Pune',       name: 'Pune',       distanceKm: 210, freightPerKg: 4.1, arrivalQuintals: 2100 },
+  { id: 'Nashik',     name: 'Nashik',     distanceKm: 15,  freightPerKg: 0.7, arrivalQuintals: 950 },
+  { id: 'Pimpalgaon', name: 'Pimpalgaon', distanceKm: 35,  freightPerKg: 1.0, arrivalQuintals: 1420 },
 ];
 
 /** Mandi commission, as a share of gross. Invented but in a realistic range. */

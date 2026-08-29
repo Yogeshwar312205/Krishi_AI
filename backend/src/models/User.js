@@ -50,6 +50,23 @@ const UserSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  /*
+   * Buyer-specific location fields for APMC Buyer/Trader roles.
+   * 
+   * When a buyer posts a rate, farmers need to know where to deliver. This can
+   * be the buyer's warehouse, APMC yard office, or procurement center - not
+   * necessarily the mandi center point. These fields store the buyer's actual
+   * pickup/delivery location.
+   */
+  buyerAddress: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  buyerCoordinates: {
+    type: [Number], // [longitude, latitude]
+    default: undefined,
+  },
 }, { timestamps: true });
 
 // Hash password before save

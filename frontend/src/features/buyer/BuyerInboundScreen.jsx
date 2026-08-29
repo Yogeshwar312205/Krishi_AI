@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Truck, MessageSquare, Send, Handshake } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Truck, MessageSquare, Send, Handshake, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useT } from '../../i18n/useT';
+import { fetchBuyerInbound } from '../../services/api';
 import { SectionHead } from '../../design/primitives/SectionHead';
 import { LedgerRow } from '../../design/primitives/LedgerRow';
-import { DemoStamp } from '../../design/primitives/DemoStamp';
 import { Button } from '../../design/primitives/Button';
 import { Field } from '../../design/primitives/Field';
 
@@ -18,7 +18,6 @@ import { Field } from '../../design/primitives/Field';
  * thing on this screen that costs somebody money.
  */
 export const BuyerInboundScreen = () => {
-  const inboundShipments = useAppStore((state) => state.inboundShipments);
   const deals = useAppStore((state) => state.deals);
   const sendDealMessage = useAppStore((state) => state.sendDealMessage);
   const agreeDeal = useAppStore((state) => state.agreeDeal);
@@ -26,6 +25,26 @@ export const BuyerInboundScreen = () => {
 
   const [replies, setReplies] = useState({});
   const [quotes, setQuotes] = useState({});
+  const [inboundShipments, setInboundShipments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadInbound = async () => {
+    setLoading(true);
+    try {
+      const shipments = await fetchBuyerInbound();
+      console.log('Loaded inbound shipments:', shipments);
+      setInboundShipments(shipments || []);
+    } catch (err) {
+      console.error('Failed to load inbound shipments:', err);
+      setInboundShipments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInbound();
+  }, []);
 
   const open = deals.filter((deal) => deal.status !== 'Closed');
 
@@ -156,11 +175,26 @@ export const BuyerInboundScreen = () => {
         </section>
       )}
 
-      <SectionHead level="group" title={t('buyer.inbound.shipments')} />
+      <SectionHead 
+        level="group" 
+        title={t('buyer.inbound.shipments')}
+        action={
+          <Button full={false} variant="secondary" icon={RefreshCw} onClick={loadInbound} busy={loading}>
+            {t('dispatch.refresh')}
+          </Button>
+        }
+      />
 
-      {inboundShipments.length === 0 ? (
+      {loading ? (
+        <div className="border-2 border-ink bg-white px-4 py-10 text-center">
+          <p className="font-display text-2xl text-ink-faint">{t('common.loading')}</p>
+        </div>
+      ) : inboundShipments.length === 0 ? (
         <div className="border-2 border-ink bg-white px-4 py-10 text-center">
           <p className="font-display text-3xl text-ink-faint">{t('buyer.inbound.empty')}</p>
+          <p className="mt-2 text-sm text-ink-soft">
+            No shipments are currently heading to your location.
+          </p>
         </div>
       ) : (
         <div className="stagger space-y-3">
@@ -174,33 +208,37 @@ export const BuyerInboundScreen = () => {
                   </p>
                 </div>
                 <span className="border-2 border-ink bg-turmeric-300 px-2 py-1 text-sm font-bold leading-none text-ink">
-                  {shipment.status}
+                  {t(`tracking.status.${shipment.status}`)}
                 </span>
               </div>
 
               <div className="px-4">
                 <LedgerRow
                   label={t('buyer.inbound.from')}
-                  sub={`${shipment.vehicleNo} · ${shipment.driverName}`}
+                  sub={shipment.vehicle ? `${shipment.vehicle.vehicleNo} · ${shipment.vehicle.driverName}` : t('transport.track.waiting')}
                   value={<span className="font-sans text-base">{shipment.farmerName}</span>}
                 />
                 <LedgerRow
-                  label={t('buyer.inbound.eta')}
-                  value={<span className="font-sans text-base">{shipment.eta}</span>}
+                  label={t('transport.route.pickup')}
+                  value={<span className="font-sans text-base">{shipment.origin.label}</span>}
                 />
                 <LedgerRow
-                  label={t('buyer.inbound.value')}
-                  sub={shipment.agreedRate}
-                  value={shipment.estTotalValue}
-                  emphasis
+                  label={t('transport.route.drop')}
+                  value={<span className="font-sans text-base">{shipment.destination.label}</span>}
                 />
+                {shipment.agreedRatePerKg && (
+                  <LedgerRow
+                    label={t('deal.agreedTitle')}
+                    sub={`${rate(shipment.agreedRatePerKg)}/${t('common.kg')}`}
+                    value={money(shipment.agreedRatePerKg * shipment.quantityKg)}
+                    emphasis
+                  />
+                )}
               </div>
             </article>
           ))}
         </div>
       )}
-
-      {inboundShipments.length > 0 && <DemoStamp />}
     </div>
   );
 };

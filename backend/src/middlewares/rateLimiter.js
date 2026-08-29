@@ -20,4 +20,16 @@ const authLimiter = rateLimit({
   }
 });
 
-module.exports = { apiLimiter, authLimiter };
+// Separate limiter for dispatch endpoints - fleet owners may check frequently
+const dispatchLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // 30 requests per minute (reasonable for manual refreshes)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many dispatch requests. Please wait a moment before refreshing.'
+  }
+});
+
+module.exports = { apiLimiter, authLimiter, dispatchLimiter };

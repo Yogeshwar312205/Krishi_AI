@@ -46,7 +46,7 @@ export const PriceScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const {
-    best, comparison, advantage, forecast, status, fetchedAt, latestArrivalDate, liveCount,
+    best, comparison, advantage, forecast, status, fetchedAt, latestArrivalDate, liveCount, totalArrivalQuintals,
   } = useLiveMarket(cropDetails.cropType, cropDetails.quantityKg);
 
   const cropName = t(`crops.${cropDetails.cropType}`);
@@ -93,6 +93,9 @@ export const PriceScreen = () => {
   const provenance = (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <MarketStatusStamp status={status} />
+      <span className="text-sm text-ink-soft font-semibold tnum">
+        📦 {t('today.cropArrivals')}: {number(totalArrivalQuintals)} {t('common.quintal')}
+      </span>
       {status === 'live' && (
         <span className="text-sm text-ink-faint tnum">
           {t('price.mandis.count', { count: liveCount })}
