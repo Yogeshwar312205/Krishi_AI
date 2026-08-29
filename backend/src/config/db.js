@@ -5,13 +5,14 @@ let isConnected = false;
 
 const connectDB = async () => {
   try {
-    const connStr = process.env.MONGODB_URI || 'mongodb://localhost:27017/krishiflow';
+    const connStr = process.env.MONGODB_URI || 'mongodb://localhost:27017/test';
     logger.info('Initiating MongoDB connection...');
     const conn = await mongoose.connect(connStr, {
       serverSelectionTimeoutMS: 5000,
     });
     isConnected = true;
     logger.info(`MongoDB Atlas Connected Successfully: ${conn.connection.host}`);
+    logger.info(`Connected to database: ${conn.connection.name}`);
   } catch (error) {
     logger.warn(`MongoDB Notice: ${error.message}`);
     logger.warn('Running with Mock In-Memory Store active alongside Mongoose Schemas for seamless demo functionality.');
